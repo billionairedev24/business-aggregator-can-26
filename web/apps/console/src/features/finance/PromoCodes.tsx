@@ -53,13 +53,13 @@ function CodeRow({ code: c, canChange }: { code: PromoCode; canChange: boolean }
     mutationFn: (active: boolean) => http(`${PATH}/${encodeURIComponent(c.id)}`, { method: 'PATCH', body: { active } }, PromoCode),
     onSuccess: () => void qc.invalidateQueries({ queryKey: promoCodesQuery.queryKey }),
   });
-  const off = c.kind === 'percent' ? t('percentOff', { percent: c.percent ?? 0 }) : t('amountOff', { amount: fmt.money(c.amountCents ?? 0) });
+  const off = c.kind === 'percent' ? t('percentOff', { percent: c.percent ?? 0 }) : t('amountOff', { amount: fmt.price(c.amountCents ?? 0) });
   const who = c.fundedBy === 'merchant' ? t('fundedMerchant', { name: c.merchantName ?? c.merchantId ?? '' }) : t('fundedNorthline');
   return (
     <li className="nl-fi-refund">
       <div>
         <strong>{c.code}</strong> · {off} · {who}
-        <div className="nl-fi-sub">{t(`state_${c.state}`)} · {t('used', { n: c.redeemed, amount: fmt.money(c.discountCents) })} · {c.appliesTo.map(k => t(`kind_${k as 'goods'}`)).join(', ')}</div>
+        <div className="nl-fi-sub">{t(`state_${c.state}`)} · {t('used', { n: c.redeemed, amount: fmt.price(c.discountCents) })} · {c.appliesTo.map(k => t(`kind_${k as 'goods'}`)).join(', ')}</div>
       </div>
       {canChange ? <Switch checked={c.active} onChange={v => toggle.mutate(v)} label={t('activeLabel', { code: c.code })} disabled={toggle.isPending} /> : null}
     </li>
@@ -107,7 +107,7 @@ function NewCode({ onDone }: { onDone: () => void }) {
       {failed ? <p className="nl-error" role="alert">{failed}</p> : null}
       <div className="nl-fi-promo-actions">
         <Button type="submit" disabled={create.isPending}>{t('create')}</Button>
-        <Button variant="ghost" onClick={onDone}>{t('cancel')}</Button>
+        <Button variant="tertiary" onClick={onDone}>{t('cancel')}</Button>
       </div>
     </form>
   );

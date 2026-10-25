@@ -29,8 +29,11 @@ export function build({ categories, config, marketplace }) {
   const fallback = {};
   const slugs = { service: {}, shop: {}, food: {} };
   const groups = { service: {}, shop: {}, food: {} };
+  // S-181: slots that show the designed fallback (the photo well) instead of a photo, by choice
+  const designed = new Set(config.designed?.slots ?? []);
   const add = (slot, s) => {
     if (slots.some(x => x.slot === slot)) throw new Error(`${slot}: listed twice`);
+    if (designed.has(slot)) { slots.push({ slot, ...s, fallback: undefined, designed: true }); return; }
     slots.push({ slot, ...s });
     if (s.fallback) fallback[slot] = s.fallback;
   };
@@ -60,6 +63,7 @@ export function build({ categories, config, marketplace }) {
     }
   }
   const known = new Set(slots.map(s => s.slot));
+  for (const d of designed) if (!known.has(d)) throw new Error(`designed: ${d} is not a slot`);
   for (const s of slots) if (s.fallback && !known.has(s.fallback)) throw new Error(`${s.slot}: falls back to ${s.fallback}, which is not a slot`);
   for (const id of Object.keys(hints)) if (!id.startsWith('$') && !known.has(`category/${id}`)) throw new Error(`categoryHints: ${id} is not a category`);
   return {
@@ -93,7 +97,8 @@ function main(args) {
   for (const [path, text] of Object.entries(files)) writeFileSync(path, text);
   if (!args.includes('--missing') && !args.includes('--todo')) { console.log(`photo slots: ${slots.count} (generated/slots.json)`); return; }
   const photos = read(join(HERE, 'photos.json')).photos;
-  const missing = slots.slots.filter(s => !processed(photos[s.slot]));
+  const missing = slots.slots.filter(s => !s.designed && !processed(photos[s.slot]));
+  const designedList = slots.slots.filter(s => s.designed);
   if (args.includes('--todo')) {
     for (const s of missing) console.log(JSON.stringify({ slot: s.slot, search: s.query, use: s.use }));
     return;
@@ -103,7 +108,8 @@ function main(args) {
     console.log(`\n${group} (${list.length} without a photo)`);
     for (const s of list) console.log(`  ${s.slot.padEnd(66)} search: ${s.query}${s.fallback ? `   [meanwhile: ${s.fallback}]` : ''}`);
   }
-  console.log(`\n${missing.length} of ${slots.count} slots have no photo yet${missing.length ? ' (each shows its fallback, finally the drawn picture)' : ''}.`);
+  if (designedList.length) console.log(`\n${designedList.length} slot(s) show the designed fallback by choice (slots.config.json designed): ${designedList.map(s => s.slot).join(', ')}`);
+  console.log(`\n${missing.length} of ${slots.count} slots have no photo yet${missing.length ? ' (each shows its fallback, finally the designed photo well)' : ''}.`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main(process.argv.slice(2));

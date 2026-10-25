@@ -7,10 +7,10 @@
  */
 export type ScreenKey =
   | 'home' | 'location' | 'search'
-  | 'shop' | 'category' | 'product' | 'cart' | 'checkout' | 'checkoutComplete' | 'confirmed'
+  | 'shop' | 'category' | 'store' | 'product' | 'cart' | 'checkout' | 'checkoutComplete' | 'confirmed'
   | 'food' | 'restaurant' | 'foodCheckout' | 'foodTrack' | 'foodGroup'
   | 'services' | 'svcCategory' | 'providers' | 'provider' | 'book' | 'booking' | 'quote' | 'quoteRequest' | 'quoteCompare'
-  | 'orders' | 'account' | 'accountDelete' | 'accountDeletion' | 'messages' | 'problem' | 'signIn' | 'register' | 'sell' | 'help' | 'credits';
+  | 'orders' | 'account' | 'accountDelete' | 'accountDeletion' | 'messages' | 'problem' | 'signIn' | 'register' | 'forgotPassword' | 'resetPassword' | 'verifyEmail' | 'sell' | 'help' | 'credits';
 
 export interface Screen {
   /** Route path (TanStack Router syntax). */
@@ -29,6 +29,8 @@ export const SCREENS: Record<ScreenKey, Screen> = {
   search: { path: '/search', story: 'S-48' },
   shop: { path: '/shop', story: 'S-49', section: 'shop' },
   category: { path: '/shop/$department', story: 'S-49', section: 'shop' },
+  /** E-15 S-172: a shop's page (its card and its goods). */
+  store: { path: '/shop/stores/$merchantId', story: 'S-172', section: 'shop' },
   product: { path: '/products/$productId', story: 'S-50', section: 'shop' },
   cart: { path: '/cart', story: 'S-51', section: 'shop' },
   /** Redesign phase 1 (§ 2.1, AT Shop:502): the 3-step checkout the payment moved to from the cart. */
@@ -66,6 +68,10 @@ export const SCREENS: Record<ScreenKey, Screen> = {
   problem: { path: '/account/problem/$kind/$id', story: 'S-60' },
   signIn: { path: '/sign-in', story: 'S-62', auth: true },
   register: { path: '/register', story: 'S-62', auth: true },
+  /** S-154's email-link pages and "Forgot password?" (E-15 S-173: no site navigation on auth pages, like sign-in). */
+  forgotPassword: { path: '/forgot-password', story: 'S-154', auth: true },
+  resetPassword: { path: '/reset-password', story: 'S-154', auth: true },
+  verifyEmail: { path: '/verify-email', story: 'S-154', auth: true },
   sell: { path: '/sell', story: 'S-61' },
   /** Help for guests and signed-in people alike, linked from every page's footer (WCAG 3.2.6). */
   help: { path: '/help', story: 'S-145' },

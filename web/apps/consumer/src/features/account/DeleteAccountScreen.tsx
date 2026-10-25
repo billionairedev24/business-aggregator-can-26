@@ -30,7 +30,7 @@ export function DeleteAccountScreen() {
   const [error, setError] = useState<string>();
 
   if (loading || (user && (requests.isPending || preview.isPending))) {
-    return <div className="nl-page"><Skeleton width={320} height={36} /><Skeleton height={220} style={{ marginTop: 20 }} /></div>;
+    return <div className="nl-page nl-skel-stack"><Skeleton width={320} height={36} /><Skeleton height={220} /></div>;
   }
   if (!user) {
     return (

@@ -124,7 +124,7 @@ describe('service category (design 06 svcCategory)', () => {
     expect(screen.getByText(/^Licensed technicians who bring the shop to you\./)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Common jobs & typical prices' })).toBeInTheDocument();
     const brake = screen.getByRole('link', { name: /Brake inspection/ });
-    expect(brake).toHaveTextContent('$89');
+    expect(brake).toHaveTextContent('$89.00');
     expect(brake).toHaveAttribute('href', '/services/mobile-mechanic/providers');
     expect(screen.getByRole('link', { name: /Alternator \/ starter/ })).toHaveTextContent('Quote');
     expect(screen.getByRole('heading', { name: 'How booking works for mobile mechanic' })).toBeInTheDocument();
@@ -157,7 +157,7 @@ describe('service category (design 06 svcCategory)', () => {
     expect(screen.getByText('Permis vérifié · AMVIC')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Voir 14 mécaniciens' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Décrivez le travail, obtenez 3 devis' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Brake inspection/ })).toHaveTextContent('89 $');
+    expect(screen.getByRole('link', { name: /Brake inspection/ })).toHaveTextContent('89,00 $');
   });
 });
 
@@ -250,8 +250,8 @@ describe('provider list (design 06 providers; redesign service cards, AT Shop:89
 describe('formatting', () => {
   const t = ((k: string, v?: Record<string, unknown>) => ({ priceQuote: 'Quote', priceFree: 'Free', perHour: `${v?.price}/h`, priceFrom: `from ${v?.price}`, availToday: `Today ${v?.time}`, availTomorrow: `Tomorrow ${v?.time}`, availDay: `${v?.day} ${v?.time}`, noOpenings: 'none' } as Record<string, string>)[k] ?? k) as never;
   it('prices as the design writes them', () => {
-    expect(price(t, 'en', 'fixed', 8900)).toBe('$89');
-    expect(price(t, 'en', 'hourly', 4500, true)).toBe('from $45/h');
+    expect(price(t, 'en', 'fixed', 8900)).toBe('$89.00');
+    expect(price(t, 'en', 'hourly', 4500, true)).toBe('from $45.00/h');
     expect(price(t, 'en', 'fixed', 6450)).toBe('$64.50');
     expect(price(t, 'en', 'quote', null)).toBe('Quote');
   });

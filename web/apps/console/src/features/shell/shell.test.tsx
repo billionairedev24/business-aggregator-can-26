@@ -8,20 +8,42 @@ import { expectNoAxeViolations } from '@northline/a11y/vitest';
 const sidebar = (name = 'Main navigation') => screen.getByRole('navigation', { name });
 const navLabels = () => within(sidebar()).getAllByRole('link').map(a => a.textContent);
 /** The accordion's group heads (the rail toggle has no text). */
-const groupHeads = (name?: string) => within(sidebar(name)).getAllByRole('button').filter(b => b.hasAttribute('aria-expanded')).map(b => b.textContent);
+// E-15 (S-174): a group is a list named by its caps heading (no collapsing)
+const groupHeads = (name?: string) => [...sidebar(name).querySelectorAll('ul[aria-labelledby]')].map(ul => document.getElementById(ul.getAttribute('aria-labelledby')!)?.textContent);
 
 describe('console shell (S-90, design 03)', () => {
-  it('shows the top bar: brand, search pill, the region line from the region model, the person and role', async () => {
+  it('shows the top bar: brand, the market scope from the region model, the search, the person and role (S-177)', async () => {
     staffApi(['admin']);
     renderConsole('/');
-    expect(await screen.findByRole('searchbox', { name: 'Search the console' })).toHaveProperty('placeholder', 'Search sellers, orders, customers, cases…');
+    expect(await screen.findByRole('combobox', { name: 'Search the console' })).toHaveProperty('placeholder', 'Search sellers, orders, people');
     expect(screen.getByRole('search', { name: 'Search the console' })).toBeTruthy(); // S-109: a named landmark (landmark-unique)
     expect(screen.getByText('Console')).toBeTruthy();
-    expect(await screen.findByText('Ops · Alberta + BC pilot')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Change the market: All markets, Alberta + BC pilot' })).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
     const account = screen.getByRole('button', { name: 'Account menu' });
-    expect(account.textContent).toContain('Priya N.');
+    expect(account.textContent).toContain('Priya Natarajan');
     expect(account.textContent).toContain('Admin');
+  });
+
+  it('rescopes the screens to a market from the top bar, and remembers it (S-177)', async () => {
+    const calls = staffApi(['admin'], c => (c.url.includes('/api/v1/console/overview') ? { body: overview() } : undefined));
+    renderConsole('/');
+    await screenReady();
+    await userEvent.click(await screen.findByRole('button', { name: /^Change the market/ }));
+    await userEvent.click(screen.getByRole('menuitemradio', { name: 'Calgary' }));
+    await waitFor(() => expect(calls.some(c => c.url.includes('/api/v1/console/overview') && c.url.includes('market=calgary') && c.url.includes('province=AB'))).toBe(true));
+    expect(screen.getByRole('button', { name: 'Change the market: Calgary, Alberta' })).toBeTruthy();
+    expect(JSON.parse(localStorage.getItem('nl.console.scope') ?? '{}')).toEqual({ province: 'AB', market: 'calgary' });
+  });
+
+  it('searches sellers or orders from the top bar, as the role allows (S-177)', async () => {
+    staffApi(['admin']);
+    const { router } = renderConsole('/');
+    const box = await screen.findByRole('combobox', { name: 'Search the console' });
+    await userEvent.type(box, 'NL-48');
+    await userEvent.click(screen.getByRole('option', { name: 'Orders and bookings with reference “NL-48”' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/orders'));
+    expect(router.state.location.search).toMatchObject({ view: 'all', q: 'NL-48' });
   });
 
   it('an admin sees every group and screen', async () => {
@@ -117,7 +139,7 @@ describe('console shell (S-90, design 03)', () => {
     renderConsole('/');
     await user.click(await screen.findByRole('button', { name: 'Account menu' }));
     await user.click(screen.getByRole('menuitem', { name: /Language \/ Langue/ }));
-    expect(await screen.findByRole('searchbox', { name: 'Rechercher dans la console' })).toBeTruthy();
+    expect(await screen.findByRole('combobox', { name: 'Rechercher dans la console' })).toBeTruthy();
     expect(groupHeads('Navigation principale')).toEqual(['Opérations', 'Marché', 'Plateforme']);
   });
 });

@@ -1,31 +1,40 @@
 - main:
-  - region "Everything local, from people you can trust":
-    - heading "Everything local, from people you can trust" [level=1]
-    - paragraph: Book verified pros, shop neighbourhood stores and get it all delivered together — you pay only when it’s done.
-    - link "Find a pro":
-      - /url: /services
-    - link "Shop local stores":
-      - /url: /shop
-    - paragraph:
-      - text: Choose where you are to see what’s close
-      - button "Set your location"
-    - list "Popular":
+  - 'heading "Northline: everything local, from people you can trust" [level=1]'
+  - region "Glenmore Bakery, on tonight’s pooled run":
+    - heading "Glenmore Bakery, on tonight’s pooled run" [level=2]
+    - paragraph: /5 products from one of Calgary’s Master shops in Bakery\. Order by 5:\d+ p[\d,.]+[bkmBKM]+\. and it rides the shared delivery with the other shops in your cart\./
+    - link "Shop Glenmore Bakery":
+      - /url: /search?scope=shop&q=Glenmore+Bakery
+    - link "More bakery":
+      - /url: /shop/bakery
+    - list "Maker of the week":
       - listitem:
-        - link "Mobile mechanic":
-          - /url: /services/mobile-mechanic
+        - link "Brake pads Quotes from Prairie Wrench":
+          - /url: /providers/prairie-wrench
+          - strong: Brake pads
       - listitem:
-        - link "Home cleaning":
-          - /url: /services/house-cleaning
+        - link "Order dinner Local kitchens, hot food to your door":
+          - /url: /food
+          - strong: Order dinner
+  - region "Shop local departments":
+    - heading "Shop local departments" [level=2]
+    - list:
       - listitem:
         - link "Bakery":
           - /url: /shop/bakery
       - listitem:
         - link "Groceries":
           - /url: /shop/groceries
-  - region "Book a service":
-    - heading "Book a service" [level=2]
-    - 'link "See more: Book a service"':
-      - /url: /services
+      - listitem:
+        - link "Butcher":
+          - /url: /shop/butcher
+      - listitem:
+        - link "Produce":
+          - /url: /shop/produce
+    - link "Shop all departments":
+      - /url: /shop
+  - region "Book trusted pros":
+    - heading "Book trusted pros" [level=2]
     - list:
       - listitem:
         - link "Mobile mechanic":
@@ -39,38 +48,34 @@
       - listitem:
         - link "Barber & hair":
           - /url: /services/barber-and-hair
-      - listitem:
-        - link "Tutor":
-          - /url: /services/tutor-k-12
-      - listitem:
-        - link "Movers":
-          - /url: /services/movers
-  - region "Shop local":
-    - heading "Shop local" [level=2]
-    - 'link "See more: Shop local"':
-      - /url: /shop
+    - link "See all services":
+      - /url: /services
+  - region "Kitchens open now":
+    - heading "Kitchens open now" [level=2]
     - list:
       - listitem:
-        - link "Groceries":
-          - /url: /shop/groceries
+        - link "Vietnamese":
+          - /url: /food?cuisine=vietnamese
       - listitem:
-        - link "Bakery":
-          - /url: /shop/bakery
+        - link "Indian":
+          - /url: /food?cuisine=indian
       - listitem:
-        - link "Butcher":
-          - /url: /shop/butcher
+        - link "Pizza":
+          - /url: /food?cuisine=pizza
       - listitem:
-        - link "Produce":
-          - /url: /shop/produce
-      - listitem:
-        - link "Pharmacy":
-          - /url: /shop/pharmacy-otc
-      - listitem:
-        - link "Gifts":
-          - /url: /shop/gifts-and-crafts
+        - link "Ramen":
+          - /url: /food?cuisine=ramen
+    - link "See all kitchens":
+      - /url: /food
+  - region "Popular today":
+    - heading "Popular today" [level=2]
+    - link /Country sourdough Glenmore Bakery \$\d+\.\d+ Order by 5:\d+ p[\d,.]+[bkmBKM]+\. for tonight/:
+      - /url: /products/P1
+    - link "See the product":
+      - /url: /products/P1
   - region "Popular near you":
     - heading "Popular near you" [level=2]
-    - 'link "See more: Popular near you"':
+    - 'link "Shop all departments: Popular near you"':
       - /url: /shop
     - list:
       - listitem:
@@ -79,37 +84,7 @@
             - link "Country sourdough":
               - /url: /products/O1?offer=O1
           - text: /Glenmore Bakery · Bakery \$\d+\.\d+ Get it/
-          - strong: tonight
-      - listitem:
-        - link /Mobile mechanic Brake pads 4\.9 out of 5 stars \d+ reviews Prairie Wrench Instant book Verified Quote/:
-          - /url: /providers/prairie-wrench
-          - heading "Brake pads" [level=3]
-          - img "4.9 out of 5 stars"
-      - listitem:
-        - article "Pho tai":
-          - heading "Pho tai" [level=3]:
-            - link "Pho tai":
-              - /url: /food/pho-dau-bo
-          - text: /Pho Dau Bo · Vietnamese · 1\.2 km \$\d+\.\d+/
-          - strong: Open now
-      - listitem:
-        - link /Shop Sidewalk Citizen New Verified from \$\d+\.\d+/:
-          - /url: /search?scope=shop&q=Sidewalk+Citizen
-          - heading "Sidewalk Citizen" [level=3]
-  - region "Pros near you":
-    - heading "Pros near you" [level=2]
-    - 'link "See more: Pros near you"':
-      - /url: /services
-    - 'button "Scroll back: Pros near you" [disabled]'
-    - 'button "Scroll on: Pros near you"'
-    - list:
-      - listitem:
-        - article "Country sourdough":
-          - heading "Country sourdough" [level=3]:
-            - link "Country sourdough":
-              - /url: /products/O1?offer=O1
-          - text: /Glenmore Bakery · Bakery \$\d+\.\d+ Get it/
-          - strong: tonight
+          - strong: /Tonight, 6–9 p[\d,.]+[bkmBKM]+\./
           - 'button "Add to cart: Country sourdough"'
       - listitem:
         - link /Mobile mechanic Brake pads 4\.9 out of 5 stars \d+ reviews Prairie Wrench Instant book Verified Quote/:
@@ -121,14 +96,38 @@
           - heading "Pho tai" [level=3]:
             - link "Pho tai":
               - /url: /food/pho-dau-bo
-          - text: /Pho Dau Bo · Vietnamese · 1\.2 km \$\d+\.\d+/
+          - text: /Pho Dau Bo · 1\.2 km \$\d+\.\d+/
           - strong: Open now
       - listitem:
         - link /Shop Sidewalk Citizen New Verified from \$\d+\.\d+/:
           - /url: /search?scope=shop&q=Sidewalk+Citizen
           - heading "Sidewalk Citizen" [level=3]
-  - region "Sell or offer services":
-    - heading "Sell or offer services" [level=2]
-    - paragraph: Open your shop or take bookings — verification, payments and payouts included.
-    - link "Get started":
-      - /url: /sell
+  - region "Top-rated pros near you":
+    - heading "Top-rated pros near you" [level=2]
+    - 'link "See all services: Top-rated pros near you"':
+      - /url: /services
+    - list:
+      - listitem:
+        - article "Country sourdough":
+          - heading "Country sourdough" [level=3]:
+            - link "Country sourdough":
+              - /url: /products/O1?offer=O1
+          - text: /Glenmore Bakery · Bakery \$\d+\.\d+ Get it/
+          - strong: /Tonight, 6–9 p[\d,.]+[bkmBKM]+\./
+          - 'button "Add to cart: Country sourdough"'
+      - listitem:
+        - link /Mobile mechanic Brake pads 4\.9 out of 5 stars \d+ reviews Prairie Wrench Instant book Verified Quote/:
+          - /url: /providers/prairie-wrench
+          - heading "Brake pads" [level=3]
+          - img "4.9 out of 5 stars"
+      - listitem:
+        - article "Pho tai":
+          - heading "Pho tai" [level=3]:
+            - link "Pho tai":
+              - /url: /food/pho-dau-bo
+          - text: /Pho Dau Bo · 1\.2 km \$\d+\.\d+/
+          - strong: Open now
+      - listitem:
+        - link /Shop Sidewalk Citizen New Verified from \$\d+\.\d+/:
+          - /url: /search?scope=shop&q=Sidewalk+Citizen
+          - heading "Sidewalk Citizen" [level=3]

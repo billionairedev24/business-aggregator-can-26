@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, Checkbox, EmptyState, ErrorState, PageHeader, PageSkeleton, useFormatters } from '@northline/ui';
+import { Alert, BoHeader, Button, Checkbox, EmptyState, ErrorState, KpiStrip, PageSkeleton, StatusTag, useFormatters, type StatusTone } from '@northline/ui';
 import { useMerchantId, useRole } from '../shell/api';
 import { appealFileUrl, standingQuery, useTickTask, type Appeal, type Coaching, type Consequence, type DisputeToAppeal } from './api';
 import { AppealDialog } from './AppealDialog';
@@ -22,16 +22,25 @@ export function StandingScreen() {
   const q = useQuery(standingQuery(merchantId));
   const [appealing, setAppealing] = useState<Subject>();
   const [sent, setSent] = useState<string>();
+  const f = useFormatters();
 
-  if (q.isPending) return <PageSkeleton kpis={0} rows={4} />;
-  if (q.isError) return <><PageHeader kicker={t('kicker')} title={t('title')} /><ErrorState message={t('loadError')} onRetry={() => void q.refetch()} /></>;
+  if (q.isPending) return <><BoHeader title={t('kicker')} /><PageSkeleton kpis={4} rows={4} /></>;
+  if (q.isError) return <><BoHeader title={t('kicker')} /><ErrorState message={t('loadError')} onRetry={() => void q.refetch()} /></>;
   const s = q.data;
   const owner = role === 'owner';
   const nothing = !s.active.length && !s.appealableDisputes.length && !s.coaching;
+  const openAppeals = s.appeals.filter(a => a.state === 'open' || a.state === 'in_review').length;
+  const tasksDone = s.coaching?.tasks.filter(x => x.done).length ?? 0;
 
   return (
-    <>
-      <PageHeader kicker={t('kicker')} title={t('title')} />
+    <div className="nl-st-page">
+      <BoHeader title={t('kicker')} sub={t('title')} />
+      <KpiStrip label={t('kpis')} items={[
+        { key: 'force', label: t('kpiInForce'), value: f.number(s.active.length), ...(s.active.length ? { delta: t('kpiInForceDelta'), trend: 'down' as const } : { delta: t('kpiClear'), trend: 'up' as const }) },
+        { key: 'disputes', label: t('kpiAppealable'), value: f.number(s.appealableDisputes.length) },
+        { key: 'appeals', label: t('kpiOpenAppeals'), value: f.number(openAppeals) },
+        { key: 'coaching', label: t('kpiCoaching'), value: s.coaching ? `${f.number(tasksDone)} / ${f.number(s.coaching.tasks.length)}` : '—', ...(s.coaching ? { delta: t('kpiCoachingDelta') } : {}) },
+      ]} />
       <p className="nl-st-lede">{t('lede')}</p>
       {sent ? <Alert tone="info" role="status">{sent}</Alert> : null}
       {nothing ? <EmptyState>{t('allClear')}</EmptyState> : null}
@@ -72,7 +81,7 @@ export function StandingScreen() {
           onClose={() => setAppealing(undefined)}
           onSent={a => { setAppealing(undefined); setSent(t('sent', { number: a.number })); }} />
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -81,10 +90,11 @@ function ConsequenceCard({ c, owner, onAppeal }: { c: Consequence; owner: boolea
   const { date } = useFormatters();
   const by = c.cause === 'staff' ? t('by_staff') : t('by_rules');
   return (
-    <li className="nl-st-card">
+    <li className="nl-st-card" data-tone="danger">
       <div className="nl-st-head">
         <h3 className="nl-st-title">{t(`kind_${c.kind}` as StandingKey)}</h3>
-        <span className="tag tag-warning">{by}</span>
+        <StatusTag tone="danger">{t('inForceTag')}</StatusTag>
+        <span className="nl-st-meta">{by}</span>
       </div>
       <p className="nl-st-meta">{t('since', { date: date(c.startedAt) })}{c.endsAt ? ` · ${t('until', { date: date(c.endsAt, 'dateTime') })}` : ''}</p>
       <p className="nl-st-text">{t(`what_${c.kind}` as StandingKey)}</p>
@@ -102,11 +112,14 @@ function ConsequenceCard({ c, owner, onAppeal }: { c: Consequence; owner: boolea
 
 function DisputeCard({ d, owner, onAppeal }: { d: DisputeToAppeal; owner: boolean; onAppeal: () => void }) {
   const t = useStandingT();
-  const { date, money } = useFormatters();
+  const { date, price } = useFormatters();
   return (
-    <li className="nl-st-card">
-      <h3 className="nl-st-title">{t('disputeLine', { case: d.caseNumber, subject: d.subject })}</h3>
-      <p className="nl-st-text">{t(`disputeDecision_${d.decision === 'partial' ? 'partial' : 'full_refund'}` as StandingKey, { amount: money(d.refundCents) })}</p>
+    <li className="nl-st-card" data-tone="warning">
+      <div className="nl-st-head">
+        <h3 className="nl-st-title">{t('disputeLine', { case: d.caseNumber, subject: d.subject })}</h3>
+        <StatusTag tone="warning">{t('appealableTag')}</StatusTag>
+      </div>
+      <p className="nl-st-text">{t(`disputeDecision_${d.decision === 'partial' ? 'partial' : 'full_refund'}` as StandingKey, { amount: price(d.refundCents) })}</p>
       {d.note ? <p className="nl-st-reason">{t('disputeNote', { note: d.note })}</p> : null}
       <div className="nl-st-actions">
         <span className="nl-st-meta">{t('appealBy', { date: date(d.appealBy) })}</span>
@@ -127,7 +140,7 @@ function CoachingPanel({ plan, merchantId, canTick }: { plan: Coaching; merchant
       <div className="nl-st-card">
         <div className="nl-st-head">
           <h3 className="nl-st-title">{plan.title}</h3>
-          <span className="tag tag-neutral">{t('tasksDone', { done, total: plan.tasks.length })}</span>
+          <StatusTag tone={done === plan.tasks.length ? 'success' : 'info'}>{t('tasksDone', { done, total: plan.tasks.length })}</StatusTag>
         </div>
         <p className="nl-st-meta">{t('coachingFrom')}{plan.dueOn ? ` · ${t('dueOn', { date: date(`${plan.dueOn}T12:00:00Z`) })}` : ''}</p>
         {plan.note ? <p className="nl-st-text">{plan.note}</p> : null}
@@ -147,14 +160,14 @@ function CoachingPanel({ plan, merchantId, canTick }: { plan: Coaching; merchant
 
 function AppealCard({ a, merchantId }: { a: Appeal; merchantId: string }) {
   const t = useStandingT();
-  const { date, money } = useFormatters();
+  const { date, price } = useFormatters();
   const what = a.subjectType === 'dispute' ? t('disputeWhat', { case: a.subjectLabel ?? a.subjectId }) : t(`kind_${a.subjectKind}` as StandingKey);
-  const tone = a.state === 'granted' ? 'tag-success' : a.state === 'denied' ? 'tag-neutral' : 'tag-highlight';
+  const tone: StatusTone = a.state === 'granted' ? 'success' : a.state === 'denied' ? 'danger' : 'info';
   return (
     <li className="nl-st-card">
       <div className="nl-st-head">
         <h3 className="nl-st-title">{t('appealOf', { number: a.number, what })}</h3>
-        <span className={`tag ${tone}`}>{t(`state_${a.state}` as StandingKey)}</span>
+        <StatusTag tone={tone}>{t(`state_${a.state}` as StandingKey)}</StatusTag>
       </div>
       <p className="nl-st-meta">{t('filedOn', { date: date(a.filedAt) })}{a.decidedAt ? ` · ${t('decidedOn', { date: date(a.decidedAt) })}` : ''}</p>
       <p className="nl-st-text">{a.statement}</p>
@@ -164,7 +177,7 @@ function AppealCard({ a, merchantId }: { a: Appeal; merchantId: string }) {
         </ul>
       ) : null}
       {a.decisionReason ? <p className="nl-st-reason">{t('reason', { reason: a.decisionReason })}</p> : null}
-      {a.compensationCents > 0 ? <p className="nl-st-text">{t('compensation', { amount: money(a.compensationCents) })}</p> : null}
+      {a.compensationCents > 0 ? <p className="nl-st-text">{t('compensation', { amount: price(a.compensationCents) })}</p> : null}
     </li>
   );
 }

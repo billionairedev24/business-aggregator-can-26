@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Icon, MIN_TARGET, colors, fonts, radius, semantic, space, type IconName } from '@northline/mobile-kit';
+import { colors, Icon, LINE, MIN_TARGET, Switch, radius, semantic, space, textStyles, type IconName } from '@northline/mobile-kit';
 
 import { type } from '../ui/primitives';
 
@@ -56,23 +56,9 @@ export function LineRow({ children, right, testID }: { children: ReactNode; righ
   );
 }
 
+/** A labelled on/off switch row: the kit's Switch (the whole row the target, ink when on). */
 export function Toggle({ label, value, onChange, disabled, testID }: { label: string; value: boolean; onChange: (v: boolean) => void; disabled?: boolean; testID?: string }) {
-  return (
-    <View style={styles.row}>
-      <Text style={[type.body, styles.name]}>{label}</Text>
-      <Switch
-        accessibilityRole="switch"
-        accessibilityLabel={label}
-        accessibilityState={{ checked: value, disabled: !!disabled }}
-        value={value}
-        onValueChange={onChange}
-        disabled={disabled}
-        trackColor={{ true: colors.accent, false: colors.neutral300 }}
-        thumbColor={colors.surface}
-        testID={testID}
-      />
-    </View>
-  );
+  return <Switch label={label} value={value} onChange={onChange} disabled={disabled} testID={testID} />;
 }
 
 /** The design's h3 (16px, semibold) between groups of rows. */
@@ -86,19 +72,19 @@ export function Heading({ children }: { children: ReactNode }) {
 
 export const accountStyles = StyleSheet.create({
   list: { gap: 0 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[1.5] },
   form: { gap: space[3] },
   actions: { gap: space[2], paddingTop: space[2] },
   sub: { gap: 2, flex: 1, minWidth: 0 },
 });
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: Math.max(MIN_TARGET, 52), paddingVertical: 4, paddingHorizontal: 14 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: Math.max(MIN_TARGET, 52), paddingVertical: space[1], paddingHorizontal: space[3.5] },
   pressed: { backgroundColor: semantic['surface-hover'] },
   name: { flex: 1, minWidth: 0 },
   value: { maxWidth: '45%' },
-  danger: { color: colors.danger },
-  group: { gap: 6 },
-  box: { borderWidth: 1, borderColor: semantic['border-card'], borderRadius: radius.lg, overflow: 'hidden', backgroundColor: colors.surface },
-  heading: { fontFamily: fonts.display, fontSize: 20, lineHeight: 26, color: colors.text, marginTop: space[4] },
+  danger: { color: semantic.danger },
+  group: { gap: space[1.5] },
+  box: { borderWidth: LINE.hair, borderColor: semantic['border-card'], borderRadius: radius.panel, overflow: 'hidden', backgroundColor: semantic.surface },
+  heading: { ...StyleSheet.flatten(textStyles.section), marginTop: space[4] },
 });

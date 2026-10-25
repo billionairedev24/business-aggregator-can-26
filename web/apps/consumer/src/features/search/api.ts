@@ -37,6 +37,8 @@ export const SearchParams = z.object({
   dietary: list,
   allergenFree: list,
   radiusKm: z.coerce.number().int().min(1).max(100).optional().catch(undefined),
+  /** E-15: the results page shown (24 a page); the page's own, never sent to the api (pages follow its `next` cursor). */
+  page: z.coerce.number().int().min(2).max(50).optional().catch(undefined),
 });
 export type SearchParams = z.infer<typeof SearchParams>;
 
@@ -77,6 +79,14 @@ export function apiQuery(p: SearchParams, place: Place | null, locale: Locale): 
   return qs.toString();
 }
 export const PAGE_SIZE = 24;
+
+/** The price facet's buckets (S-44: under_10 … 100_plus, dollars) as the api's inclusive cents. */
+export const PRICE_BUCKETS: Record<string, { min?: number; max?: number }> = {
+  under_10: { max: 999 }, '10_25': { min: 1000, max: 2499 }, '25_50': { min: 2500, max: 4999 }, '50_100': { min: 5000, max: 9999 }, '100_plus': { min: 10000 },
+};
+/** The bucket the page's price range is, when it is one. */
+export const priceBucketOf = (p: Pick<SearchParams, 'minPrice' | 'maxPrice'>) =>
+  Object.entries(PRICE_BUCKETS).find(([, b]) => b.min === p.minPrice && b.max === p.maxPrice)?.[0];
 
 const Merchant = z.object({
   id: z.string(), name: z.string(), type: z.string(), slug: z.string().nullish(), tier: z.string().nullish(),
@@ -209,8 +219,9 @@ export const imageUrl = (key: string | null | undefined) =>
  * A home rail (redesign § 1.3 "Rails"): the first dozen products or services where the visitor is, from the same
  * public search — the browser asks once the place is known (the server doesn't know where the visitor is).
  */
-export const railQuery = (kind: 'product' | 'service', place: Place, locale: Locale) => {
+export const railQuery = (kind: 'product' | 'service', place: Place, locale: Locale, sort?: Extract<Sort, 'rating'>) => {
   const qs = new URLSearchParams({ kind, lang: locale, size: '12' });
+  if (sort) qs.set('sort', sort);
   if (place.market) qs.set('market', place.market);
   if (place.lat !== undefined && place.lng !== undefined) { qs.set('lat', place.lat.toFixed(5)); qs.set('lng', place.lng.toFixed(5)); }
   return queryOptions({

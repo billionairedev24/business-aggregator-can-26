@@ -1,6 +1,6 @@
 /* Sellers & providers, the sheet and the seller detail (S-82; redesign § 2.3 → BO `orgs`). Semantic tokens only. */
 .nl-sl-bar { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
-.nl-sl-search .input { min-height: var(--size-touch); width: min(320px, 100%); border-radius: var(--radius-sm); }
+.nl-sl-search .input { min-height: var(--size-touch); width: min(320px, 100%); }
 .nl-sl-note { margin: 0; color: var(--color-text-muted); font-size: var(--text-sm); }
 .nl-sl-error { margin: 0; color: var(--color-danger); font-size: var(--text-md); }
 .nl-sl-low { color: var(--color-danger); font-weight: var(--weight-semibold); }
@@ -8,16 +8,16 @@
 .nl-sl-unsuspend { border-color: var(--color-danger-border); color: var(--color-danger); }
 .nl-sl-options { display: flex; flex-direction: column; gap: var(--space-2); }
 .nl-sl-apply { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
-.nl-sl-signal { display: grid; grid-template-columns: minmax(96px, 180px) minmax(0, 1fr) 52px; align-items: center; gap: var(--space-3); padding: 6px 0; font-size: var(--text-md); }
+.nl-sl-signal { display: grid; grid-template-columns: minmax(96px, 180px) minmax(0, 1fr) 52px; align-items: center; gap: var(--space-3); padding: var(--space-1-5) 0; font-size: var(--text-md); }
 .nl-sl-signal strong { text-align: right; }
 .nl-sl-track { height: 6px; background: var(--color-badge-neutral-bg); border-radius: var(--radius-pill); position: relative; overflow: hidden; }
-.nl-sl-fill { position: absolute; inset: 0 auto 0 0; border-radius: var(--radius-pill); background: var(--color-success); }
+.nl-sl-fill { position: absolute; inset: 0 auto 0 0; width: var(--pct, 0%); border-radius: var(--radius-pill); background: var(--color-success); }
 .nl-sl-fill[data-low] { background: var(--color-danger); }
 .nl-sl-timeline { list-style: none; margin: 0; padding: 0; font-size: var(--text-md); display: flex; flex-direction: column; gap: var(--space-2); }
 .nl-sl-timeline li { display: flex; gap: var(--space-3); min-width: 0; }
 .nl-sl-timeline li > span:first-child { color: var(--color-text-muted); width: 70px; flex: none; }
 .nl-sl-timeline li > span:last-child { min-width: 0; overflow-wrap: anywhere; }
-.nl-sl-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.nl-sl-tags { display: flex; gap: var(--space-1-5); flex-wrap: wrap; }
 .nl-sl-oversight { position: sticky; top: calc(var(--size-touch) + var(--space-8)); }
 @media (max-width: 899.98px) { .nl-sl-oversight { position: static; } }
 .nl-sl-timeline li { padding-top: var(--space-2); border-top: 1px solid var(--color-border); }

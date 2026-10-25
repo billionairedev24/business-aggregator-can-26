@@ -11,6 +11,7 @@ import { categoryName, familyOf, nouns } from './taxonomy';
 import { Crumbs } from '../pages/Crumbs';
 import { categorySlot } from '@northline/media';
 import { Scene } from '../art/Scene';
+import { useRenderNow } from '../../lib/renderClock';
 
 export type ProviderFilter = 'master' | 'instant' | 'today' | 'under80';
 export const FILTERS: readonly ProviderFilter[] = ['master', 'instant', 'today', 'under80'];
@@ -53,7 +54,8 @@ export function ProviderList({ slug }: { slug: string }) {
   const name = categoryName(category.slug, category.names, locale);
   const noun = nouns(familyOf(category.kind, category.slug, category.vehicle), name.text, locale).heading;
   const zone = useZone();
-  const shown = useMemo(() => applyFilters(list.data?.items ?? [], filters, new Date(), zone), [list.data, filters, zone]);
+  const now = useRenderNow();
+  const shown = useMemo(() => applyFilters(list.data?.items ?? [], filters, now, zone), [list.data, filters, now.getTime(), zone]); // eslint-disable-line react-hooks/exhaustive-deps
   const toggle = (f: ProviderFilter) => setFilters(prev => { const next = new Set(prev); if (next.has(f)) next.delete(f); else next.add(f); return next; });
   const area = list.data?.area ?? list.data?.city ?? location.city ?? '';
 
@@ -103,6 +105,7 @@ function heading(t: ReturnType<typeof useServicesT>, kind: ServiceKind, noun: st
 /** One provider as a ServiceCard (AT Shop:891): mark | the service, name, stars, on-time rate, next opening | "from" price. */
 function ProviderRow({ provider: p, locale, kind }: { provider: ProviderCard; locale: Locale; kind: { text: string; lang?: 'en' } }) {
   const zone = useZone();
+  const now = useRenderNow();
   const t = useServicesT();
   const quote = p.pricingMode === 'quote' || p.fromCents == null;
   return (
@@ -110,7 +113,7 @@ function ProviderRow({ provider: p, locale, kind }: { provider: ProviderCard; lo
       imageUrl={p.imageUrl} mark={<BrandMark name={p.name} color={p.brandColor} size={96} />}
       rating={p.reviewCount > 0 ? p.rating : null} reviewCount={p.reviewCount}
       place={p.onTimePct !== null && p.onTimePct !== undefined ? t('onTime', { pct: percent(p.onTimePct, locale) }) : undefined}
-      note={nextAvailable(t, locale, p.nextAvailable, new Date(), zone)}
+      note={nextAvailable(t, locale, p.nextAvailable, now, zone)}
       priceCents={quote ? null : p.fromCents} priceText={quote ? price(t, locale, p.pricingMode, p.fromCents, true) : undefined}
       priceSuffix={p.pricingMode === 'hourly' ? t('hourSuffix') : undefined}
       verified={p.tier === 'master' || p.tier === 'trusted'} level={2} />
@@ -124,7 +127,7 @@ function ProviderRowsSkeleton({ label }: { label: string }) {
       {Array.from({ length: 4 }, (_, i) => (
         <div key={i} className="nl-scard nl-svc-row-skel">
           <Skeleton width={96} height={96} radius="var(--radius-sm)" />
-          <span><Skeleton width="50%" height={18} /><Skeleton width="70%" height={12} style={{ marginTop: 8 }} /></span>
+          <span><Skeleton width="50%" height={18} /><Skeleton width="70%" height={12} className="nl-skel-gap" /></span>
           <Skeleton width={70} height={16} />
         </div>
       ))}

@@ -1,7 +1,9 @@
 {
-  "$comment": "The fixed rhythm of the AfroTransact layout language (docs/design/redesign-spec.md § 1.2): spacing, type scale, control sizes, shadows, z-index, motion and the page grid. Not part of the brand: a rebrand cannot change it.",
-  "space": { "0": 0, "1": 4, "2": 8, "3": 12, "4": 16, "5": 20, "6": 24, "8": 32, "10": 40, "12": 48, "16": 64 },
+  "$comment": "The fixed rhythm (redesign-spec § 1.2; tokens v2, S-167): spacing, type scale, control sizes, shadows, z-index, motion and the page grid. `type` is the v2 type roles of the locked direction (docs/design/revamp-epic.md: body 14, meta 12, card titles 13.5, page titles 24; S-188: the display roles of the hero, the department tiles and the maker-of-the-week headline, set in `--font-display`) and `density` its marketplace density (5 results a row at 1280, 7 a rail, a 224 px filter rail, a 12 px photo-well inset). Not part of the brand: a rebrand cannot change it.",
+  "space": { "0": 0, "1": 4, "1-5": 6, "2": 8, "2-5": 10, "3": 12, "3-5": 14, "4": 16, "5": 20, "6": 24, "8": 32, "10": 40, "12": 48, "16": 64 },
   "text": { "2xs": 11, "xs": 12, "sm": 13, "md": 14, "base": 15, "lg": 17, "xl": 20, "2xl": 24, "3xl": 30, "4xl": 38, "5xl": 52 },
+  "type": { "page-title": 24, "section": 18, "sub": 16, "card-title": 13.5, "body": 14, "label": 13, "meta": 12, "caps": 11, "price": 17, "price-sm": 15, "price-lg": 28, "display-hero": 66, "display-hero-sm": 36, "display-tile": 32, "display-tile-sm": 24, "display-maker": 30, "display-maker-sm": 24, "run-time": 22, "run-time-sm": 18 },
+  "density": { "results-cols": "5", "rail-cols": "7", "grid-gap-x": 16, "grid-gap-y": 22, "rail-gap": 14, "filter-rail": 224, "card-pad": 10, "well-inset": 12 },
   "fluid": {
     "2xl": "clamp(21px, 19px + 0.5vw, 24px)",
     "3xl": "clamp(24px, 20px + 1vw, 30px)",
@@ -11,7 +13,7 @@
   "weight": { "regular": 400, "medium": 500, "semibold": 600, "bold": 700, "black": 800 },
   "leading": { "tight": 1.2, "normal": 1.45, "relaxed": 1.6 },
   "tracking": { "tight": "-0.015em", "caps": "0.06em" },
-  "size": { "control-sm": 32, "control": 40, "control-lg": 48, "touch": 44, "header-mark": 32, "header": 104, "sidebar": 264, "rail": 72, "sheet": 680 },
+  "size": { "control-sm": 32, "control": 38, "control-lg": 46, "field": 36, "touch": 44, "header-mark": 32, "header": 104, "sidebar": 228, "rail": 72, "sheet": 680 },
   "page": { "max": 1500, "gutter": "clamp(12px, 2.4vw, 32px)" },
   "shadow": {
     "sm": [{ "y": 1, "blur": 2, "alpha": 0.08 }],

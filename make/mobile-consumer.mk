@@ -43,9 +43,12 @@ mobile-consumer-web-smoke: $(MOBILE_INSTALLED) ## Web build on the fixture backe
 # Look at the native apps' screens without a phone (light direction): the web build of each app on its fixture
 # backend, every screen photographed at 390 × 844 by headless Chromium (mobile/scripts/shots.mjs).
 # MOBILE_SHOTS_APPS=consumer|courier (default both) · MOBILE_SHOTS_SKIP_BUILD=1 · MOBILE_SHOTS_ONLY=home,product
+# S-178: the stock photos come from the variants `make photos` builds into the consumer site's /photos/ (built first
+# when missing); shots.mjs answers the app's photo requests from that folder.
 MOBILE_SHOTS_APPS ?= consumer courier
 .PHONY: mobile-shots
 mobile-shots: $(MOBILE_INSTALLED) ## Screenshots of every consumer and courier screen (web build, fixture backend, 390×844) into mobile/shots-out/<app>/
+	@[ -d $(ROOT)/web/apps/consumer/public/photos ] || $(MAKE) photos
 	@for app in $(MOBILE_SHOTS_APPS); do \
 	  pkg=$$( [ "$$app" = consumer ] && echo @northline/consumer-app || echo @northline/courier ); \
 	  if [ -z "$(MOBILE_SHOTS_SKIP_BUILD)" ]; then (cd $(ROOT)/mobile && pnpm --filter $$pkg export:web) || exit 1; fi; \

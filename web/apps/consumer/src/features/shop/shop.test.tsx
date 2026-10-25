@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -7,6 +8,8 @@ import { mockFetch, renderApp, type Call } from '../../test/render';
 import { DepartmentPage } from './DepartmentPage';
 import { ShopSkeleton } from './parts';
 import { ShopLanding } from './ShopLanding';
+import { StorePage } from './StorePage';
+import { loadStore } from './store';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 // Tonight's run: 6–9 pm in Edmonton (MDT = UTC−6), order by 5:20 pm.
@@ -47,9 +50,18 @@ function Department() {
   const { market } = useSearch({ strict: false }) as { market?: string };
   return <Suspense fallback={<ShopSkeleton />}><DepartmentPage slug={department} market={market} /></Suspense>;
 }
+/** The store route's loader (features/shop/store.ts) and its page. */
+function StoreData() {
+  const { merchantId } = useParams({ strict: false }) as { merchantId: string };
+  const search = useSearch({ strict: false }) as { market?: string; dept?: string };
+  const qc = useQueryClient();
+  const { data } = useSuspenseQuery({ queryKey: ['test-store', merchantId], queryFn: () => loadStore(qc, merchantId, search, 'en') });
+  return data ? <StorePage data={data} market={search.market} /> : <h1>Not found</h1>;
+}
+const Store = () => <Suspense fallback={<ShopSkeleton />}><StoreData /></Suspense>;
 const open = (path: string, locale: 'en' | 'fr' = 'en') => {
   const calls = mockFetch(server);
-  const view = renderApp(path, { locale, routes: { shop: () => <Landing />, category: () => <Department /> } });
+  const view = renderApp(path, { locale, routes: { shop: () => <Landing />, category: () => <Department />, store: () => <Store /> } });
   return { calls, ...view };
 };
 const url = (c: Call) => new URL(c.url, 'http://x');
@@ -83,13 +95,21 @@ describe('Shop landing (design 06 shop)', () => {
 
     const run = screen.getByRole('region', { name: 'All shops on tonight’s run' });
     expect(within(run).getByText('One courier, one fee — every shop below packs for the same run.')).toBeInTheDocument();
-    expect(within(run).getByRole('link', { name: /Glenmore Bakery.*Bakery · 5 products.*Order by 5:20 p\.m\./ })).toHaveAttribute('href', '/shop/bakery');
+    expect(within(run).getByRole('link', { name: /Glenmore Bakery.*Bakery · 5 products.*Order by 5:20 p\.m\./ })).toHaveAttribute('href', '/shop/stores/M1?dept=bakery');
     expect(within(run).getByRole('link', { name: /Little Sprouts.*Tomorrow/ })).toBeInTheDocument();
     expect(within(run).getByRole('link', { name: /Empty Shelf.*Not on a run/ })).toBeInTheDocument();
 
     const popular = screen.getByRole('region', { name: 'Popular tonight' });
-    expect(within(popular).getByRole('link', { name: /Country sourdough\s*\$7\.50\s*Glenmore Bakery · 900 g/ })).toHaveAttribute('href', '/products/P1');
-    expect(within(popular).getByRole('link', { name: /Free-run eggs\s*from \$6\.50\s*Bow Valley Dairy \+ 1 more shop/ })).toBeInTheDocument();
+    // E-15: the results' card — the price with its unit price, the shop and size, Add to cart (one seller)
+    const sourdough = within(popular).getByRole('article', { name: 'Country sourdough' });
+    expect(within(sourdough).getByRole('link', { name: 'Country sourdough' })).toHaveAttribute('href', '/products/P1');
+    expect(sourdough).toHaveTextContent(/\$7\.50\$0\.83\/100 g/);
+    expect(sourdough).toHaveTextContent('Glenmore Bakery · 900 g');
+    expect(within(sourdough).getByRole('button', { name: 'Add to cart: Country sourdough' })).toBeInTheDocument();
+    const eggs = within(popular).getByRole('article', { name: 'Free-run eggs' });
+    expect(eggs).toHaveTextContent('from $6.50');
+    expect(eggs).toHaveTextContent('Bow Valley Dairy + 1 more shop');
+    expect(within(eggs).queryByRole('button', { name: /Add to cart/ })).toBeNull(); // several shops: the product page picks
     expect(within(popular).getByRole('link', { name: 'Search everything' })).toHaveAttribute('href', '/search?scope=shop');
   });
 
@@ -98,11 +118,11 @@ describe('Shop landing (design 06 shop)', () => {
     api = c => (url(c).pathname === '/api/v1/public/shop' ? { body: { ...LANDING, popular: [...LANDING.popular, lager] } } : undefined);
     const first = open('/shop');
     const popular = await screen.findByRole('region', { name: 'Popular tonight' });
-    expect(within(popular).getByRole('link', { name: /Craft lager 6-pack.*Bow Valley Market · 6 × 355 ml\s*18\+ · photo ID checked/ })).toBeInTheDocument();
-    expect(within(popular).getByRole('link', { name: /Country sourdough/ })).not.toHaveTextContent('photo ID');
+    expect(within(popular).getByRole('article', { name: 'Craft lager 6-pack' })).toHaveTextContent(/Bow Valley Market · 6 × 355 ml\s*18\+ · photo ID checked/);
+    expect(within(popular).getByRole('article', { name: 'Country sourdough' })).not.toHaveTextContent('photo ID');
     first.unmount();
     open('/shop', 'fr');
-    expect(await screen.findByRole('link', { name: /Craft lager 6-pack.*18 ans et plus · pièce d’identité vérifiée/ })).toBeInTheDocument();
+    expect(await screen.findByRole('article', { name: 'Craft lager 6-pack' })).toHaveTextContent(/18 ans et plus · pièce d’identité vérifiée/);
   });
 
   it('is in French', async () => {
@@ -112,7 +132,7 @@ describe('Shop landing (design 06 shop)', () => {
     expect(screen.getByText('commandez avant 17 h 20 · 3 commerces · 5 voisins inscrits · Calgary')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Magasiner par rayon' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Tous les commerces de la tournée' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Country sourdough\s*7,50\s\$/ })).toBeInTheDocument();
+    expect(screen.getByRole('article', { name: 'Country sourdough' })).toHaveTextContent(/7,50\s\$/);
     expect(screen.getByRole('link', { name: /Glenmore Bakery.*Commandez avant 17 h 20/ })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Little Sprouts.*Demain/ })).toBeInTheDocument();
   });
@@ -124,7 +144,7 @@ describe('Shop landing (design 06 shop)', () => {
     expect(calls.some(c => url(c).searchParams.get('market') === 'Edmonton')).toBe(true);
     expect(router.state.location.search).toEqual({ market: 'Edmonton' });
     expect(screen.getByRole('link', { name: /Bakery\s*2 shops/ })).toHaveAttribute('href', '/shop/bakery?market=Edmonton');
-    expect(screen.getByRole('link', { name: /Country sourdough/ })).toHaveAttribute('href', '/products/P1?market=Edmonton');
+    expect(screen.getByRole('link', { name: 'Country sourdough' })).toHaveAttribute('href', '/products/P1?market=Edmonton');
   });
 
   it('keeps a market given in the link', async () => {
@@ -180,12 +200,15 @@ describe('Department page (design 06 category)', () => {
     expect(within(chips).getByRole('link', { name: 'Butcher' })).toHaveAttribute('href', '/shop/butcher');
 
     const shops = screen.getByRole('region', { name: 'Shops · Bakery' });
-    expect(within(shops).getByRole('link', { name: /Glenmore Bakery.*5 products.*Master.*On tonight’s run/ })).toHaveAttribute('href', '/search?scope=shop&q=Glenmore%20Bakery');
+    expect(within(shops).getByRole('link', { name: /Glenmore Bakery.*5 products.*Master.*On tonight’s run/ })).toHaveAttribute('href', '/shop/stores/M1?dept=bakery');
     expect(within(shops).getByRole('link', { name: /Sidewalk Citizen.*Trusted.*Tomorrow/ })).toBeInTheDocument();
 
     const products = screen.getByRole('region', { name: 'Popular in Bakery' });
     expect(within(products).getByText('Sorted by')).toBeInTheDocument();
-    expect(within(products).getByRole('link', { name: /Croissant ×4\s*\$12\.00\s*Sidewalk Citizen · box/ })).toHaveAttribute('href', '/products/P3');
+    const croissant = within(products).getByRole('article', { name: 'Croissant ×4' });
+    expect(within(croissant).getByRole('link', { name: 'Croissant ×4' })).toHaveAttribute('href', '/products/P3');
+    expect(croissant).toHaveTextContent(/\$12\.00\$3\.00 each/);
+    expect(croissant).toHaveTextContent('Sidewalk Citizen · box');
   });
 
   it('is in French', async () => {
@@ -204,5 +227,48 @@ describe('Department page (design 06 category)', () => {
     open('/shop/bakery');
     expect(await screen.findByText('No shops in Bakery deliver to Calgary yet.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to Shop' })).toHaveAttribute('href', '/shop');
+  });
+});
+
+describe('a shop’s page (E-15 S-172)', () => {
+  const hit = (id: string, name: string, merchant: { id: string; name: string }) => ({
+    id, kind: 'product', name, description: null, merchant: { ...merchant, type: 'seller', slug: null, tier: 'master' }, category: { id: 'shop.bakery', name: 'Bakery' },
+    priceCents: 925, pricingMode: 'fixed', rating: 4.7, reviewCount: 12, trustTier: 'master', distanceKm: null, instantBook: false, fulfilment: ['pooled'],
+    openNow: false, soldOut: false, onTonightsRun: true, prepMinutes: null, dietary: [], imageKey: null,
+  });
+
+  it('shows the shop’s header and its goods from the search, kept to this merchant', async () => {
+    const base = api;
+    api = c => (url(c).pathname === '/api/v1/search'
+      ? { body: { items: [hit('O9', 'Seeded rye, 750 g', { id: 'M1', name: 'Glenmore Bakery' }), hit('O8', 'Glenmore-style bagels', { id: 'M9', name: 'Other Bakery' })], total: 2, facets: null, next: null } }
+      : base(c));
+    const { calls } = open('/shop/stores/M1?dept=bakery');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Glenmore Bakery' })).toBeInTheDocument();
+    await expectNoAxeViolations(document.body);
+    const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(crumbs).getByRole('link', { name: 'Bakery' })).toHaveAttribute('href', '/shop/bakery');
+    expect(screen.getByText('Bakery · Calgary')).toBeInTheDocument();
+    expect(screen.getByText('Master')).toBeInTheDocument();
+    expect(screen.getByText('On tonight’s run · order by 5:20 p.m.')).toBeInTheDocument();
+    const goods = screen.getByRole('region', { name: 'Products' });
+    expect(within(goods).getByRole('link', { name: 'Seeded rye, 750 g' })).toBeInTheDocument();
+    expect(within(goods).queryByText('Glenmore-style bagels')).not.toBeInTheDocument();
+    const search = calls.find(c => url(c).pathname === '/api/v1/search')!;
+    expect(url(search).searchParams.get('q')).toBe('Glenmore Bakery');
+    expect(url(search).searchParams.get('kind')).toBe('product');
+  });
+
+  it('falls back to the products the Shop pages list for it, and is a 404 when no page lists the shop', async () => {
+    open('/shop/stores/M1?dept=bakery');
+    const goods = await screen.findByRole('region', { name: 'Products' });
+    expect(within(goods).getByRole('link', { name: 'Country sourdough' })).toBeInTheDocument();
+    open('/shop/stores/M77');
+    expect(await screen.findByRole('heading', { name: 'Not found' })).toBeInTheDocument();
+  });
+
+  it('is in French', async () => {
+    open('/shop/stores/M1?dept=bakery', 'fr');
+    expect(await screen.findByRole('link', { name: 'Chercher dans cette boutique' })).toBeInTheDocument();
+    expect(screen.getByText(/Sur la tournée de ce soir · commandez avant 17 h 20/)).toBeInTheDocument();
   });
 });

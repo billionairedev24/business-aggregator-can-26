@@ -75,7 +75,7 @@ export function LegalBlock({ merchantId, form, values, onChange, documents, onDo
   return (
     <section className="nl-ob-legal" aria-labelledby="nl-ob-legal-title">
       <div className="nl-ob-legal-head">
-        <strong id="nl-ob-legal-title" style={{ fontSize: 15 }}>{t('legalDetails', { name: t(`bs_${structure}_name`) })}</strong>
+        <strong id="nl-ob-legal-title" className="nl-ob-legal-title">{t('legalDetails', { name: t(`bs_${structure}_name`) })}</strong>
         {law ? <span className="nl-small nl-muted">{law}</span> : null}
       </div>
       <p className="nl-ob-legal-why">
@@ -85,7 +85,7 @@ export function LegalBlock({ merchantId, form, values, onChange, documents, onDo
       <p className="nl-small nl-muted nl-ob-legal-registry">
         {form.registryUrl ? <a href={form.registryUrl} target="_blank" rel="noopener noreferrer">{t('legalRegistry', { registry })}</a> : t('legalRegistry', { registry })}
       </p>
-      <div className="nl-grid" style={{ ['--nl-min' as string]: '220px' }}>
+      <div className="nl-grid nl-ob-grid">
         {form.fields.map(f => {
           if (f.kind === 'group') {
             const g = (values[f.key] && typeof values[f.key] === 'object' ? values[f.key] : {}) as Record<string, string>;
@@ -93,7 +93,7 @@ export function LegalBlock({ merchantId, form, values, onChange, documents, onDo
               <fieldset key={f.key} className="nl-span-all nl-ob-group" aria-describedby={fieldHelp(f, locale) ? `nl-ob-${f.key}-help` : undefined}>
                 <legend className="nl-label">{label(f)} <span className="nl-label-note">{note(f)}</span></legend>
                 {fieldHelp(f, locale) ? <div id={`nl-ob-${f.key}-help`} className="nl-hint">{fieldHelp(f, locale)}</div> : null}
-                <div className="nl-grid" style={{ ['--nl-min' as string]: '220px' }}>
+                <div className="nl-grid nl-ob-grid">
                   {/* the parts carry a note only while the group is required; otherwise the legend's note says it */}
                   {f.parts.map(p => textField({ ...p, required: p.required }, g[p.key] ?? '', v => set(f.key, { ...g, [p.key]: v }), `${f.key}.${p.key}`, false, isRequired(f, details)))}
                 </div>
@@ -133,7 +133,7 @@ export function LegalBlock({ merchantId, form, values, onChange, documents, onDo
       </div>
       {spec ? (
         <div>
-          <div className="nl-ob-owners-head"><strong style={{ fontSize: 14 }} id="nl-ob-owners">{t(spec.label)}</strong><span className="nl-small nl-muted">{t(spec.note)}</span></div>
+          <div className="nl-ob-owners-head"><strong className="nl-ob-owners-title" id="nl-ob-owners">{t(spec.label)}</strong><span className="nl-small nl-muted">{t(spec.note)}</span></div>
           <div className="nl-ob-owners" role="group" aria-labelledby="nl-ob-owners">
             {owners.map((o, i) => (
               <div key={i} className="nl-ob-owner" role="group" aria-label={t('ownerRow', { n: i + 1 })}>
@@ -146,12 +146,12 @@ export function LegalBlock({ merchantId, form, values, onChange, documents, onDo
                 <Field label={spec.share ? t(spec.share) : t('noShare')} error={errors[`principals[${i}].ownershipPct`]}>
                   <TextInput placeholder="%" inputMode="decimal" disabled={!spec.share} value={o.pct} onChange={e => onOwners(owners.map((r, j) => (j === i ? { ...r, pct: e.target.value } : r)))} onBlur={() => onTouch(`principals[${i}].ownershipPct`)} />
                 </Field>
-                <button type="button" className="btn btn-ghost" style={{ minHeight: 44 }} disabled={owners.length === 1} onClick={() => onOwners(owners.filter((_, j) => j !== i))}>{t('remove')}</button>
+                <button type="button" className="btn btn-ghost" disabled={owners.length === 1} onClick={() => onOwners(owners.filter((_, j) => j !== i))}>{t('remove')}</button>
               </div>
             ))}
           </div>
           {errors.principals ? <div role="alert" className="nl-error">{errors.principals}</div> : null}
-          <button type="button" className="btn btn-ghost" style={{ marginTop: 6 }} onClick={() => onOwners([...owners, { legalName: '', role: spec.roles[1] ?? spec.roles[0]!, pct: '' }])}>{t('addAnother')}</button>
+          <button type="button" className="btn btn-ghost nl-ob-add" onClick={() => onOwners([...owners, { legalName: '', role: spec.roles[1] ?? spec.roles[0]!, pct: '' }])}>{t('addAnother')}</button>
         </div>
       ) : null}
     </section>

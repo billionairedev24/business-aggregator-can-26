@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, EmptyState, ErrorState, PageSkeleton, useLocale, timeZone } from '@northline/ui';
+import { Alert, BoHeader, Button, EmptyState, ErrorState, PageSkeleton, StatusTag, formatWhen, useLocale, type StatusTone } from '@northline/ui';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { useLivePoll } from '../../lib/live';
 import { LIVE_POLL_MS, liveQuery, useKitchenToggle, useLiveAction, type Ticket } from './api';
@@ -30,9 +30,19 @@ export function useNewOrderAnnouncement(items: readonly Ticket[] | undefined, sa
   return message;
 }
 
-const TAG: Record<Ticket['stage'], string> = { new: 'tag-accent-2', cooking: 'tag-accent', ready: 'tag-neutral', handed_off: 'tag-neutral', refused: 'tag-neutral' };
+/**
+ * S-175: the stage colours of the kitchen display (one role per colour): a new order waits on the kitchen (warning),
+ * cooking is in hand (info), ready is done (success); a ticket past its ready-by time turns danger.
+ */
+export const STAGE_TONE: Record<Ticket['stage'], StatusTone> = { new: 'warning', cooking: 'info', ready: 'success', handed_off: 'neutral', refused: 'neutral' };
+const LANES = ['new', 'cooking', 'ready'] as const;
+const isLate = (o: Ticket, now: Date) => o.stage === 'cooking' && !!o.readyBy && minutesUntil(o.readyBy, now) < 0;
 
-/** Kitchen · Live orders (design 02 lines 831–841, `kds`): New → Cooking → Ready → handed off, busy bump, pause. */
+/**
+ * Kitchen · Live orders (design 02 `kds`; S-175 the kitchen display): three lanes — New → Cooking → Ready — of big,
+ * glanceable tickets with the stage's colour on top, the dishes in large type and one big button for the next step;
+ * busy bump and pause in the head. Phones stack the lanes.
+ */
 export function LiveOrdersScreen() {
   const merchantId = useMerchantId();
   const merchant = useMerchant();
@@ -51,58 +61,65 @@ export function LiveOrdersScreen() {
 
   const kicker = t('liveKicker', { name: merchant?.displayName ?? '' });
   if (q.isPending) return <PageSkeleton kpis={0} rows={4} />;
-  if (q.isError) return <><div className="nl-k-kicker">{kicker}</div><ErrorState message={t('loadError')} onRetry={() => void q.refetch()} /></>;
+  if (q.isError) return <><BoHeader kicker={kicker} title={t('liveTitleShort')} /><ErrorState message={t('loadError')} onRetry={() => void q.refetch()} /></>;
 
   const b = q.data;
   const paused = !!b.pausedUntil && new Date(b.pausedUntil) > now;
   const day = t(`dayLong_${weekdayIn(now)}` as 'dayLong_1');
   const title = t('liveTitle', { day, meal: t(`meal_${mealOf(now)}`), n: b.counts.open });
+  const ticket = (o: Ticket) => {
+    const cta = o.stage === 'new' ? t('cta_new') : o.stage === 'cooking' ? t('cta_cooking') : o.fulfilmentMode === 'pickup' ? t('cta_ready_pickup') : t('cta_ready_delivery');
+    const action = o.stage === 'new' ? 'accept' : o.stage === 'cooking' ? 'ready' : 'handoff';
+    const prep = prepText(o, t, now);
+    const late = isLate(o, now);
+    // 2026-10-04: an age-restricted pickup is handed over only after the counter's ID check
+    const counterCheck = action === 'handoff' && o.fulfilmentMode === 'pickup' && !!o.idCheckAge;
+    return (
+      <li key={o.orderId} className="nl-k-ticket" data-stage={o.stage} data-late={late || undefined} aria-labelledby={`kds-${o.orderId}`}>
+        <div className="nl-k-ticket-head">
+          <strong className="nl-k-ref" id={`kds-${o.orderId}`}>{o.ref ?? o.orderId}</strong>
+          <StatusTag size="lg" tone={late ? 'danger' : STAGE_TONE[o.stage]}>{late ? t('stageLate') : t(`stage_${o.stage}`)}</StatusTag>
+        </div>
+        {prep ? <div className="nl-k-timer" data-late={late || undefined}>{prep}</div> : null}
+        <ul className="nl-k-lines">{o.lines.map((l, i) => <li key={i}>{lineText(l, t)}</li>)}</ul>
+        <div className="nl-k-meta">{whoText(o, t, locale)}</div>
+        {o.scheduledFor ? <div className="nl-k-meta">{t('scheduledFor', { time: formatWhen(o.scheduledFor, locale, 'time') })}</div> : null}
+        <div className="nl-k-where">{whereText(o, t, locale, now)}</div>
+        {o.idCheckAge && o.fulfilmentMode === 'pickup' ? <div><StatusTag tone="warning">{tc('checkId', { age: o.idCheckAge })}</StatusTag></div> : null}
+        {canOperate ? (
+          <Button size="lg" block className="nl-k-cta" aria-describedby={`kds-${o.orderId}`} disabled={act.isPending && act.variables?.orderId === o.orderId}
+            onClick={() => (counterCheck ? setChecking(o) : act.mutate({ orderId: o.orderId, action }, { onError: () => void q.refetch() }))}>{cta}</Button>
+        ) : null}
+      </li>
+    );
+  };
   return (
-    <div className="nl-kitchen">
+    <div className="nl-kitchen bo-page">
       <div className="nl-sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</div>
-      <div className="nl-k-head">
-        <div>
-          <span className="nl-k-kicker">{kicker}</span>
-          <h1 className="nl-k-title">{title}</h1>
-        </div>
-        <div className="nl-k-actions">
-          <span className="nl-k-muted">{t('prepShown')} <strong>{b.prep.bumpMin ? t('prepBumped', { min: b.prep.shownMin, bump: b.prep.bumpMin }) : t('prepMin', { min: b.prep.shownMin })}</strong></span>
-          {canOperate ? (
-            <>
-              <button type="button" className="btn btn-secondary" disabled={toggle.isPending || b.prep.bumpMin >= 30} onClick={() => toggle.mutate('bump')}>{t('busy')}</button>
-              <button type="button" className="btn btn-ghost" disabled={toggle.isPending || b.prep.bumpMin === 0} onClick={() => toggle.mutate('reset')}>{t('reset')}</button>
-              <button type="button" className="btn btn-secondary nl-k-danger" aria-pressed={paused} disabled={toggle.isPending} onClick={() => toggle.mutate(paused ? 'resume' : 'pause')}>{paused ? t('resume') : t('pause')}</button>
-            </>
-          ) : null}
-        </div>
-      </div>
-      {b.autoPause?.active && b.autoPause.threshold ? <div className="nl-k-paused" role="status"><strong>{t('autoPausedStrong')}</strong> {t('autoPausedText', { late: b.autoPause.lateOrders, limit: b.autoPause.threshold })}</div> : null}
-      {paused ? <div className="nl-k-paused" role="status"><strong>{t('pausedStrong')}</strong> {t('pausedText', { n: Math.max(1, minutesUntil(b.pausedUntil!, now)) })}</div> : null}
+      <BoHeader kicker={kicker} title={title}
+        sub={<>{t('prepShown')} <strong>{b.prep.bumpMin ? t('prepBumped', { min: b.prep.shownMin, bump: b.prep.bumpMin }) : t('prepMin', { min: b.prep.shownMin })}</strong></>}
+        actions={canOperate ? (
+          <>
+            <Button variant="secondary" disabled={toggle.isPending || b.prep.bumpMin >= 30} onClick={() => toggle.mutate('bump')}>{t('busy')}</Button>
+            <Button variant="tertiary" disabled={toggle.isPending || b.prep.bumpMin === 0} onClick={() => toggle.mutate('reset')}>{t('reset')}</Button>
+            <Button variant={paused ? 'secondary' : 'destructive'} aria-pressed={paused} disabled={toggle.isPending} onClick={() => toggle.mutate(paused ? 'resume' : 'pause')}>{paused ? t('resume') : t('pause')}</Button>
+          </>
+        ) : undefined} />
+      {b.autoPause?.active && b.autoPause.threshold ? <Alert tone="info" role="status"><strong>{t('autoPausedStrong')}</strong> {t('autoPausedText', { late: b.autoPause.lateOrders, limit: b.autoPause.threshold })}</Alert> : null}
+      {paused ? <Alert tone="info" role="status"><strong>{t('pausedStrong')}</strong> {t('pausedText', { n: Math.max(1, minutesUntil(b.pausedUntil!, now)) })}</Alert> : null}
       {act.isError || toggle.isError ? <Alert tone="error" role="alert">{t('actionError')}</Alert> : null}
       {b.items.length === 0 ? <EmptyState>{t('liveEmpty')}</EmptyState> : (
-        <ul className="nl-k-board">
-          {b.items.map(o => {
-            const cta = o.stage === 'new' ? t('cta_new') : o.stage === 'cooking' ? t('cta_cooking') : o.fulfilmentMode === 'pickup' ? t('cta_ready_pickup') : t('cta_ready_delivery');
-            const action = o.stage === 'new' ? 'accept' : o.stage === 'cooking' ? 'ready' : 'handoff';
-            const prep = prepText(o, t, now);
-            // 2026-10-04: an age-restricted pickup is handed over only after the counter's ID check
-            const counterCheck = action === 'handoff' && o.fulfilmentMode === 'pickup' && !!o.idCheckAge;
+        <div className="nl-k-lanes">
+          {LANES.map(stage => {
+            const items = b.items.filter(o => o.stage === stage || (stage === 'ready' && o.stage === 'refused'));
             return (
-              <li key={o.orderId} className="nl-k-ticket">
-                <div className="nl-k-ticket-head"><strong id={`kds-${o.orderId}`}>{o.ref ?? o.orderId}</strong><span className={`tag ${TAG[o.stage]}`}>{t(`stage_${o.stage}`)}</span></div>
-                <div className="nl-k-meta">{whoText(o, t, locale)}{prep ? ` · ${prep}` : ''}</div>
-                {o.scheduledFor ? <div className="nl-k-meta">{t('scheduledFor', { time: new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { timeZone: timeZone(), hour: 'numeric', minute: '2-digit' }).format(new Date(o.scheduledFor)) })}</div> : null}
-                <div className="nl-k-lines">{o.lines.map((l, i) => <div key={i}>{lineText(l, t)}</div>)}</div>
-                <div className="nl-k-where">{whereText(o, t, locale, now)}</div>
-                {o.idCheckAge && o.fulfilmentMode === 'pickup' ? <div className="nl-k-meta"><span className="tag tag-highlight">{tc('checkId', { age: o.idCheckAge })}</span></div> : null}
-                {canOperate ? (
-                  <button type="button" className="btn btn-primary nl-k-cta" aria-describedby={`kds-${o.orderId}`} disabled={act.isPending && act.variables?.orderId === o.orderId}
-                    onClick={() => (counterCheck ? setChecking(o) : act.mutate({ orderId: o.orderId, action }, { onError: () => void q.refetch() }))}>{cta}</button>
-                ) : null}
-              </li>
+              <section key={stage} className="nl-k-lane" data-stage={stage} aria-labelledby={`lane-${stage}`}>
+                <h2 className="nl-k-lane-title" id={`lane-${stage}`}>{t(`stage_${stage}`)} <span className="nl-k-lane-n">{items.length}</span></h2>
+                {items.length ? <ul className="nl-k-board">{items.map(ticket)}</ul> : <p className="nl-k-lane-empty">{t(`laneEmpty_${stage}`)}</p>}
+              </section>
             );
           })}
-        </ul>
+        </div>
       )}
       <p className="nl-k-foot">{t('liveFooter')}</p>
       {checking ? <CounterCheckDialog merchantId={merchantId} ticket={checking} onClose={() => setChecking(null)} /> : null}

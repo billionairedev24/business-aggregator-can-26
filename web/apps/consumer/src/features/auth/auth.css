@@ -1,53 +1,54 @@
-/* Consumer sign-in / create account — design 06 `auth` (lines 51–108). Tokens only. */
+/* Consumer sign-in / create account / forgot password (E-15 S-173, Plainsight; audit #9: no wide empty gap). One
+   centred block, at most 940 px: the 440 px card first, then a narrow panel with the reasons to sign in (on phones it
+   follows the card). Bordered 4 px panels on hairlines, IBM Plex Sans, semantic tokens and the scale only
+   (pnpm lint:tokens). The auth server renders no page of its own (server/auth is JSON + redirects to these pages and the
+   Studio's and console's), and the shared steps come from @northline/auth-kit (account.css) on the same tokens. */
 .nl-auth {
-  max-width: 1280px; width: 100%; margin: 0 auto; padding: var(--space-8) 0 var(--space-16); box-sizing: border-box;
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: var(--space-8) clamp(32px, 5vw, 80px); align-items: start;
+  max-width: 940px; width: 100%; margin: 0 auto; padding: var(--space-6) 0 var(--space-12); box-sizing: border-box;
+  display: grid; grid-template-columns: minmax(0, 440px) minmax(0, 1fr); gap: var(--space-6); align-items: start; justify-content: center;
 }
-/* the advertorial: a linen panel with a picture on top */
-.nl-auth-intro { min-width: 0; background: var(--color-surface-sunken); border-radius: var(--radius-lg); padding: 0 var(--space-8) var(--space-8); overflow: hidden; }
-.nl-auth-pic { position: relative; display: block; height: 200px; margin: 0 calc(-1 * var(--space-8)) var(--space-6); }
-@media (max-width: 599.98px) {
-  .nl-auth { padding-top: var(--space-4); }
-  .nl-auth-intro { padding: 0 var(--space-5) var(--space-6); order: 2; }
-  .nl-auth-pic { height: 130px; margin: 0 calc(-1 * var(--space-5)) var(--space-5); }
+@media (max-width: 859.98px) {
+  .nl-auth { grid-template-columns: minmax(0, 1fr); max-width: 480px; padding-top: var(--space-4); }
 }
-.nl-auth-kicker { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-muted); }
-.nl-auth-hero { font-size: clamp(32px, 4vw, 52px); line-height: 1.06; letter-spacing: -0.025em; margin: 14px 0 0; max-width: 18ch; }
-.nl-auth-lede { font-size: 16px; color: var(--color-text-muted); max-width: 48ch; margin: 16px 0 0; line-height: 1.55; }
-.nl-auth-points { display: flex; flex-direction: column; gap: 14px; margin: 32px 0 0; padding: 0; list-style: none; max-width: 48ch; }
-.nl-auth-point { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; line-height: 1.5; }
-.nl-auth-point-num { width: 22px; height: 22px; border-radius: 50%; background: var(--color-surface-brand); color: var(--color-link-hover); display: grid; place-items: center; font-size: 12px; font-weight: 600; flex: none; margin-top: 2px; }
-.nl-auth-point-body { display: block; color: var(--color-text-muted); }
-.nl-auth-foot { margin-top: 32px; font-size: 13px; color: var(--color-text-muted); }
 
-.nl-auth-card { background: var(--color-surface); border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: var(--space-8); max-width: 480px; width: 100%; justify-self: end; box-sizing: border-box; min-width: 0; }
-@media (max-width: 859px) { .nl-auth-card { justify-self: stretch; max-width: none; } }
-@media (max-width: 400px) { .nl-auth-card { padding: 20px 16px; } }
-.nl-auth-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.nl-auth-title { font-size: 26px; margin: 0; letter-spacing: -0.02em; }
-.nl-auth-cancel { min-height: 44px; font-size: 13px; }
-.nl-auth-card .nl-steps { margin: 14px 0 16px; }
-.nl-auth-sub { font-size: 14px; color: var(--color-text-muted); margin: 0 0 16px; }
-.nl-auth-fields { display: grid; gap: 12px; }
-.nl-auth-card .input { min-height: 46px; }
-.nl-auth-code { letter-spacing: .3em; font-size: 18px; }
-.nl-auth-terms { margin-top: 12px; font-size: 12px; color: var(--color-text-muted); }
-.nl-auth-note { margin: 6px 0 0; font-size: 12px; color: var(--color-text-muted); } /* S-116: the Terms' language */
-.nl-auth-primary { width: 100%; min-height: 46px; margin-top: 14px; }
-.nl-auth-passkey { width: 100%; min-height: 44px; margin-top: 8px; }
-.nl-auth-social { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-.nl-auth-social > .btn { flex: 1 1 0; min-height: 44px; gap: 8px; text-decoration: none; }
-.nl-auth-switch { text-align: center; font-size: 13px; margin-top: 14px; color: var(--color-text-muted); }
-.nl-auth-hint { font-size: 13px; color: var(--color-text-muted); margin-top: 6px; }
-.nl-auth-link { font: inherit; color: var(--color-link); text-decoration: underline; text-underline-offset: 3px; background: none; border: 0; padding: 0; cursor: pointer; min-height: 44px; }
+.nl-auth-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-panel); padding: var(--space-6); width: 100%; box-sizing: border-box; min-width: 0; }
+@media (max-width: 399.98px) { .nl-auth-card { padding: var(--space-5) var(--space-4); } }
+.nl-auth-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
+.nl-auth-title { font-size: var(--type-page-title); font-weight: var(--weight-bold); line-height: var(--leading-tight); margin: 0; }
+.nl-auth-cancel { min-height: var(--size-touch); font-size: var(--type-label); }
+.nl-auth-card .nl-steps { margin: var(--space-3-5) 0 var(--space-4); }
+.nl-auth-sub { font-size: var(--type-body); color: var(--color-text-muted); margin: 0 0 var(--space-4); }
+.nl-auth-fields { display: grid; gap: var(--space-3); }
+.nl-auth-code { letter-spacing: .3em; font-size: var(--type-section); }
+.nl-auth-terms { margin-top: var(--space-3); font-size: var(--type-meta); color: var(--color-text-muted); }
+.nl-auth-note { margin: var(--space-1-5) 0 0; font-size: var(--type-meta); color: var(--color-text-muted); } /* S-116: the Terms' language */
+.nl-auth-primary { width: 100%; min-height: var(--size-control-lg); margin-top: var(--space-3-5); }
+.nl-auth-passkey { width: 100%; min-height: var(--size-touch); margin-top: var(--space-2); }
+.nl-auth-social { display: flex; gap: var(--space-2); margin-top: var(--space-2); flex-wrap: wrap; }
+.nl-auth-social > .btn { flex: 1 1 0; text-decoration: none; }
+.nl-auth-switch { text-align: center; font-size: var(--type-label); margin-top: var(--space-3-5); padding-top: var(--space-3-5); border-top: 1px solid var(--color-border); color: var(--color-text-muted); }
+.nl-auth-hint { font-size: var(--type-label); color: var(--color-text-muted); margin-top: var(--space-1-5); }
+.nl-auth-link { font: inherit; color: var(--color-link); text-decoration: underline; text-underline-offset: 3px; background: none; border: 0; padding: 0; cursor: pointer; min-height: var(--size-touch); }
 .nl-auth-link:hover:not(:disabled) { color: var(--color-link-hover); }
 .nl-auth-link:disabled { color: var(--color-text-subtle); text-decoration: none; cursor: default; }
-.nl-auth-options { display: flex; flex-direction: column; gap: 8px; }
-.nl-auth-qr { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 12px; font-size: 13px; color: var(--color-text-muted); }
-.nl-auth-qr img { width: 144px; height: 144px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-surface); }
+.nl-auth-options { display: flex; flex-direction: column; gap: var(--space-2); }
+.nl-auth-qr { display: flex; gap: var(--space-3-5); align-items: center; flex-wrap: wrap; margin-top: var(--space-3); font-size: var(--type-label); color: var(--color-text-muted); }
+.nl-auth-qr img { width: 144px; height: 144px; border-radius: var(--radius-control); border: 1px solid var(--color-border); background: var(--color-surface); }
 .nl-auth-qr-help { flex: 1 1 160px; min-width: 0; }
-.nl-auth-qr-help p { margin: 0 0 6px; }
-.nl-auth-qr code { overflow-wrap: anywhere; font-size: 12px; }
-.nl-auth-done { padding: 14px 16px; background: var(--color-surface-brand); border-radius: var(--radius-md); color: var(--color-text); font-size: 14px; }
-.nl-auth-card .nl-alert { margin-top: 14px; }
-.nl-auth-legal { font-size: 12px; color: var(--color-text-muted); margin: 18px 0 0; line-height: 1.5; }
+.nl-auth-qr-help p { margin: 0 0 var(--space-1-5); }
+.nl-auth-qr code { overflow-wrap: anywhere; font-size: var(--type-meta); }
+.nl-auth-done { padding: var(--space-3-5) var(--space-4); background: var(--color-status-success-bg); color: var(--color-status-success-fg); border-radius: var(--radius-panel); font-size: var(--type-body); }
+.nl-auth-card .nl-alert { margin-top: var(--space-3-5); }
+.nl-auth-legal { font-size: var(--type-meta); color: var(--color-text-muted); margin: var(--space-4) 0 0; line-height: var(--leading-normal); }
+
+/* why sign in: kicker, heading, three numbered points (the checkout's ink number boxes), the support line */
+.nl-auth-intro { min-width: 0; padding: var(--space-6); border-radius: var(--radius-panel); background: var(--color-well); }
+.nl-auth-kicker { font-size: var(--type-caps); font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); }
+.nl-auth-hero { font-size: var(--type-section); font-weight: var(--weight-bold); line-height: var(--leading-tight); margin: var(--space-2) 0 0; max-width: 28ch; }
+.nl-auth-lede { font-size: var(--type-body); color: var(--color-text-muted); max-width: 48ch; margin: var(--space-2) 0 0; line-height: var(--leading-normal); }
+.nl-auth-points { display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-5) 0 0; padding: 0; list-style: none; max-width: 48ch; }
+.nl-auth-point { display: flex; gap: var(--space-2-5); align-items: flex-start; font-size: var(--type-body); line-height: var(--leading-normal); }
+.nl-auth-point-num { width: var(--space-6); height: var(--space-6); border-radius: var(--radius-control); background: var(--color-selected); color: var(--color-selected-text); display: grid; place-items: center; font-size: var(--type-meta); font-weight: var(--weight-bold); flex: none; }
+.nl-auth-point-body { display: block; color: var(--color-text-muted); }
+.nl-auth-foot { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--color-border); font-size: var(--type-meta); color: var(--color-text-muted); }
+@media (max-width: 599.98px) { .nl-auth-intro { padding: var(--space-4); } }

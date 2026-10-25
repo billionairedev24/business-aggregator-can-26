@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { ApiError, colors, space } from '@northline/mobile-kit';
+import { ApiError, semantic, space, textStyles } from '@northline/mobile-kit';
 
 import { REVIEW_TAGS, aftercareApi, type MyReview, type ReviewKind, type ReviewTarget } from '../api/aftercare';
 import { useAuth } from '../auth/AuthProvider';
@@ -159,8 +159,8 @@ function ReviewForm({ kind, id, target, heading, existing, onDone, extra }: { ki
 
 const styles = StyleSheet.create({
   stack: { gap: space[3] },
-  stars: { flexDirection: 'row', gap: 6 },
-  star: { width: 48, height: 48, fontSize: 30, lineHeight: 48, textAlign: 'center', color: colors.borderStrong },
-  starOn: { color: colors.rating },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  stars: { flexDirection: 'row', gap: space[1.5] },
+  star: { ...StyleSheet.flatten(textStyles.pageTitle), width: 48, height: 48, textAlign: 'center', color: semantic['border-strong'] },
+  starOn: { color: semantic.star },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[1.5] },
 });

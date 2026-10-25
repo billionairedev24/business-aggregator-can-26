@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
 
-import { Icon, colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
+import { Icon, TYPE, radius, semantic, space, textStyles } from '@northline/mobile-kit';
 
 import { MapStrip } from '../../../../src/components/MapStrip';
 import { OutboxBar } from '../../../../src/components/tracking';
@@ -12,9 +12,10 @@ import { services } from '../../../../src/services';
 import { kindKey, navigationUrl, pickedUp, stopAddress, stopName } from '../../../../src/stops';
 
 /**
- * One stop (redesign spec § 2.5; light direction): the schematic map strip with when it's due, "Navigate" (the hand-off
- * to the phone's maps app), "Stop {n} · {kind}", where and what, the customer's instructions, then the next action in the
- * sticky bottom bar — I've arrived, Pick up, Hand over or the return. No customer name or phone number is shown (the
+ * One stop (S-179, glanceable in sunlight; redesign spec § 2.5): the schematic map strip with when it's due on an ink
+ * tag, "Navigate" (the hand-off to the phone's maps app, a full-width 46 pt button), "Stop {n} · {kind}", where — the
+ * address at 16 pt bold — and what, the customer's instructions on the well grey, then the next action in the sticky
+ * bottom bar — I've arrived, Pick up, Hand over or the return. No customer name or phone number is shown (the
  * api gives the courier none); there is no in-app call or message yet (DECISIONS S-87). An age-restricted drop-off
  * says the ID check's age; a return stop (2026-10-04: a refused age-restricted order) takes the order back.
  */
@@ -74,10 +75,10 @@ export default function StopScreen() {
       <MapStrip
         kind={stop.kind}
         label={stop.eta && open ? t('stop.map', { time: time(stop.eta, zone) }) : t('stop.mapNoEta')}
-        action={nav ? <Button tone="secondary" icon="navigation-arrow" label={t('stop.navigate')} hint={t('stop.navigateHint')} onPress={() => void Linking.openURL(nav)} testID="navigate" /> : undefined}
+        action={nav ? <Button tone="secondary" large icon="navigation-arrow" label={t('stop.navigate')} hint={t('stop.navigateHint')} onPress={() => void Linking.openURL(nav)} testID="navigate" /> : undefined}
       />
       <View style={styles.head}>
-        <Text style={styles.kicker}>{t('stop.seqKind', { seq: stop.seq, kind })}</Text>
+        <Text style={textStyles.caps}>{t('stop.seqKind', { seq: stop.seq, kind })}</Text>
         <Heading>{stopName(stop)}</Heading>
         <Row>
           <Chip tone={unsent.has(stop.id) ? 'warn' : stop.state === 'done' ? 'done' : 'neutral'} label={unsent.has(stop.id) ? t('stop.unsent') : t(`stop.state.${stop.state}` as MessageKey)} />
@@ -87,16 +88,17 @@ export default function StopScreen() {
         </Row>
       </View>
       <Card>
+        <Text style={textStyles.caps}>{t('stop.address')}</Text>
         <Row>
-          <Icon name="map-pin" size={20} />
-          <Body style={styles.flex}>{stopAddress(stop)}</Body>
+          <Icon name="map-pin" size={TYPE.price} />
+          <Text style={[textStyles.sub, styles.flex]}>{stopAddress(stop)}</Text>
         </Row>
         {stop.dropoff?.unit ? <Body strong>{t('stop.unit', { unit: stop.dropoff.unit })}</Body> : null}
       </Card>
       {stop.dropoff?.note ? (
         <View style={styles.note}>
           <Row>
-            <Icon name="chat-text" size={18} />
+            <Icon name="chat-text" size={TYPE.price} />
             <Body strong>{t('stop.note')}</Body>
           </Row>
           <Body>{stop.dropoff.note}</Body>
@@ -126,6 +128,5 @@ export default function StopScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   head: { gap: space[1] },
-  kicker: { fontFamily: fonts.bold, fontSize: 12, letterSpacing: 0.5, textTransform: 'uppercase', color: colors.textMuted },
-  note: { gap: space[2], padding: space[4], borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'] },
+  note: { gap: space[2], padding: space[4], borderRadius: radius.panel, backgroundColor: semantic.well },
 });

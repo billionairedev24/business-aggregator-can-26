@@ -37,7 +37,7 @@ export function EmbedSnippet({ slug, manageSites = false }: { slug: string; mana
     <div className="nl-set-embed">
       <p className="nl-muted">{t('embedHelp')}</p>
       <pre className="nl-set-code"><code>{code}</code></pre>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div className="nl-set-actions">
         <Button variant="secondary" onClick={() => { void navigator.clipboard?.writeText(code).then(() => setCopied(true)); }}>{copied ? t('copied') : t('copy')}</Button>
         {owner && <Button variant="ghost" onClick={() => setConfirming(true)}>{t('embedRoll')}</Button>}
       </div>
@@ -66,9 +66,9 @@ function AllowedSites({ origins, owner }: { origins: string[]; owner: boolean })
         <TextArea rows={3} value={text} disabled={!owner} onChange={e => setText(e.target.value)} />
       </Field>
       {owner && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="nl-set-actions">
           <Button variant="secondary" disabled={save.isPending} onClick={() => save.mutate(text.split(/[\s,]+/).filter(Boolean))}>{t('embedSitesSave')}</Button>
-          {save.isSuccess && <span role="status" className="nl-small nl-muted">{t('embedSitesSaved')}</span>}
+          {save.isSuccess && <span role="status" className="nl-set-muted">{t('embedSitesSaved')}</span>}
         </div>
       )}
       {save.isError && !error && <Alert tone="error">{t('saveError')}</Alert>}

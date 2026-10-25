@@ -1,18 +1,19 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { BoHeader, Button, DataTable, Drawer, ErrorState, Field, formatDate, formatMoney, PageSkeleton, SheetSection, TextArea, useLocale, type DataTableColumn, type DataTableTone } from '@northline/ui';
+import { BoHeader, Button, DataTable, Drawer, ErrorState, Field, formatDate, formatPrice, PageSkeleton, SheetSection, TextArea, useLocale, type DataTableColumn, type DataTableTone } from '@northline/ui';
 import { ApiError, ValidationError } from '../../lib/http';
 import { useAge } from '../shell/age';
 import { useGrant } from '../shell/grant';
-import { PlaceFilters, type PlaceFilter } from '../shell/PlaceFilters';
+import type { PlaceFilter } from '../shell/PlaceFilters';
+import { usePlace } from '../shell/scope';
 import { appealFileUrl, appealQuery, appealsQuery, useAssignAppeal, useDecideAppeal, type QueueItem } from './api';
 import { useAppealsT } from './messages';
 import '../shell/queues.css';
 
 export interface AppealsSearch extends PlaceFilter { appeal?: string }
 const PATH = '/trust/appeals';
-const TONE: Record<string, DataTableTone> = { open: 'tag-highlight', in_review: 'tag-neutral', granted: 'tag-accent', denied: 'tag-neutral' };
+const TONE: Record<string, DataTableTone> = { open: 'status-warning', in_review: 'status-info', granted: 'status-success', denied: 'status-neutral' };
 
 interface Row { id: string; number: string; business: string; about: string; filed: string; owner: string; state: string; item: QueueItem }
 
@@ -24,19 +25,19 @@ interface Row { id: string; number: string; business: string; about: string; fil
 export function Appeals() {
   const t = useAppealsT();
   const search = useSearch({ strict: false }) as AppealsSearch;
-  const filter = { province: search.province, market: search.market };
+  const filter = usePlace();
   const navigate = useNavigate();
   const query = useQuery(appealsQuery(filter));
   const age = useAge();
   const { roleName } = useGrant();
-  const head = <BoHeader title={t('title')} sub={t('lede')} actions={<><Link className="btn btn-ghost" to="/trust">{t('back')}</Link><PlaceFilters to={PATH} filter={filter} /></>} />;
+  const head = <BoHeader title={t('title')} sub={t('lede')} actions={<><Link className="btn btn-secondary" to="/trust">{t('back')}</Link></>} />;
   if (query.isPending) return <div className="bo-page">{head}<PageSkeleton kpis={0} rows={4} /></div>;
   if (query.isError && !query.data) {
     return <div className="bo-page">{head}{query.error instanceof ValidationError ? <p role="alert" className="nl-q-error">{t('badFilter')}</p> : <ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />}</div>;
   }
   const items = query.data!.items;
   const selected = search.appeal ? items.find(i => i.appeal.id === search.appeal) : undefined;
-  const select = (id: string | undefined) => void navigate({ to: PATH, search: { ...filter, appeal: id } as never });
+  const select = (id: string | undefined) => void navigate({ to: PATH, search: { ...search, appeal: id } as never });
   const rows: Row[] = items.map(i => ({
     id: i.appeal.id, number: i.appeal.number, business: i.businessName, about: about(t, i), filed: t('filed', { age: age(i.appeal.filedAt) }),
     owner: i.assigneeName ?? t('nobody'), state: t(`st_${i.appeal.state}`), item: i,
@@ -51,7 +52,7 @@ export function Appeals() {
   return (
     <div className="bo-page">
       {head}
-      <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={r => ({ state: TONE[r.item.appeal.state] ?? 'tag-neutral' })}
+      <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={r => ({ state: TONE[r.item.appeal.state] ?? 'tag-neutral' })}
         can={{ create: false, update: false, delete: false }} roleName={roleName} emptyText={t('empty')} openLabel={t('open')} onOpen={r => select(r.id)} reportName="appeals" />
       {selected ? (
         <Drawer open onClose={() => select(undefined)} title={`${selected.appeal.number} · ${selected.businessName}`}>
@@ -81,7 +82,7 @@ function AppealBody({ item }: { item: QueueItem }) {
   const decided = a.state === 'granted' || a.state === 'denied';
   const errors = decide.error instanceof ValidationError ? decide.error.byField() : {};
   const refusal = [assign.error, decide.error].find(e => e && !(e instanceof ValidationError)) as ApiError | Error | undefined;
-  const money = (c: number) => formatMoney(c, locale);
+  const money = (c: number) => formatPrice(c, locale);
   const date = (s: string) => formatDate(s, locale);
   return (
     <>

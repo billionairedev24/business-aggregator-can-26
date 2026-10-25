@@ -49,9 +49,9 @@ describe('finance (S-85, design 03)', () => {
     renderConsole('/finance');
     expect(await screen.findByRole('heading', { level: 1, name: 'Finance' })).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
-    expect(screen.getByText('Escrow held · 3,104 items').nextElementSibling?.textContent).toBe('$418,220');
-    expect(screen.getByText('Payouts in flight · 1,140 sellers').nextElementSibling?.textContent).toBe('$186,400');
-    expect(screen.getByText('Net revenue · week').nextElementSibling?.textContent).toBe('$24,100');
+    expect(screen.getByText('Escrow held · 3,104 items').nextElementSibling?.textContent).toBe('$418k');
+    expect(screen.getByText('Payouts in flight · 1,140 sellers').nextElementSibling?.textContent).toBe('$186k');
+    expect(screen.getByText('Net revenue · week').nextElementSibling?.textContent).toBe('$24.1k');
     expect(screen.getByText('Stripe ↔ ledger variance').nextElementSibling?.textContent).toBe('$0.00');
     expect(screen.getByText('matched · Sep 7')).toBeTruthy();
     expect(screen.getByText('Take rate on GMV')).toBeTruthy();
@@ -61,8 +61,8 @@ describe('finance (S-85, design 03)', () => {
     expect(within(card('Sep 5')).getByText('Mismatch')).toBeTruthy();
     expect(within(card('Sep 5')).getByText('$12.50')).toBeTruthy();
     expect(within(card('Sep 7')).getByText('Matched')).toBeTruthy();
-    expect(screen.getByText('GST collected on platform fees · Q3').nextElementSibling?.textContent).toBe('$14,880');
-    expect(screen.getByText('Marketplace facilitator GST on goods · Q3').nextElementSibling?.textContent).toBe('$61,210');
+    expect(screen.getByText('GST collected on platform fees · Q3').nextElementSibling?.textContent).toBe('$14,880.00');
+    expect(screen.getByText('Marketplace facilitator GST on goods · Q3').nextElementSibling?.textContent).toBe('$61,210.00');
     expect(screen.getByText('Next filing').nextElementSibling?.textContent).toBe('Oct 31');
     expect(screen.getByRole('link', { name: 'Export reconciliation' }).getAttribute('href')).toBe('/api/v1/console/payments/reconciliation/export?from=2026-09-05&to=2026-09-07');
     expect(screen.getByRole('link', { name: 'Export to accounting' }).getAttribute('href')).toMatch(/^\/api\/v1\/console\/payments\/reconciliation\/ledger-export\?from=2026-07-01&to=\d{4}-\d{2}-\d{2}$/);

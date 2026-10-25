@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { newIdempotencyKey, ValidationError } from '@northline/client';
-import { Alert, Button, EmptyState, Field, OptionCard, RadioGroup, Select, Skeleton, SiteLink, TextInput, useFormatters } from '@northline/ui';
+import { Alert, Button, Chip, EmptyState, Field, OptionCard, Price, RadioGroup, Segmented, Select, Skeleton, SiteLink, TextInput, useFormatters } from '@northline/ui';
+import { Section } from '../checkout/Section';
 import { StripePayment } from '../cart/Payment';
 import { CheckoutConsent, useCheckoutConsent } from '../consent/CheckoutConsent';
 import { AgeCheck } from '../cart/AgeCheck';
@@ -34,7 +35,8 @@ type Phase = { step: 'form' } | { step: 'stepUp'; mode: 'required' | 'enrol' } |
  */
 export function CheckoutScreen() {
   const t = useFoodT();
-  const { money, date } = useFormatters();
+  // tip amounts are choices in whole dollars (the checkout's); every price uses `price`
+  const { money, price, date } = useFormatters();
   const navigate = useNavigate();
   const { user, loading } = useViewer();
   const { location } = useDeliveryLocation();
@@ -90,7 +92,7 @@ export function CheckoutScreen() {
     staleTime: 30_000,
   });
 
-  if (loading) return <div className="nl-page"><Skeleton width={320} height={36} /><Skeleton height={200} style={{ marginTop: 20 }} /></div>;
+  if (loading) return <div className="nl-page nl-skel-stack"><Skeleton width={320} height={36} /><Skeleton height={200} /></div>;
   if (!cart || cart.lines.length === 0) {
     return (
       <div className="nl-page nl-fco-empty">
@@ -141,71 +143,84 @@ export function CheckoutScreen() {
   const age = quote.data?.age ?? NO_AGE;
   const payable = !!body && (pickup || hasAddress) && !(when === 'schedule' && !slot) && !!quote.data && ageCleared(age);
 
+  const tipKeys = TIPS.map((_, i) => String(i));
   return (
-    <div className="nl-fco">
-      <div>
-        <h1>{t('checkoutTitle', { name: cart.name })}</h1>
-        <h2>{t('when')}</h2>
-        <RadioGroup className="nl-fco-when" aria-label={t('when')}>
-          {data?.kitchen.open !== false && <OptionCard selected={when === 'asap'} role="radio" aria-checked={when === 'asap'} title={t('asap')} description={data ? t('etaRange', { from: data.kitchen.etaFromMin, to: data.kitchen.etaToMin }) : ''} onClick={() => setWhen('asap')} />}
-          {data && data.slots.length > 0 && <OptionCard selected={when === 'schedule'} role="radio" aria-checked={when === 'schedule'} title={t('scheduleOpt')} description={t('scheduleDesc')} onClick={() => setWhen('schedule')} />}
-          {data?.kitchen.fulfilment.includes('pickup') && <OptionCard selected={pickup} role="radio" aria-checked={pickup} title={t('pickupOpt')} description={t('pickupDesc', { from: data.kitchen.pickupFromMin, to: data.kitchen.pickupToMin })} onClick={() => setWhen('pickup')} />}
-        </RadioGroup>
-        {when === 'schedule' && (
-          <Field label={t('window')}>
-            <Select value={slot} onChange={e => setSlot(e.target.value)} options={slots.map(s => ({ value: s, label: `${date(s, 'long')} · ${date(s, 'time')}–${date(new Date(new Date(s).getTime() + 30 * 60_000), 'time')}` }))} />
-          </Field>
-        )}
-
-        {!pickup && (
-          <>
-            <h2>{t('deliverTo')}</h2>
-            {hasAddress ? (
-              <div className="nl-fco-address">
-                <div><div className="nl-fco-strong">{location.street}{location.unit ? `, ${location.unit}` : ''}</div><div className="nl-fco-muted">{[location.city, location.postalCode].filter(Boolean).join(' · ')}</div></div>
-                <Link to="/location" search={{ next: '/food/checkout' }} className="btn btn-ghost">{t('change')}</Link>
-              </div>
-            ) : (
-              <Alert tone="info" role="status" actions={<Link to="/location" search={{ next: '/food/checkout' }} className="btn btn-secondary">{t('addAddress')}</Link>}>{t('noAddress')}</Alert>
+    <div className="nl-page co-page nl-fco">
+      <div className="co-layout">
+        <div className="co-head"><h1 className="co-title">{t('checkoutTitle', { name: cart.name })}</h1></div>
+        <div className="co-main">
+          <Section n={1} id="fco-when" title={t('when')}>
+            <RadioGroup className="co-choices nl-fco-when" aria-labelledby="fco-when">
+              {data?.kitchen.open !== false && <OptionCard mark="radio" selected={when === 'asap'} role="radio" title={t('asap')} description={data ? t('etaRange', { from: data.kitchen.etaFromMin, to: data.kitchen.etaToMin }) : ''} onClick={() => setWhen('asap')} />}
+              {data && data.slots.length > 0 && <OptionCard mark="radio" selected={when === 'schedule'} role="radio" title={t('scheduleOpt')} description={t('scheduleDesc')} onClick={() => setWhen('schedule')} />}
+              {data?.kitchen.fulfilment.includes('pickup') && <OptionCard mark="radio" selected={pickup} role="radio" title={t('pickupOpt')} description={t('pickupDesc', { from: data.kitchen.pickupFromMin, to: data.kitchen.pickupToMin })} onClick={() => setWhen('pickup')} />}
+            </RadioGroup>
+            {when === 'schedule' && (
+              <Field label={t('window')} className="nl-fco-window">
+                <Select value={slot} onChange={e => setSlot(e.target.value)} options={slots.map(s => ({ value: s, label: `${date(s, 'long')} · ${date(s, 'time')}–${date(new Date(new Date(s).getTime() + 30 * 60_000), 'time')}` }))} />
+              </Field>
             )}
-            <fieldset className="nl-fco-chips"><legend>{t('dropoff')}</legend>
-              {DROPOFFS.map(d => <button key={d} type="button" className="nl-chip" aria-pressed={dropoff === d} onClick={() => setDropoff(d)}>{t(d)}</button>)}
-            </fieldset>
-            <Field label={t('courierNote')}><TextInput value={note} onChange={e => setNote(e.target.value)} placeholder={t('courierNotePlaceholder')} maxLength={140} /></Field>
-            <fieldset className="nl-fco-chips"><legend>{t('extras')}</legend>
-              {EXTRAS.map(x => <button key={x} type="button" className="nl-chip" aria-pressed={extras.has(x)} onClick={() => setExtras(s => { const n = new Set(s); if (n.has(x)) n.delete(x); else n.add(x); return n; })}>{t(x)}</button>)}
-            </fieldset>
-            <fieldset className="nl-fco-chips"><legend>{t('tipTitle')}</legend>
-              {TIPS.map((x, i) => <button key={i} type="button" className="nl-chip" aria-pressed={tip === i} onClick={() => setTip(i)}>{x.kind === 'none' ? t('noTip') : x.kind === 'percent' ? `${x.value}%` : money(x.value, { whole: true })}</button>)}
-            </fieldset>
-          </>
-        )}
-        <AgeCheck age={age} returnTo="web_food" onChanged={() => void quote.refetch()} />
-        <h2>{tp('promoTitle')}</h2>
-        <PromoPoints code={promoCode} onCode={setPromoCode} discountCents={quote.data?.discountCents}
-          error={quote.error instanceof ValidationError ? quote.error.byField().promoCode : undefined}
-          usePoints={usePoints} onUsePoints={setUsePoints} pointsAvailable={quote.data?.pointsAvailable}
-          pointsCents={quote.data?.pointsCents} disabled={phase.step === 'pay'} />
-        <h2>{t('payment')}</h2>
-        {phase.step === 'pay' && phase.started.mode === 'stripe'
-          ? <StripePayment started={asCartStarted(phase.started)} busy={busy} onPaid={() => void place(phase.started)} onError={m => setError(m)} />
-          : <p className="nl-fco-muted">{t('fakeKicker')}</p>}
-        <CheckoutConsent consent={consent} />
-      </div>
+          </Section>
 
-      <aside className="nl-rest-aside" aria-live="polite">
-        <Summary t={t} totals={totals} loading={quote.isFetching && !totals} lines={cart.lines.map(l => ({ key: l.key, qty: l.qty, title: l.title, cents: l.unitCents * l.qty }))} />
-        {error && <p className="nl-error" role="alert">{error}</p>}
-        {quote.isError && phase.step === 'form' && <p className="nl-error" role="alert">{quote.error instanceof ValidationError ? quote.error.errors.map(x => x.message).join(' ') : problemCode(quote.error) === 'kitchen_closed' ? t('err_closed') : t('err_generic')}</p>}
-        {phase.step === 'pay' && phase.started.mode === 'fake' ? (
-          <BankStep t={t} total={money(phase.started.totals.totalCents)} busy={busy} onApprove={() => void place(phase.started)} />
-        ) : phase.step !== 'pay' ? (
-          <>
-            <Button block disabled={!payable || busy} aria-busy={busy} onClick={() => void pay()}>{busy ? t('paying') : t('pay', { total: money(totals?.totalCents ?? 0) })}</Button>
-            <p className="nl-fco-note">{t('payNote')}</p>
-          </>
-        ) : null}
-      </aside>
+          {!pickup && (
+            <Section n={2} id="fco-where" title={t('deliverTo')}
+              action={hasAddress ? <Link to="/location" search={{ next: '/food/checkout' }} className="btn btn-link co-change">{t('change')}</Link> : null}>
+              {hasAddress ? (
+                <RadioGroup className="co-choices" aria-labelledby="fco-where">
+                  <OptionCard mark="radio" role="radio" selected title={`${location.street}${location.unit ? `, ${location.unit}` : ''}`} description={[location.city, location.postalCode].filter(Boolean).join(' · ')} />
+                </RadioGroup>
+              ) : (
+                <Alert tone="info" role="status" actions={<Link to="/location" search={{ next: '/food/checkout' }} className="btn btn-secondary">{t('addAddress')}</Link>}>{t('noAddress')}</Alert>
+              )}
+              <div className="nl-fco-group">
+                <span className="nl-fco-label" id="fco-dropoff">{t('dropoff')}</span>
+                <Segmented name="fco-dropoff" stack aria-label={t('dropoff')} value={dropoff} onChange={setDropoff} options={DROPOFFS.map(d => ({ value: d, label: t(d) }))} />
+              </div>
+              <Field label={t('courierNote')}><TextInput value={note} onChange={e => setNote(e.target.value)} placeholder={t('courierNotePlaceholder')} maxLength={140} /></Field>
+              <div className="nl-fco-group" role="group" aria-labelledby="fco-extras">
+                <span className="nl-fco-label" id="fco-extras">{t('extras')}</span>
+                <div className="nl-chips">
+                  {EXTRAS.map(x => <Chip key={x} selected={extras.has(x)} onClick={() => setExtras(s => { const n = new Set(s); if (n.has(x)) n.delete(x); else n.add(x); return n; })}>{t(x)}</Chip>)}
+                </div>
+              </div>
+            </Section>
+          )}
+
+          {!pickup && (
+            <Section n={3} id="fco-tip" title={t('tipTitle')} className="co-tip-seg-host">
+              <Segmented name="fco-tip" aria-label={t('tipTitle')} value={String(tip)} onChange={v => setTip(Number(v))}
+                options={tipKeys.map((k, i) => { const x = TIPS[i]!; return { value: k, label: x.kind === 'none' ? t('noTip') : x.kind === 'percent' ? `${x.value} %` : money(x.value, { whole: true }) }; })} />
+            </Section>
+          )}
+
+          <Section n={pickup ? 2 : 4} id="fco-pay" title={t('payment')}>
+            <AgeCheck age={age} returnTo="web_food" onChanged={() => void quote.refetch()} />
+            {phase.step === 'pay' && phase.started.mode === 'stripe'
+              ? <StripePayment started={asCartStarted(phase.started)} busy={busy} onPaid={() => void place(phase.started)} onError={m => setError(m)} />
+              : <p className="co-muted">{t('fakeKicker')}</p>}
+            <details className="co-promo">
+              <summary>{tp('promoTitle')}</summary>
+              <PromoPoints code={promoCode} onCode={setPromoCode} discountCents={quote.data?.discountCents}
+                error={quote.error instanceof ValidationError ? quote.error.byField().promoCode : undefined}
+                usePoints={usePoints} onUsePoints={setUsePoints} pointsAvailable={quote.data?.pointsAvailable}
+                pointsCents={quote.data?.pointsCents} disabled={phase.step === 'pay'} />
+            </details>
+            <CheckoutConsent consent={consent} />
+          </Section>
+        </div>
+
+        <aside className="co-summary" aria-label={t('summaryTitle')} aria-live="polite">
+          {phase.step === 'pay' && phase.started.mode === 'fake' ? (
+            <BankStep t={t} total={price(phase.started.totals.totalCents)} busy={busy} onApprove={() => void place(phase.started)} />
+          ) : phase.step !== 'pay' ? (
+            <Button block size="lg" disabled={!payable || busy} aria-busy={busy} onClick={() => void pay()}>{busy ? t('paying') : t('pay', { total: price(totals?.totalCents ?? 0) })}</Button>
+          ) : null}
+          <p className="co-fine">{t('payNote')}</p>
+          <Summary t={t} totals={totals} loading={quote.isFetching && !totals} lines={cart.lines.map(l => ({ key: l.key, qty: l.qty, title: l.title, cents: l.unitCents * l.qty }))} />
+          {error && <Alert tone="error" role="alert">{error}</Alert>}
+          {quote.isError && phase.step === 'form' && <Alert tone="error" role="alert">{quote.error instanceof ValidationError ? quote.error.errors.map(x => x.message).join(' ') : problemCode(quote.error) === 'kitchen_closed' ? t('err_closed') : t('err_generic')}</Alert>}
+        </aside>
+      </div>
 
       {phase.step === 'stepUp' && (
         <StepUpDialog mode={phase.mode} onClose={() => setPhase({ step: 'form' })} onProof={proof => { setPhase({ step: 'form' }); void pay(proof); }} />
@@ -224,17 +239,17 @@ export function asCartStarted(s: FoodStarted): CartStarted {
 }
 
 function Summary({ t, totals, loading, lines }: { t: T; totals?: Totals; loading: boolean; lines: { key: string; qty: number; title: string; cents: number }[] }) {
-  const { money } = useFormatters();
+  const { price: money } = useFormatters();
   const tp = usePromoT();
   return (
     <>
-      <ul className="nl-rest-lines">
+      <ul className="nl-rest-lines nl-fco-lines">
         {(totals?.lines.map((l, i) => ({ key: String(i), qty: l.qty, title: l.title, cents: l.totalCents })) ?? lines).map(l => (
           <li key={l.key}><span><strong>{l.qty}×</strong> {l.title}</span><span>{money(l.cents)}</span></li>
         ))}
       </ul>
       {loading ? <Skeleton height={120} /> : totals ? (
-        <dl className="nl-rest-totals">
+        <dl className="co-totals nl-fco-totals">
           <div><dt>{t('items')}</dt><dd>{money(totals.subtotalCents)}</dd></div>
           {totals.discountCents > 0 && <div><dt>{tp('discount', { code: totals.promoCode ?? '' })}</dt><dd>−{money(totals.discountCents)}</dd></div>}
           {totals.pointsCents > 0 && <div><dt>{tp('pointsLine')}</dt><dd>−{money(totals.pointsCents)}</dd></div>}
@@ -242,10 +257,12 @@ function Summary({ t, totals, loading, lines }: { t: T; totals?: Totals; loading
           <div><dt>{t('serviceFee')}</dt><dd>{totals.plusServiceFee ? tp('plusFee') : money(totals.serviceFeeCents)}</dd></div>
           {totals.mode === 'delivery' && <div><dt>{t('tip')}</dt><dd>{money(totals.tipCents)}</dd></div>}
           <div><dt>{t('tax')}</dt><dd>{money(totals.taxCents)}</dd></div>
-          <div className="nl-rest-total"><dt>{t('total')}</dt><dd>{money(totals.totalCents)}</dd></div>
         </dl>
       ) : null}
-      {totals?.estimate && <p className="nl-fco-muted">{t('estimate')}</p>}
+      {totals && !loading ? (
+        <div className="co-total"><span>{t('total')}</span><Price cents={totals.totalCents} size="xl" /></div>
+      ) : null}
+      {totals?.estimate && <p className="co-fine">{t('estimate')}</p>}
     </>
   );
 }

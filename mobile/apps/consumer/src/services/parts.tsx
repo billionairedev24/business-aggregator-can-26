@@ -2,7 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { MIN_TARGET, colors, fonts, radius, semantic, shadow, space } from '@northline/mobile-kit';
+import { colors, FilterChip, LINE, MIN_TARGET, radius, semantic, space, textStyles } from '@northline/mobile-kit';
 
 import { KEYS as ACCOUNT_KEYS } from '../account/common';
 import { servicesApi } from '../api/services';
@@ -41,20 +41,7 @@ export function useTier() {
 
 /** The design's `chip`: a filter or a time (accent fill when chosen). */
 export function Chip({ label, selected, onPress, disabled, hint, testID }: { label: string; selected: boolean; onPress: () => void; disabled?: boolean; hint?: string; testID?: string }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityHint={hint}
-      accessibilityState={{ selected, disabled: !!disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      testID={testID}
-      style={({ pressed }) => [styles.chip, selected && styles.chipOn, pressed && !selected && styles.chipPressed, disabled && styles.chipOff]}
-    >
-      <Text style={[styles.chipText, selected && styles.chipTextOn, disabled && styles.chipTextOff]}>{label}</Text>
-    </Pressable>
-  );
+  return <FilterChip label={label} selected={selected} onPress={onPress} disabled={disabled} hint={hint} role="button" testID={testID} />;
 }
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
@@ -126,32 +113,17 @@ export function Kicker({ children }: { children: ReactNode }) {
 export type T = (key: MessageKey, params?: Record<string, string | number>) => string;
 
 const styles = StyleSheet.create({
-  chip: {
-    minHeight: MIN_TARGET,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.borderControl,
-    backgroundColor: colors.surface,
-  },
-  chipOn: { backgroundColor: colors.actionPrimary, borderColor: colors.actionPrimary },
-  chipPressed: { backgroundColor: semantic['surface-hover'] },
-  chipOff: { opacity: 0.45 },
-  chipText: { fontFamily: fonts.medium, fontSize: 14, color: colors.text },
-  chipTextOn: { fontFamily: fonts.semibold, color: colors.actionPrimaryText },
-  chipTextOff: { textDecorationLine: 'line-through' },
-  mark: { borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center' },
-  markText: { fontFamily: fonts.display, color: colors.onAccent },
+  mark: { borderRadius: radius.panel, alignItems: 'center', justifyContent: 'center' },
+  markText: { fontFamily: textStyles.section.fontFamily, color: semantic['action-primary-text'] },
   line: { flexDirection: 'row', justifyContent: 'space-between', gap: space[3] },
   lineLeft: { flex: 1 },
-  lineStrong: { fontFamily: fonts.bold, fontSize: 17 },
-  muted: { color: colors.textMuted },
-  panel: { padding: space[4], borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'], gap: space[2] },
-  panelAccent: { backgroundColor: semantic['surface-brand'] },
-  steps: { flexDirection: 'row', gap: 6 },
-  step: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.borderStrong },
-  stepOn: { backgroundColor: colors.actionPrimary },
-  row: { minHeight: MIN_TARGET, padding: space[4], gap: space[2], borderRadius: radius.lg, borderWidth: 1, borderColor: semantic['border-card'], backgroundColor: colors.surface, ...shadow.sm },
+  lineStrong: { ...StyleSheet.flatten(textStyles.sub) },
+  muted: { color: semantic['text-muted'] },
+  panel: { padding: space[4], borderRadius: radius.panel, backgroundColor: semantic.well, gap: space[2] },
+  panelAccent: { backgroundColor: semantic['status-info-bg'] },
+  steps: { flexDirection: 'row', gap: space[1.5] },
+  step: { flex: 1, height: 4, borderRadius: radius.status, backgroundColor: semantic['border-strong'] },
+  stepOn: { backgroundColor: semantic.selected },
+  row: { minHeight: MIN_TARGET, padding: space[4], gap: space[2], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-strong'], backgroundColor: semantic.surface },
   rowPressed: { backgroundColor: semantic['surface-hover'] },
 });

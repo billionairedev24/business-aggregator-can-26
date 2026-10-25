@@ -1,17 +1,27 @@
-/* Studio › Standing (S-156): consequences, appeals, coaching. Semantic tokens only. */
-.nl-st-lede { color: var(--color-text-muted); max-width: 72ch; margin: 0 0 var(--space-5); line-height: var(--leading-relaxed); }
-.nl-st-section { margin: 0 0 var(--space-6); }
-.nl-st-h2 { font-size: var(--text-lg); margin: 0 0 var(--space-3); }
+/*
+ * Studio › Standing (S-156; S-176 on the Studio dashboard's language): the page head, the KPI strip, then what is in
+ * force, what can be appealed, coaching, appeals and history as white panels on hairlines — a panel's edge is its
+ * urgency (in force danger, appealable warning). Semantic tokens and the scale only (strictly linted).
+ */
+.nl-st-page { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
+.nl-st-page > .bo-head { margin-bottom: 0; }
+.nl-st-lede { color: var(--color-text-muted); max-width: 72ch; margin: 0; font-size: var(--type-body); line-height: var(--leading-relaxed); }
+.nl-st-section { margin: 0; }
+.nl-st-h2 { font-size: var(--type-sub); font-weight: var(--weight-semibold); margin: 0 0 var(--space-3); }
 .nl-st-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
-.nl-st-card { padding: var(--space-4) var(--space-5); border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: var(--space-2); }
+.nl-st-card { padding: var(--space-4) var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-panel); background: var(--color-surface); display: flex; flex-direction: column; gap: var(--space-2); }
+.nl-st-card[data-tone='danger'] { border-inline-start: 3px solid var(--color-status-danger-fg); }
+.nl-st-card[data-tone='warning'] { border-inline-start: 3px solid var(--color-status-warning-fg); }
 @media (max-width: 599.98px) { .nl-st-card { padding: var(--space-4); } }
 .nl-st-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
-.nl-st-title { font-size: var(--text-md); font-weight: var(--weight-semibold); margin: 0; }
-.nl-st-meta { font-size: var(--text-sm); color: var(--color-text-muted); margin: 0; overflow-wrap: anywhere; }
-.nl-st-text { margin: 0; line-height: var(--leading-relaxed); overflow-wrap: anywhere; }
-.nl-st-reason { margin: 0; padding: var(--space-2) var(--space-3); background: var(--color-surface-sunken); border-left: 3px solid var(--color-border-strong); border-radius: var(--radius-sm); overflow-wrap: anywhere; }
+.nl-st-title { font-size: var(--type-body); font-weight: var(--weight-semibold); margin: 0; }
+.nl-st-meta { font-size: var(--type-label); color: var(--color-text-muted); margin: 0; overflow-wrap: anywhere; }
+.nl-st-text { margin: 0; font-size: var(--type-body); line-height: var(--leading-relaxed); overflow-wrap: anywhere; }
+.nl-st-reason { margin: 0; padding: var(--space-2) var(--space-3); background: var(--color-well); border-inline-start: 3px solid var(--color-border-strong); border-radius: var(--radius-control); font-size: var(--type-body); overflow-wrap: anywhere; }
 .nl-st-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .nl-st-tasks { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
 .nl-st-files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
-.nl-st-file { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); min-height: 44px; }
+.nl-st-file { display: flex; align-items: center; gap: var(--space-2); font-size: var(--type-label); min-height: var(--size-touch); }
 .nl-st-file > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+/* S-180: an appeal file link is a 24 px target (WCAG 2.5.8) */
+.nl-st-file a { display: inline-block; padding-block: var(--space-1); }

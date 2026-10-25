@@ -1,26 +1,29 @@
 import { useRouterState } from '@tanstack/react-router';
 import { Lifebuoy, SignIn, Storefront, Translate, UserPlus } from '@phosphor-icons/react';
-import { AccountMenu, LocationPill, SiteHeader, SiteLink, Skeleton, fullNavEnabled, useLocale } from '@northline/ui';
+import { AccountMenu, LocationPill, SiteHeader, SiteLink, Skeleton, useLocale, type SiteNavLink } from '@northline/ui';
 import { useCartCount } from '../cart/api';
 import { CUISINES, DEPARTMENTS, SERVICE_CATEGORIES, type Tile } from '../home/catalog';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
+import type { Scope } from '../search/api';
 import { SiteSearch } from '../search/SiteSearch';
 import { signInHref, useSignOut, useViewer } from '../session/api';
 import { AccountArea } from './AccountArea';
 import { useShellT } from './messages';
 import { SCREENS, screenFor } from './screens';
 
-/** The nav row's shortcuts after the sections: the busiest service categories, then the main departments. */
-const SERVICE_SHORTCUTS = ['mechanic', 'cleaning', 'plumber', 'movers', 'barber'];
-const SHOP_SHORTCUTS = ['groceries', 'bakery', 'butcher', 'produce', 'pharmacy', 'clothing'];
+/** The strip's shortcuts after the sections (design/revamp/a.html): the main departments, then the busiest service categories. */
+const SHOP_SHORTCUTS = ['bakery', 'butcher', 'groceries', 'pharmacy', 'clothing'];
+const SERVICE_SHORTCUTS = ['mechanic', 'cleaning', 'barber', 'tutor', 'plumber'];
+/** Today's deals: the shop's items on tonight's pooled run (the shared delivery is the day's offer; no deals feed yet). */
+export const DEALS_HREF = '/search?scope=shop&delivery=tonight';
 
 /**
- * The consumer header (owner, 2026-10-19, after AfroTransact's): a compact white top bar — logo · the location control
- * (the place's name at every width; opens the location dialog) · search (the one search of every page, home included)
- * · the avatar menu (signed in, or "Welcome, guest" with Sign in / Create account) · cart (count) — and a slim nav row:
- * "All" (every category by section, sell, the language), Services / Shop (/ Food), the main categories and
- * departments (the catalogue's tiles, region-neutral), Help at the end. Orders & bookings are in the account menu only;
- * the language switch is in the footer, the account menu and the "All" sheet. The sign-in pages show the logo alone.
+ * The consumer header (E-15 A · Plainsight, design/revamp/a.html): logo · "Deliver to" (opens the location dialog,
+ * never a geolocation prompt on load) · the search with its All / Services / Shop / Food scope (the current section's
+ * by default) · "Hello, … / Account & orders" (the account menu, where orders, bookings and the FR/EN switch live) ·
+ * cart with its count; then the violet department strip (S-188): "All" (every category by section, in a sheet — the menu button
+ * opens it on phones), Services · Shop · Food, the main departments | the busiest service categories, "Today's deals"
+ * and "Sell on …" at the right end. The sign-in pages show the logo alone.
  */
 export function Header() {
   const t = useShellT();
@@ -32,34 +35,37 @@ export function Header() {
   const cartCount = useCartCount(!loading);
   const { location, chooser } = useDeliveryLocation();
   const signOut = useSignOut();
-  // on the results page the field shows what was searched
-  const searched = useRouterState({ select: st => (st.location.pathname === '/search' ? (st.location.search as { q?: unknown }).q : undefined) });
+  // on the results page the field shows what was searched, in the scope it was searched in
+  const searched = useRouterState({ select: st => (st.location.pathname === '/search' ? st.location.search as { q?: unknown; scope?: unknown } : undefined) });
   const section = screen ? SCREENS[screen].section : undefined;
   const auth = !!(screen && SCREENS[screen].auth);
-  // redesign § 3.7: Food as its own vertical is hidden for the demo (its routes stay)
-  const full = fullNavEnabled();
+  const searchedScope = typeof searched?.scope === 'string' && ['services', 'shop', 'food'].includes(searched.scope) ? searched.scope as Scope : undefined;
+  const scope: Scope = searched ? searchedScope ?? 'all' : section ?? 'all';
   const here = (to: string) => pathname === to || pathname.startsWith(`${to}/`);
-  const link = (tile: Tile) => ({ key: tile.key, label: locale === 'fr' ? tile.fr : tile.en, href: tile.href, current: !tile.href.includes('?') && here(tile.href) });
-  const pick = (all: readonly Tile[], keys: readonly string[]) => keys.map(k => all.find(x => x.key === k)).filter((x): x is Tile => !!x).map(link);
-  const shortcuts = [...pick(SERVICE_CATEGORIES, SERVICE_SHORTCUTS), ...pick(DEPARTMENTS, SHOP_SHORTCUTS)];
-  // one current item in the row: the category's shortcut when it has one, else its section
+  const link = (tile: Tile, group?: string): SiteNavLink => ({ key: tile.key, label: locale === 'fr' ? tile.fr : tile.en, href: tile.href, group, current: !tile.href.includes('?') && here(tile.href) });
+  const pick = (all: readonly Tile[], keys: readonly string[], group: string) => keys.map(k => all.find(x => x.key === k)).filter((x): x is Tile => !!x).map(x => link(x, group));
+  const shortcuts = [...pick(DEPARTMENTS, SHOP_SHORTCUTS, 'shop'), ...pick(SERVICE_CATEGORIES, SERVICE_SHORTCUTS, 'services')];
+  // one current item in the strip: the category's shortcut when it has one, else its section
   const inShortcut = shortcuts.some(l => l.current);
-  // the nav row is words only (owner 2026-10-19: photos, not decorative icons); the sheet keeps its icons
-  const links = (full ? ['services', 'shop', 'food'] as const : ['services', 'shop'] as const)
-    .map(key => ({ key, label: t(key), href: `/${key}`, current: section === key && !inShortcut }));
+  const links = (['services', 'shop', 'food'] as const).map(key => ({ key, label: t(key), href: `/${key}`, current: section === key && !inShortcut }));
+  const end: SiteNavLink[] = [
+    { key: 'deals', label: t('deals'), href: DEALS_HREF, tone: 'deal' },
+    { key: 'sell', label: t('sell'), href: '/sell', current: pathname === '/sell' },
+  ];
   const menu = [
-    { key: 'services', heading: t('services'), href: '/services', links: SERVICE_CATEGORIES.map(link) },
-    { key: 'shop', heading: t('shop'), href: '/shop', links: DEPARTMENTS.map(link) },
-    ...(full ? [{ key: 'food', heading: t('food'), href: '/food', links: CUISINES.map(link) }] : []),
+    { key: 'services', heading: t('services'), href: '/services', links: SERVICE_CATEGORIES.map(x => link(x)) },
+    { key: 'shop', heading: t('shop'), href: '/shop', links: DEPARTMENTS.map(x => link(x)) },
+    { key: 'food', heading: t('food'), href: '/food', links: CUISINES.map(x => link(x)) },
   ];
   const toggleLocale = () => setLocale(locale === 'fr' ? 'en' : 'fr');
   const language = { key: 'language', label: t('langSwitch'), lang: locale === 'fr' ? 'en-CA' : 'fr-CA', icon: Translate, onSelect: toggleLocale };
+  const firstName = user?.firstName?.trim() || undefined;
 
   const account = auth ? null
-    : loading ? <Skeleton width={56} height={44} radius={4} />
-    : user ? <AccountArea user={user} onSignOut={() => void signOut('/')} onToggleLocale={toggleLocale} />
+    : loading ? <Skeleton width={120} height={36} radius="var(--radius-control)" />
+    : user ? <AccountArea user={user} onSignOut={() => void signOut('/')} onToggleLocale={toggleLocale} greeting={{ line1: firstName ? t('hello', { name: firstName }) : t('helloSignedIn'), line2: t('accountOrders') }} />
     : (
-      <AccountMenu sections={[
+      <AccountMenu greeting={{ line1: t('helloGuest'), line2: t('accountOrders') }} sections={[
         { items: [
           { key: 'signIn', label: t('signIn'), icon: SignIn, href: signInHref(href) },
           { key: 'register', label: t('createAccount'), icon: UserPlus, href: signInHref(href, 'register') },
@@ -70,11 +76,11 @@ export function Header() {
 
   return (
     <SiteHeader
-      location={auth ? null : <LocationPill status={location.status} label={location.label} kicker={section === 'services' ? 'near' : 'deliverTo'} onOpen={chooser.show} />}
-      search={auth ? undefined : <SiteSearch variant="header" placeholder={t('search')} initial={typeof searched === 'string' ? searched : ''} />}
+      location={auth ? null : <LocationPill status={location.status} label={location.label} name={firstName} kicker={section === 'services' ? 'near' : 'deliverTo'} onOpen={chooser.show} />}
+      search={auth ? undefined : <SiteSearch variant="header" placeholder={t('search')} scope={scope} initial={typeof searched?.q === 'string' ? searched.q : ''} />}
       links={auth ? [] : links}
       shortcuts={auth ? [] : shortcuts}
-      end={auth ? [] : [{ key: 'help', label: t('helpLink'), href: '/help', current: pathname === '/help' }]}
+      end={auth ? [] : end}
       menu={auth ? [] : menu}
       menuExtra={auth ? undefined : (
         <>

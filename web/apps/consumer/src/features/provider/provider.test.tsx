@@ -35,10 +35,24 @@ const facts: ProviderFacts = {
   taxBps: 500, reviews: { items: [review(1), review(2), review(3)], nextOffset: 3 },
 };
 
+/** The public calendar for whatever days the booking box asks: two slots a day (the second taken), the third day full. */
+function slots(url: string) {
+  const q = new URL(url, 'http://x').searchParams;
+  const from = q.get('from')!;
+  const days = Array.from({ length: Number(q.get('days')) }, (_, i) => {
+    const d = new Date(`${from}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + i);
+    const date = d.toISOString().slice(0, 10);
+    const s = i === 2 ? [] : [{ startsAt: `${date}T16:00:00Z`, free: true }, { startsAt: `${date}T17:30:00Z`, free: false }];
+    return { date, closed: null, free: s.filter(x => x.free).length, slots: s };
+  });
+  return { serviceId: q.get('serviceId'), durationMin: 60, days, timeZone: 'America/Halifax', cancellation: { windowHours: 24, feeBps: 5000, feeCents: 0 } };
+}
+
 function api(over: { page?: Partial<Storefront>; facts?: Partial<ProviderFacts> } = {}) {
   return (c: Call) => guest(c) ?? (() => {
     if (c.url === '/api/v1/storefronts/prairie-wrench') return { body: { ...page, ...over.page } };
     if (c.url.startsWith('/api/v1/public/providers/prairie-wrench/reviews')) return { body: { items: [review(4)], nextOffset: null } };
+    if (c.url.startsWith('/api/v1/public/providers/prairie-wrench/slots')) return { body: slots(c.url) };
     if (c.url.startsWith('/api/v1/public/providers/prairie-wrench')) return { body: { ...facts, ...over.facts } };
     return undefined;
   })();
@@ -46,42 +60,84 @@ function api(over: { page?: Partial<Storefront>; facts?: Partial<ProviderFacts> 
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe('provider page (design 06 provider)', () => {
-  it('renders the published page: hero, trust figures, credentials, about, reviews, FAQ and area in the page’s order', async () => {
+describe('provider page (E-15 S-172, design/revamp/a.html)', () => {
+  it('renders the header, the trust badges, the tabs and the services as one-choice cards', async () => {
     mockFetch(api());
     renderApp('/providers/prairie-wrench', { routes });
     expect(await screen.findByRole('heading', { level: 1, name: 'Prairie Wrench' })).toBeInTheDocument();
     await expectNoAxeViolations(document.body); // S-109
-    expect(screen.getByText('Mobile mechanic · Calgary & Airdrie · since 2019')).toBeInTheDocument();
-    expect(screen.getByText('Master tier · verified')).toBeInTheDocument();
+    const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(crumbs).getByRole('link', { name: 'Mobile mechanic' })).toHaveAttribute('href', '/services/mobile-mechanic');
+    expect(screen.getByText('Mobile mechanic · Beltline, Downtown')).toBeInTheDocument();
+    expect(screen.getByText('Mobile mechanic · Calgary & Airdrie · since 2019 · Master tier · verified')).toBeInTheDocument();
     expect(screen.getByRole('note')).toHaveTextContent('Winter tire swaps: book before Oct 15 for $99');
-    expect(screen.getByText('4.9')).toBeInTheDocument();
-    expect(screen.getByText('312 verified reviews')).toBeInTheDocument();
-    expect(screen.getByText('98%')).toBeInTheDocument();
-    expect(screen.getByText('0.3%')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '4.9 out of 5 stars' })).toBeInTheDocument();
+    expect(screen.getByText('98% on time · 71% book again')).toBeInTheDocument();
     for (const tag of ['ID verified', 'AMVIC licensed', '$2M insured', 'instant book']) expect(screen.getByText(tag)).toBeInTheDocument();
-    expect(screen.getByText('Mobile mechanic since 2019. Red Seal, AMVIC-licensed.')).toBeInTheDocument();
-    const headings = screen.getAllByRole('heading', { level: 2 }).map(h => h.textContent);
-    expect(headings.slice(0, 3)).toEqual(['Reviews · 312', 'FAQ', 'Service area']);
-    expect(screen.getByText('“Great job number 1.”')).toBeInTheDocument();
-    expect(screen.getByText('Customer 1 · verified booking · 3 days ago')).toBeInTheDocument();
-    expect(screen.getByText(/Reply from Prairie Wrench/)).toBeInTheDocument();
-    expect(screen.getByText('Comes to you in Beltline · Downtown.')).toBeInTheDocument();
-    expect(screen.getByText('Do you work in parkades?')).toBeInTheDocument();
+    const tabs = screen.getByRole('tablist', { name: 'About Prairie Wrench' });
+    expect(within(tabs).getAllByRole('tab').map(x => x.textContent)).toEqual(['Services2', 'Reviews312', 'About']);
+    expect(within(tabs).getByRole('tab', { name: /Services/ })).toHaveAttribute('aria-selected', 'true');
+    const services = screen.getByRole('radiogroup', { name: 'Choose a service' });
+    expect(within(services).getByRole('radio', { name: /Brake inspection/ })).toHaveAttribute('aria-checked', 'true');
+    expect(within(services).getByRole('radio', { name: /Alternator.*quoted before work/ })).toBeInTheDocument();
+    const neighbours = screen.getByRole('region', { name: 'What neighbours say' });
+    expect(within(neighbours).getByText('“Great job number 1.”')).toBeInTheDocument();
+    expect(within(neighbours).getByText('Customer 1 · verified booking · 3 days ago')).toBeInTheDocument();
+    expect(within(neighbours).getByText(/Reply from Prairie Wrench/)).toBeInTheDocument();
   });
 
-  it('offers the services and the booking button in the aside', async () => {
+  it('shows the about, the figures, the FAQ and the area under About, and every review under Reviews', async () => {
     mockFetch(api());
     renderApp('/providers/prairie-wrench', { routes });
-    const aside = await screen.findByRole('complementary', { name: 'Book Prairie Wrench' });
-    expect(within(aside).getByText('Compare verified mechanics by trust, price and next available slot.')).toBeInTheDocument();
-    expect(within(aside).getByText('Brake inspection')).toBeInTheDocument();
-    expect(within(aside).getByText('$89')).toBeInTheDocument();
-    expect(within(aside).getByText('Quote')).toBeInTheDocument();
-    expect(within(aside).getByText('60 min')).toBeInTheDocument();
-    expect(within(aside).getByRole('link', { name: 'Book a visit' })).toHaveAttribute('href', '/providers/prairie-wrench/book');
-    expect(within(aside).getByRole('link', { name: 'Not sure? Request a quote' })).toBeInTheDocument();
-    expect(within(aside).getByText('Next available: No openings in the next 2 weeks · Extra parts need your approval. Free cancellation until 12 h before.')).toBeInTheDocument();
+    await user().click(await screen.findByRole('tab', { name: /About/ }));
+    expect(screen.getByText('Mobile mechanic since 2019. Red Seal, AMVIC-licensed.')).toBeInTheDocument();
+    expect(screen.getByText('312 verified reviews')).toBeInTheDocument();
+    expect(screen.getByText('0.3%')).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 2 }).map(h => h.textContent)).toEqual(expect.arrayContaining(['About Prairie Wrench', 'FAQ', 'Service area']));
+    expect(within(screen.getByRole('region', { name: 'Service area' })).getByText('Comes to you in Beltline · Downtown.')).toBeInTheDocument();
+    expect(screen.getByText('Do you work in parkades?')).toBeInTheDocument();
+    await user().click(screen.getByRole('tab', { name: /Reviews/ }));
+    expect(screen.getByRole('heading', { name: 'Reviews · 312' })).toBeInTheDocument();
+    expect(screen.getByText('“Great job number 3.”')).toBeInTheDocument();
+  });
+
+  it('books from the box: a day, a time, then "Book <day> at <time>" opens the wizard with them chosen', async () => {
+    sessionStorage.clear();
+    mockFetch(api());
+    const { router } = renderApp('/providers/prairie-wrench', { routes: { ...routes, book: () => <h1>Booking wizard</h1> } });
+    const box = await screen.findByRole('complementary', { name: 'Book a time' });
+    expect(within(box).getAllByText('Brake inspection')).toHaveLength(2); // the choice and the price line
+    expect(within(box).getByText('60 min · $89.00')).toBeInTheDocument();
+    expect(within(box).getByRole('button', { name: 'Choose a time' })).toBeDisabled();
+    const days = await within(box).findByRole('radiogroup', { name: 'Choose a day' });
+    const choices = within(days).getAllByRole('radio');
+    expect(choices).toHaveLength(5);
+    expect(choices[2]).toBeDisabled(); // nothing free that day
+    await user().click(choices[1]!);
+    expect(choices[1]).toHaveAttribute('aria-checked', 'true');
+    const times = within(box).getByRole('radiogroup', { name: /^Times on / });
+    expect(within(times).getByRole('radio', { name: '2:30 p.m.' })).toBeDisabled(); // taken (Halifax time, the calendar's zone)
+    await user().click(within(times).getByRole('radio', { name: '1:00 p.m.' }));
+    expect(within(box).getByText('Comes to you')).toBeInTheDocument();
+    expect(within(box).getByText('Included')).toBeInTheDocument();
+    expect(within(box).getByText('$4.45')).toBeInTheDocument(); // 5 % on $89
+    expect(within(box).getByText('Your card is held, not charged, until you confirm the job is done.')).toBeInTheDocument();
+    const book = within(box).getByRole('button', { name: /^Book .+ at 1:00 p\.m\.$/ });
+    await user().click(book);
+    expect(await screen.findByRole('heading', { name: 'Booking wizard' })).toBeInTheDocument();
+    expect(router.state.location.search).toEqual({ service: 's1' });
+    const draft = JSON.parse(sessionStorage.getItem('nl.book.prairie-wrench')!);
+    expect(draft).toMatchObject({ serviceId: 's1', timeZone: 'America/Halifax', cancellation: { windowHours: 24 } });
+    expect(draft.startsAt).toMatch(/T16:00:00Z$/);
+  });
+
+  it('asks for a quote when the chosen service is quoted', async () => {
+    mockFetch(api());
+    renderApp('/providers/prairie-wrench', { routes });
+    await user().click(await screen.findByRole('radio', { name: /Alternator/ }));
+    const box = screen.getByRole('complementary', { name: 'Book a time' });
+    expect(within(box).getByRole('link', { name: 'Request a quote' })).toHaveAttribute('href', '/services/mobile-mechanic/quote?provider=prairie-wrench');
+    expect(within(box).queryByRole('radiogroup', { name: 'Choose a day' })).not.toBeInTheDocument();
   });
 
   it('leaves out sections the business turned off, and says so when it has no reviews yet', async () => {
@@ -89,16 +145,22 @@ describe('provider page (design 06 provider)', () => {
     renderApp('/providers/prairie-wrench', { routes });
     expect(await screen.findByRole('heading', { name: 'Reviews · 0' })).toBeInTheDocument();
     expect(screen.getAllByText('New on Northline — verified').length).toBeGreaterThan(0);
-    expect(screen.queryByText('Mobile mechanic since 2019. Red Seal, AMVIC-licensed.')).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Service area' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /Services/ })).not.toBeInTheDocument();
     expect(screen.queryByText('Brake inspection')).not.toBeInTheDocument();
     expect(screen.queryByRole('note')).not.toBeInTheDocument();
+    const aside = screen.getByRole('complementary', { name: 'Book Prairie Wrench' });
+    expect(within(aside).getByRole('link', { name: 'Book a visit' })).toHaveAttribute('href', '/providers/prairie-wrench/book');
+    expect(within(aside).getByRole('link', { name: 'Not sure? Request a quote' })).toBeInTheDocument();
+    await user().click(screen.getByRole('tab', { name: /About/ }));
+    expect(screen.queryByText('Mobile mechanic since 2019. Red Seal, AMVIC-licensed.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Service area' })).not.toBeInTheDocument();
   });
 
   it('loads more reviews on demand', async () => {
     const calls = mockFetch(api());
     renderApp('/providers/prairie-wrench', { routes });
-    await user().click(await screen.findByRole('button', { name: 'Show more reviews' }));
+    await user().click(await screen.findByRole('tab', { name: /Reviews/ }));
+    await user().click(screen.getByRole('button', { name: 'Show more reviews' }));
     expect(await screen.findByText('“Great job number 4.”')).toBeInTheDocument();
     expect(calls.some(c => c.url === '/api/v1/public/providers/prairie-wrench/reviews?offset=3&limit=10')).toBe(true);
     expect(screen.queryByRole('button', { name: 'Show more reviews' })).not.toBeInTheDocument();
@@ -107,12 +169,15 @@ describe('provider page (design 06 provider)', () => {
   it('reads in French', async () => {
     mockFetch(api());
     renderApp('/providers/prairie-wrench', { routes, locale: 'fr' });
-    expect(await screen.findByText('Niveau Maître · vérifié')).toBeInTheDocument();
-    expect(screen.getByText('312 avis vérifiés')).toBeInTheDocument();
-    expect(screen.getByText('4,9')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Avis · 312' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Réserver une visite' })).toBeInTheDocument();
+    expect(await screen.findByText(/Niveau Maître · vérifié/)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '4,9 sur 5 étoiles' })).toBeInTheDocument();
+    expect(screen.getByText('98 % à l’heure · 71 % réservent de nouveau')).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'Choisissez un service' })).toBeInTheDocument();
+    const box = screen.getByRole('complementary', { name: 'Réserver un moment' });
+    expect(within(box).getByRole('button', { name: 'Choisissez une heure' })).toBeDisabled();
     expect(screen.getByText('Customer 1 · réservation vérifiée · il y a 3 jours')).toBeInTheDocument();
+    await user().click(screen.getByRole('tab', { name: /Avis/ }));
+    expect(screen.getByRole('heading', { name: 'Avis · 312' })).toBeInTheDocument();
   });
 
   it('words relative review dates', () => {

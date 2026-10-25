@@ -15,7 +15,10 @@
     "lint:colors": "node scripts/check-hex-colors.mjs",
     "test-storybook": "pnpm --filter @northline/ui test-storybook",
     "lint:brand": "node scripts/check-brand-literal.mjs",
-    "lint:tokens": "node scripts/check-legacy-tokens.mjs"
+    "lint:tokens": "node scripts/check-legacy-tokens.mjs",
+    "test:visual": "pnpm --filter @northline/gallery test:visual",
+    "test:visual:update": "pnpm --filter @northline/gallery test:visual:update",
+    "dev:gallery": "pnpm --filter @northline/gallery dev"
   },
   "devDependencies": {
     "typescript": "^5.9.0",

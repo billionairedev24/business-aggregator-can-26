@@ -6,19 +6,21 @@ import { useState } from 'react';
 import { Image, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
-  MIN_TARGET,
-  SCREENSHOT_MAX_BYTES,
-  SCREENSHOT_TYPES,
   checkPhoto,
   colors,
-  fonts,
   pilotApi,
+  LINE,
+  MIN_TARGET,
   radius,
   screenOf,
+  SCREENSHOT_MAX_BYTES,
+  SCREENSHOT_TYPES,
   space,
+  textStyles,
   type FeedbackCategory,
   type FeedbackSeverity,
   type PickedImage,
+  semantic,
 } from '@northline/mobile-kit';
 
 import { Banner, Body, Button, Heading, Screen } from '../components/ui';
@@ -179,22 +181,12 @@ function Choices<T extends string>({ label, options, value, onChange, testID }: 
 
 const styles = StyleSheet.create({
   choices: { gap: space[2] },
-  choice: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: MIN_TARGET, paddingHorizontal: space[3], borderRadius: radius.md, borderWidth: 1, borderColor: colors.divider },
-  choiceOn: { borderColor: colors.accent, backgroundColor: colors.accent100 },
-  dot: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: colors.neutral500 },
-  dotOn: { borderColor: colors.accent, backgroundColor: colors.accent },
-  choiceText: { flex: 1, fontFamily: fonts.body, fontSize: 16, color: colors.text },
-  input: {
-    minHeight: MIN_TARGET * 3,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    borderRadius: radius.md,
-    padding: space[3],
-    fontFamily: fonts.body,
-    fontSize: 16,
-    color: colors.text,
-    textAlignVertical: 'top',
-  },
+  choice: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: MIN_TARGET, paddingHorizontal: space[3], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: colors.divider },
+  choiceOn: { borderColor: semantic.selected, backgroundColor: semantic['selected-tint'] },
+  dot: { width: 18, height: 18, borderRadius: radius.round, borderWidth: LINE.bold, borderColor: colors.neutral500 },
+  dotOn: { borderColor: semantic.selected, backgroundColor: semantic.selected },
+  choiceText: { ...StyleSheet.flatten(textStyles.body), flex: 1 },
+  input: { ...StyleSheet.flatten(textStyles.body), minHeight: MIN_TARGET * 3, borderWidth: LINE.hair, borderColor: colors.divider, borderRadius: radius.panel, padding: space[3], textAlignVertical: 'top' },
   shotRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
-  shot: { width: 72, height: 128, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.divider },
+  shot: { width: 72, height: 128, borderRadius: radius.control, borderWidth: LINE.hair, borderColor: colors.divider },
 });

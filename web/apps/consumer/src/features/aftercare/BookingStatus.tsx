@@ -20,7 +20,7 @@ export function BookingStatus({ bookingId }: { bookingId: string }) {
   const { date, money } = useFormatters();
   const { user, loading } = useViewer();
   const q = useQuery({ ...bookingQuery(bookingId), enabled: !!user });
-  if (loading || (user && q.isPending)) return <div className="nl-page"><Skeleton width={320} height={36} /><Skeleton height={160} style={{ marginTop: 16 }} /></div>;
+  if (loading || (user && q.isPending)) return <div className="nl-page"><Skeleton width={320} height={36} /><Skeleton height={160} className="nl-skel-gap-lg" /></div>;
   if (!user) return <div className="nl-page"><EmptyState action={<SiteLink href={signInHref(`/bookings/${bookingId}`)} className="btn btn-primary">{t('bookingTitle')}</SiteLink>}>{t('bookingTitle')}</EmptyState></div>;
   if (q.isError || !q.data) {
     return <div className="nl-page">{isNotFound(q.error) ? <EmptyState action={<SiteLink href="/account/orders" className="btn btn-primary">{t('bookingTitle')}</SiteLink>}>{t('bookingTitle')}</EmptyState> : <ErrorState message={t('etaError')} onRetry={() => void q.refetch()} />}</div>;

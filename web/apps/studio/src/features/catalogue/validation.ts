@@ -169,14 +169,14 @@ export function parseCount(text: string): number | null {
   return /^-?\d+$/.test(s) ? Number(s) : Number.NaN;
 }
 
-const money = (required: string) => z.number({ error: required }).refine(n => !Number.isNaN(n), required);
+const cents = (required: string) => z.number({ error: required }).refine(n => !Number.isNaN(n), required);
 
 // ── product draft (Save draft) ────────────────────────────────────────────────────────────────────────────────────
 export const productDraftSchema = z.object({
   title: z.string().trim().min(1, MSG.TITLE_REQUIRED).max(80, MSG.TOO_LONG_80).refine(t => !PROMO.test(t), MSG.TITLE_PROMO),
   categoryId: z.string().min(1, MSG.CATEGORY_REQUIRED),
-  priceCents: money(MSG.PRICE_REQUIRED).refine(n => n > 0, MSG.PRICE_POSITIVE),
-  stock: money(MSG.STOCK_REQUIRED).refine(n => Number.isNaN(n) || n >= 0, MSG.STOCK_NEGATIVE),
+  priceCents: cents(MSG.PRICE_REQUIRED).refine(n => n > 0, MSG.PRICE_POSITIVE),
+  stock: cents(MSG.STOCK_REQUIRED).refine(n => Number.isNaN(n) || n >= 0, MSG.STOCK_NEGATIVE),
   compareAtCents: z.number().nullable().refine(n => n === null || !Number.isNaN(n), MSG.COMPARE_AT_HIGHER),
   costCents: z.number().nullable().refine(n => n === null || (!Number.isNaN(n) && n >= 0), MSG.COST_NEGATIVE),
   lowStockAt: z.number().nullable().refine(n => n === null || (!Number.isNaN(n) && n >= 0), MSG.LOW_STOCK_NEGATIVE),
@@ -189,8 +189,8 @@ export const productDraftSchema = z.object({
   variants: z.array(z.object({
     value: z.string().trim().min(1, MSG.VARIANT_VALUE_REQUIRED),
     sku: z.string().trim().min(1, MSG.SKU_REQUIRED).max(40, MSG.SKU_TOO_LONG),
-    priceCents: money(MSG.PRICE_REQUIRED).refine(n => n > 0, MSG.PRICE_POSITIVE),
-    stock: money(MSG.STOCK_REQUIRED).refine(n => Number.isNaN(n) || n >= 0, MSG.STOCK_NEGATIVE),
+    priceCents: cents(MSG.PRICE_REQUIRED).refine(n => n > 0, MSG.PRICE_POSITIVE),
+    stock: cents(MSG.STOCK_REQUIRED).refine(n => Number.isNaN(n) || n >= 0, MSG.STOCK_NEGATIVE),
   })),
 });
 

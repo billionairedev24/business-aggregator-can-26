@@ -17,7 +17,8 @@ export const useKitchenT = defineMessages({
     dt_gluten_free: 'Gluten-free', dt_vegan: 'Vegan', dt_vegetarian: 'Vegetarian', dt_halal: 'Halal', dt_spicy: 'Spicy', dt_popular: 'Popular', dt_vegan_option: 'Vegan option',
 
     // live orders
-    liveKicker: 'Live orders · {name}',
+    liveKicker: 'Live orders · {name}', liveTitleShort: 'Live orders', stageLate: 'Late',
+    laneEmpty_new: 'No new orders.', laneEmpty_cooking: 'Nothing on the stove.', laneEmpty_ready: 'Nothing waiting for pickup.',
     liveTitle: '{day} {meal} · {n} open',
     meal_morning: 'morning', meal_lunch: 'lunch', meal_dinner: 'dinner',
     prepShown: 'Prep time shown to customers:', prepMin: '{min} min', prepBumped: '{min} min (+{bump} busy)',
@@ -50,7 +51,7 @@ export const useKitchenT = defineMessages({
     itemCount: '{n, plural, one {# item} other {# items}}', addItem: 'add item', addItemIn: 'Add item to {section}',
     reorder: 'Reorder {name}: use the arrow keys', renameSection: 'Rename {name}',
     modifiers: 'Modifiers: {list}', none: 'none', noDesc: '—',
-    available: 'Available', soldOut: 'Sold out today',
+    available: 'Available', availableNamed: 'Available: {name}', soldOut: 'Sold out today',
     vis_draft: 'Draft', vis_needs_photo: 'Needs photo', vis_awaiting_approval: 'Hidden until approved',
     emptySection: 'No items in this section yet.', emptyMenus: 'No menus yet. Create your first menu to start adding dishes.', createMenu: 'Create a menu',
     emptyMenu: 'This menu has no sections yet.',
@@ -128,6 +129,7 @@ export const useKitchenT = defineMessages({
     v_slotItems: 'Pick a section or items for this slot.', v_discount: 'Enter a discount from 1 to 90 %.', v_days: 'Pick at least one day.', v_endAfter: 'End time must be after start time.',
 
     // hours, prep & capacity
+    hoursKpis: 'Hours and capacity figures', kpiOpenDays: 'Open', kpiDaysValue: '{n, plural, one {# day a week} other {# days a week}}', kpiWays: 'Ways to get food', viewAll: 'All', optionsOf: 'Options of {name}',
     hoursKicker: 'Hours, prep & capacity', hoursTitle: 'When you take orders and how many',
     hoursLede: 'Opening hours per menu, default prep time, and throttles so the kitchen never gets buried. Scheduled and group orders are planned around these.',
     openingTitle: 'Opening hours · delivery & pickup', closed: 'Closed', editHours: 'Edit hours', holidayHours: 'Holiday hours',
@@ -160,7 +162,8 @@ export const useKitchenT = defineMessages({
     contains: 'Contient : {allergen}',
     dt_gluten_free: 'Sans gluten', dt_vegan: 'Végane', dt_vegetarian: 'Végétarien', dt_halal: 'Halal', dt_spicy: 'Épicé', dt_popular: 'Populaire', dt_vegan_option: 'Option végane',
 
-    liveKicker: 'Commandes en direct · {name}',
+    liveKicker: 'Commandes en direct · {name}', liveTitleShort: 'Commandes en direct', stageLate: 'En retard',
+    laneEmpty_new: 'Aucune nouvelle commande.', laneEmpty_cooking: 'Rien en cuisson.', laneEmpty_ready: 'Rien en attente de remise.',
     liveTitle: '{day} {meal} · {n} ouvertes',
     meal_morning: 'matin', meal_lunch: 'dîner', meal_dinner: 'souper',
     prepShown: 'Temps de préparation affiché aux clients :', prepMin: '{min} min', prepBumped: '{min} min (+{bump} achalandé)',
@@ -192,7 +195,7 @@ export const useKitchenT = defineMessages({
     itemCount: '{n, plural, one {# article} other {# articles}}', addItem: 'ajouter un plat', addItemIn: 'Ajouter un plat à {section}',
     reorder: 'Réordonner {name} : utilisez les flèches', renameSection: 'Renommer {name}',
     modifiers: 'Options : {list}', none: 'aucune', noDesc: '—',
-    available: 'Disponible', soldOut: 'Épuisé aujourd’hui',
+    available: 'Disponible', availableNamed: 'Disponible : {name}', soldOut: 'Épuisé aujourd’hui',
     vis_draft: 'Brouillon', vis_needs_photo: 'Photo requise', vis_awaiting_approval: 'Masqué jusqu’à l’approbation',
     emptySection: 'Aucun plat dans cette section.', emptyMenus: 'Aucun menu pour l’instant. Créez votre premier menu pour ajouter des plats.', createMenu: 'Créer un menu',
     emptyMenu: 'Ce menu n’a pas encore de section.',
@@ -267,6 +270,7 @@ export const useKitchenT = defineMessages({
     v_comboName: 'Entrez un nom de combo.', v_slots: 'Ajoutez au moins un emplacement.', v_slotLabel: 'Décrivez cet emplacement, p. ex. 2 plats au choix.', v_slotQty: 'Entrez une quantité de 1 à 20.',
     v_slotItems: 'Choisissez une section ou des plats pour cet emplacement.', v_discount: 'Entrez un rabais de 1 à 90 %.', v_days: 'Choisissez au moins un jour.', v_endAfter: 'L’heure de fin doit suivre l’heure de début.',
 
+    hoursKpis: 'Chiffres des heures et de la capacité', kpiOpenDays: 'Ouvert', kpiDaysValue: '{n, plural, one {# jour par semaine} other {# jours par semaine}}', kpiWays: 'Façons d’obtenir les plats', viewAll: 'Tous', optionsOf: 'Options de {name}',
     hoursKicker: 'Heures, préparation et capacité', hoursTitle: 'Quand vous prenez des commandes, et combien',
     hoursLede: 'Heures d’ouverture par menu, temps de préparation par défaut et limites pour que la cuisine ne soit jamais débordée. Les commandes planifiées et de groupe en tiennent compte.',
     openingTitle: 'Heures d’ouverture · livraison et cueillette', closed: 'Fermé', editHours: 'Modifier les heures', holidayHours: 'Heures des fêtes',

@@ -89,11 +89,11 @@ function runState(r: Run, t: DeliveryT, locale: 'en' | 'fr'): { text: string; to
   if (r.late) {
     const minutes = r.nextEta ? Math.max(0, (Date.now() - Date.parse(r.nextEta)) / 60_000) : 0;
     const age = minutes < 60 ? t('ageMin', { n: Math.round(minutes) }) : t('ageH', { n: formatNumber(minutes / 60, locale, { maximumFractionDigits: 1 }) });
-    return { text: t('r_stuck', { age }), tone: 'tag-accent-2' };
+    return { text: t('r_stuck', { age }), tone: 'status-danger' };
   }
   if (r.state === 'loading') return { text: t('r_loading'), tone: 'tag-neutral' };
   if (r.state === 'planned') return { text: r.courier ? t('r_planned') : t('r_unassigned'), tone: 'tag-neutral' };
-  return { text: t('r_onTime'), tone: 'tag-accent' };
+  return { text: t('r_onTime'), tone: 'status-success' };
 }
 
 function RunsTable({ runs, couriers }: { runs: Run[]; couriers: Courier[] }) {
@@ -112,7 +112,7 @@ function RunsTable({ runs, couriers }: { runs: Run[]; couriers: Courier[] }) {
   ];
   return (
     <>
-      <DataTable<RunRow> entity={t('runEntity')} plural={t('runPlural')} columns={columns} rows={rows} pageSize={5}
+      <DataTable<RunRow> dense entity={t('runEntity')} plural={t('runPlural')} columns={columns} rows={rows} pageSize={5}
         rowTones={r => ({ state: runState(r.src, t, locale).tone })} roleName={roleName}
         can={{ create: false, update: can('dispatch'), delete: false }}
         actions={[
@@ -137,7 +137,7 @@ function ReassignDialog({ run, mode, couriers, onClose }: { run: Run; mode: 'ass
   const error = assign.error ? errorText(assign.error) : undefined;
   return (
     <Dialog open onClose={onClose} title={t(move ? 'moveTitle' : 'reassignTitle', { run: run.label ?? run.id })}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
         <Button disabled={!courierId || assign.isPending} onClick={() => assign.mutate({ runId: run.id, courierId }, { onSuccess: onClose })}>{t(move ? 'moveRest' : 'reassign')}</Button></>}>
       <p className="nl-dl-note">{t(move ? 'moveNote' : 'reassignNote')}</p>
       {free.length ? (
@@ -164,7 +164,7 @@ function CouriersTable({ couriers, runs }: { couriers: Courier[]; runs: Run[] })
     shift: c.shift ? t('shift', { from: fmt.date(c.shift.startsAt, 'time'), to: fmt.date(c.shift.endsAt, 'time') }) : t('none'),
     run: c.runId ? (runs.find(r => r.id === c.runId)?.label ?? c.runId.slice(-6)) : t('none'), src: c,
   }));
-  const tone = (c: Courier): DataTableTone => (!c.active || stuck(c, runs, Date.now()) ? 'tag-accent-2' : c.status === 'offline' ? 'tag-neutral' : 'tag-accent');
+  const tone = (c: Courier): DataTableTone => (!c.active || stuck(c, runs, Date.now()) ? 'status-danger' : c.status === 'offline' ? 'status-neutral' : 'status-success');
   const columns: DataTableColumn<CourierRow>[] = [
     { key: 'name', label: t('k_name'), primary: true }, { key: 'vehicle', label: t('k_vehicle') }, { key: 'status', label: t('k_status'), type: 'tag' },
     { key: 'shift', label: t('k_shift') }, { key: 'run', label: t('k_run') },
@@ -172,7 +172,7 @@ function CouriersTable({ couriers, runs }: { couriers: Courier[]; runs: Run[] })
   const paused = t('st_paused');
   return (
     <>
-      <DataTable<CourierRow> entity={t('courierEntity')} plural={t('courierPlural')} columns={columns} rows={rows} pageSize={5}
+      <DataTable<CourierRow> dense entity={t('courierEntity')} plural={t('courierPlural')} columns={columns} rows={rows} pageSize={5}
         rowTones={r => ({ status: tone(r.src) })} roleName={roleName} can={{ create: false, update: can('dispatch'), delete: false }}
         actions={[
           { id: 'pause', label: t('pause'), perm: 'update', inline: true, bulk: false, when: { key: 'status', in: [t('st_offline'), t('st_available'), t('st_on_run')] } },
@@ -198,7 +198,7 @@ function PauseDialog({ courier, onClose }: { courier: Courier; onClose: () => vo
   const name = courier.name ?? courier.id;
   return (
     <Dialog open onClose={onClose} title={t('pauseTitle', { name })}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
         <Button disabled={pause.isPending} onClick={() => pause.mutate({ courierId: courier.id, reason }, { onSuccess: onClose })}>{t('pause')}</Button></>}>
       <p className="nl-dl-note">{t('pauseNote')}</p>
       <Field label={t('pauseReason')} error={error}>
@@ -214,7 +214,7 @@ function ZonesTable({ map }: { map: DeliveryMap }) {
   const t = useDeliveryT();
   const fmt = useFormatters();
   const { roleName } = useGrant();
-  const money = (c: number | null | undefined) => (c == null ? t('none') : c === 0 ? t('free') : fmt.money(c));
+  const money = (c: number | null | undefined) => (c == null ? t('none') : c === 0 ? t('free') : fmt.price(c));
   const rows: ZoneRow[] = map.zones.map(z => ({
     id: z.id, zone: z.name, runs: z.runsPerDay == null ? t('none') : String(z.runsPerDay), fee: money(z.feeStdCents), plus: money(z.feePlusCents),
     cost: t('none'), margin: t('none'),
@@ -223,6 +223,6 @@ function ZonesTable({ map }: { map: DeliveryMap }) {
     { key: 'zone', label: t('z_zone'), primary: true }, { key: 'runs', label: t('z_runs') }, { key: 'fee', label: t('z_fee') },
     { key: 'plus', label: t('z_plus') }, { key: 'cost', label: t('z_cost') }, { key: 'margin', label: t('z_margin') },
   ];
-  return <DataTable<ZoneRow> entity={t('zoneEntity')} plural={t('zonePlural')} columns={columns} rows={rows} pageSize={5}
+  return <DataTable<ZoneRow> dense entity={t('zoneEntity')} plural={t('zonePlural')} columns={columns} rows={rows} pageSize={5}
     can={{ create: false, update: false, delete: false }} roleName={roleName} />;
 }

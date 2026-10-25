@@ -128,7 +128,7 @@ export function SignIn() {
 }
 
 const styles = StyleSheet.create({
-  fields: { gap: 14, paddingTop: space[2] },
+  fields: { gap: space[3.5], paddingTop: space[2] },
   half: { flexGrow: 1, flexBasis: 180, paddingHorizontal: space[3] },
   center: { justifyContent: 'center' },
 });

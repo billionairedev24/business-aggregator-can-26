@@ -138,6 +138,74 @@ export function formatMoney(cents: number, locale: Locale = 'en', opts: { whole?
   return new Intl.NumberFormat(INTL_LOCALE[locale], { style: 'currency', currency: 'CAD', currencyDisplay: 'narrowSymbol', minimumFractionDigits: opts.whole ? 0 : 2, maximumFractionDigits: opts.whole ? 0 : 2 }).format(cents / 100);
 }
 
+/**
+ * The one price format (E-15, revamp-epic § Locked direction): `$8.50` / `8,50 $`, always with cents, the narrow
+ * symbol, the locale's spaces as plain spaces (no NBSP surprises in tests and copy). Components draw it with `Price`.
+ */
+export function formatPrice(cents: number, locale: Locale = 'en'): string {
+  return plainSpaces(formatMoney(cents, locale));
+}
+
+/**
+ * A large amount at a glance (a back-office KPI, never a price someone pays): `$1.84M`, `$212k`, `$24.1k` ·
+ * `1,84 M $`, `212 k $`. Under $1,000 it is the price format itself (`$8.50`). Three significant figures, so $1,840,000
+ * reads $1.84M and $212,000 reads $212k.
+ */
+export function formatCompactMoney(cents: number, locale: Locale = 'en'): string {
+  const dollars = cents / 100;
+  if (Math.abs(dollars) < 1000) return formatPrice(cents, locale);
+  const s = new Intl.NumberFormat(INTL_LOCALE[locale], { style: 'currency', currency: 'CAD', currencyDisplay: 'narrowSymbol', notation: 'compact', maximumSignificantDigits: 3 }).format(dollars);
+  return plainSpaces(s).replace(/(\d)K\b/, '$1k');
+}
+
+/** A unit a price can be quoted per: weight or volume per 100 g / 100 mL / kg / L, or each. */
+export type PriceUnit = '100g' | 'kg' | '100ml' | 'l' | 'each' | 'hour';
+const UNIT_LABEL: Record<Locale, Record<PriceUnit, string>> = {
+  en: { '100g': '/100 g', kg: '/kg', '100ml': '/100 mL', l: '/L', each: ' each', hour: '/hr' },
+  fr: { '100g': '/100 g', kg: '/kg', '100ml': '/100 mL', l: '/L', each: ' chacun', hour: '/h' },
+};
+/** The unit price as meta beside a price: `$0.94/100 g`, `$3.75 each` · `0,94 $/100 g`, `3,75 $ chacun`. */
+export function formatUnitPrice(cents: number, unit: PriceUnit, locale: Locale = 'en'): string {
+  return `${formatPrice(cents, locale)}${UNIT_LABEL[locale][unit]}`;
+}
+/**
+ * The per-unit cents of a pack: `unitCents(850, 900, '100g')` = 94 (a 900 g loaf at $8.50 is $0.94/100 g). `size` is
+ * the pack's quantity in grams, millilitres or units, as `per` counts them.
+ */
+export function unitCents(priceCents: number, size: number, per: PriceUnit): number {
+  const base = per === '100g' || per === '100ml' ? 100 : per === 'kg' || per === 'l' ? 1000 : 1;
+  return size > 0 ? Math.round((priceCents * base) / size) : priceCents;
+}
+
+/**
+ * The unit price a pack's own words state ("Country sourdough, 900 g", "2 lb", "1.5 L", "4-pack", "×4", "dozen"): per 100 g
+ * or 100 mL up to 999, per kg or L from 1 kg / 1 L (and pounds), "each" for a pack of several. Null when the words
+ * name no size, so a card shows no unit price rather than a guessed one.
+ */
+export function unitPriceOf(priceCents: number, ...texts: readonly (string | null | undefined)[]): { cents: number; per: PriceUnit } | null {
+  for (const text of texts) {
+    if (!text) continue;
+    const w = text.toLowerCase();
+    const n = (v: string) => Number(v.replace(',', '.'));
+    const mass = /(\d+(?:[.,]\d+)?)\s*(kg|g|lb|lbs|ml|l)\b/.exec(w);
+    if (mass) {
+      const v = n(mass[1]!);
+      const u = mass[2]!;
+      if (!(v > 0)) continue;
+      const grams = u === 'kg' || u === 'l' ? v * 1000 : u === 'lb' || u === 'lbs' ? v * 453.592 : v;
+      const liquid = u === 'ml' || u === 'l';
+      const per: PriceUnit = grams >= 1000 || u === 'lb' || u === 'lbs' ? (liquid ? 'l' : 'kg') : (liquid ? '100ml' : '100g');
+      return { cents: unitCents(priceCents, Math.round(grams), per), per };
+    }
+    const pack = /(\d+)\s*-?\s*(?:pack|pk|ct|count|pieces|pcs)\b/.exec(w) ?? /[×x]\s*(\d+)\s*$/.exec(w) ?? (/\bdozen\b/.test(w) ? ['', '12'] : null);
+    if (pack && Number(pack[1]) > 1) return { cents: unitCents(priceCents, Number(pack[1]), 'each'), per: 'each' };
+  }
+  return null;
+}
+
+/** Intl puts narrow no-break spaces in times and amounts ("6:00 p.m.", "8,50 $"); copy and tests read plain spaces. */
+const plainSpaces = (s: string) => s.replace(/[   ]/g, ' ');
+
 export function formatNumber(n: number, locale: Locale = 'en', opts?: Intl.NumberFormatOptions): string {
   return new Intl.NumberFormat(INTL_LOCALE[locale], opts).format(n);
 }
@@ -189,6 +257,43 @@ export function formatDay(date: string, locale: Locale = 'en', style: 'date' | '
   return formatDate(`${date}T12:00:00Z`, locale, style, 'UTC');
 }
 
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+const sameDay = (a: Date, b: Date, zone: string) => {
+  const k = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+  return k(a) === k(b);
+};
+
+/**
+ * A span of two instants, never an ISO string (audit #8: "2026-10-19, 9:36 p.m.–2026-10-20, 12:36 a.m." reached the
+ * orders page — en-CA's default date is numeric): the same day reads "6–9 p.m." / "18 h – 21 h" (minutes only when a
+ * time is off the hour), across days "Oct 19, 9:36 p.m. – Oct 20, 12:36 a.m.".
+ */
+export function formatTimeRange(start: string | number | Date, end: string | number | Date, locale: Locale = 'en', zone: string = timeZone()): string {
+  const a = start instanceof Date ? start : new Date(start), b = end instanceof Date ? end : new Date(end);
+  const onHour = a.getUTCMinutes() === 0 && b.getUTCMinutes() === 0;
+  const time: Intl.DateTimeFormatOptions = { hour: 'numeric', ...(onHour ? {} : { minute: '2-digit' }) };
+  const opts: Intl.DateTimeFormatOptions = sameDay(a, b, zone) ? time : { month: 'short', day: 'numeric', ...time, minute: '2-digit' };
+  return plainSpaces(new Intl.DateTimeFormat(INTL_LOCALE[locale], { timeZone: zone, ...opts }).formatRange(a, b));
+}
+
+/**
+ * A span of days: calendar dates (YYYY-MM-DD) or instants. "Oct 19 – 22" / "19–22 oct." (one month), "Oct 30 – Nov 2",
+ * with the year when it is not this one (`full`). A one-day span is that day.
+ */
+export function formatDateRange(start: string | number | Date, end: string | number | Date, locale: Locale = 'en', style: 'date' | 'full' = 'date', zone: string = timeZone()): string {
+  const day = (v: string | number | Date) => (typeof v === 'string' && ISO_DAY.test(v) ? new Date(`${v}T12:00:00Z`) : v instanceof Date ? v : new Date(v));
+  const calendar = typeof start === 'string' && ISO_DAY.test(start);
+  const tz = calendar ? 'UTC' : zone;
+  const opts: Intl.DateTimeFormatOptions = style === 'full' ? { year: 'numeric', month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric' };
+  return plainSpaces(new Intl.DateTimeFormat(INTL_LOCALE[locale], { timeZone: tz, ...opts }).formatRange(day(start), day(end)));
+}
+
+/** Any date the API sends — a calendar date (YYYY-MM-DD) or an instant — in the formatter's styles, never raw. */
+export function formatWhen(value: string | number | Date, locale: Locale = 'en', style: 'date' | 'long' | 'full' | 'dateTime' | 'time' = 'date', zone: string = timeZone()): string {
+  if (typeof value === 'string' && ISO_DAY.test(value)) return formatDay(value, locale, style === 'dateTime' || style === 'time' ? 'date' : style);
+  return plainSpaces(formatDate(value, locale, style, zone));
+}
+
 /** The instant of a wall-clock time (HH:mm) on a calendar date in `zone`, as ISO-8601. */
 export function zonedInstant(date: string, time: string, zone: string): string {
   const offset = (at: Date) => {
@@ -217,6 +322,14 @@ export function useFormatters() {
   const { locale } = useLocale();
   return useMemo(() => ({
     money: (cents: number, opts?: { whole?: boolean }) => formatMoney(cents, locale, opts),
+    /** The one price format: $8.50 / 8,50 $ (Price draws it). */
+    price: (cents: number) => formatPrice(cents, locale),
+    /** A KPI's amount at a glance: $1.84M, $212k (never a price someone pays). */
+    compactMoney: (cents: number) => formatCompactMoney(cents, locale),
+    unitPrice: (cents: number, unit: PriceUnit) => formatUnitPrice(cents, unit, locale),
+    timeRange: (start: string | number | Date, end: string | number | Date, zone?: string) => formatTimeRange(start, end, locale, zone),
+    dateRange: (start: string | number | Date, end: string | number | Date, style?: 'date' | 'full', zone?: string) => formatDateRange(start, end, locale, style, zone),
+    when: (v: string | number | Date, style?: Parameters<typeof formatWhen>[2], zone?: string) => formatWhen(v, locale, style, zone),
     number: (n: number, opts?: Intl.NumberFormatOptions) => formatNumber(n, locale, opts),
     /** `zone`: the booking's, merchant's or market's when the page knows it; else the current zone. */
     date: (v: string | number | Date, style?: Parameters<typeof formatDate>[2], zone?: string) => formatDate(v, locale, style, zone),

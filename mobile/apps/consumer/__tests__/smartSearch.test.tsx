@@ -26,7 +26,7 @@ describe('S-158 natural-language search on the phone', () => {
     expect(within(box).getByText('On tonight’s run')).toBeTruthy();
     // nothing applied yet: the search is the words
     expect(urls.filter((u) => u.includes('/search?')).every((u) => !new URL(u).searchParams.has('dietary'))).toBe(true);
-    fireEvent.press(within(box).getByRole('button', { name: 'Remove On tonight’s run' }));
+    fireEvent.press(within(box).getByRole('button', { name: 'Remove filter: On tonight’s run' }));
     fireEvent.press(screen.getByTestId('smart-apply'));
     await waitFor(() => {
       const last = new URL(urls.filter((u) => u.includes('/search?')).at(-1)!);
@@ -35,7 +35,7 @@ describe('S-158 natural-language search on the phone', () => {
     });
     expect(await screen.findByText('Ribeye, AAA')).toBeTruthy();
     const applied = screen.getByTestId('smart-applied');
-    fireEvent.press(within(applied).getByRole('button', { name: 'Remove Halal' }));
+    fireEvent.press(within(applied).getByRole('button', { name: 'Remove filter: Halal' }));
     await waitFor(() => expect(new URL(urls.filter((u) => u.includes('/search?')).at(-1)!).searchParams.has('dietary')).toBe(false));
   });
 

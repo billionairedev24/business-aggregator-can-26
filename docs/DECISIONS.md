@@ -10824,3 +10824,1241 @@ MiB, plus metaspace, code cache and the C heap: peak RSS 1019 MiB, the OOMKill. 
 - **Measurements are local** (JDK 25 on Ubuntu, `-XX:MaxRAM` standing in for the pod limit, `ActiveProcessorCount=1`, a
   shared and loaded 4-CPU machine, so times vary ±30 %); never measured in a real pod. RSS is not all of cgroup memory
   (page cache counts too, but is reclaimable).
+
+## 2026-10-23 — E-15 Full UI revamp: direction reopened, Amazon as the reference
+
+Owner direction: the UI across every app is an eyesore, and the 2026-10-19 light & photo-first / Evergreen direction
+is reopened, not just re-executed. Scope: consumer web, Studio, console, and the consumer and courier apps. Reference:
+Amazon's marketplace patterns (search-led header with deliver-to, dense results with a filter rail, buy box, Seller
+Central-style back office). We copy patterns only, never Amazon's brand or trade dress. Epic E-15 (S-165–S-180) in
+`docs/backlog/northline-backlog.csv`; brief in `docs/design/revamp-epic.md`. Gate: page work waits until the owner
+picks one of three rendered directions (S-166).
+
+## 2026-10-23 — E-15 direction locked: A · Plainsight, with Main Street's maker-of-the-week hero (S-166)
+
+The owner picked direction **A · Plainsight** (product on white, dense, IBM Plex Sans, near-square corners, blue action,
+ink selection, magenta commerce) and asked for direction B's **maker-of-the-week hero** on the consumer home. The
+mockups are in `design/revamp/`; the locked values are in `docs/design/revamp-epic.md` § Locked direction. This retires
+the Evergreen palette, Fraunces and DM Sans, and the pill-shaped buttons of the 2026-10-19 light direction. The mockup
+photos (Open Images, CC BY 2.0, `design/revamp/CREDITS.md`) are for the design review only: people photos have no model
+releases, and S-181 replaces them.
+
+
+## 2026-10-23 — S-167/S-168 Tokens v2 and the component library
+
+**Tokens (S-167).** `palettes/plainsight.json` holds the locked values and `brand.json` selects it; lakeshore, evergreen
+and dusk still build (and pass the contrast gate) until every screen has moved.
+- A palette now has three optional blocks the build reads: `roles` (semantic roles pinned to exact values after
+  derivation, for the mockups' exact greys and tints), `radius` (replaces brand.json's corners for that palette) and
+  `shadow`. The radii are emitted with the palette's colours, so the Storybook palette switch changes corners too.
+- New roles, derived for every palette: `selected` / `selected-text` / `selected-tint` / `selected-ink`, `commerce` /
+  `commerce-on` / `commerce-text` / `commerce-bg`, `well` / `well-ink` / `well-line`, `star` / `star-empty`,
+  `status-{success,warning,danger,info,neutral}-{fg,bg}`, `action-secondary*` and `action-tertiary*` (names for the
+  neutral and link roles), `promo-bg` / `promo-text`. The contrast gate checks 25 more pairs.
+- New radius names `control` (3), `panel` (4), `image` (2), `status` (2), `round` (999). Mapping the as-built names:
+  xs 2, sm 3, md 4, lg 4 and **pill 3**, so every pill on an unrebuilt screen turns into a 3 px box at once ("never
+  pills"); what is really round (switch, radio, avatar, the cart count) uses `round`.
+- The as-built roles map onto Plainsight: `action-accent` (Add to cart, the old gold/ember role) is the action blue, not
+  a second button colour; `accent`/`accentTint`/`accentInk` (badges, ratings, the email's notice) are the commerce
+  magenta; `rating` and the stars are ink; the inverse/dark role is ink (bulk bar, search button, toasts); the cart
+  count is commerce; the department strip and the footer are the well grey. Flat cards: `shadow-sm` is none.
+- `scale.json` gains `type` (page title 24, section 18, sub 16, card title 13.5, body 14, label 13, meta 12, caps 11,
+  prices 15/17/28), `density` (5 results, 7 a rail, grid gaps 16/22, a 224 px filter rail, the 12 px well inset) and
+  half spacing steps (`--space-1-5` 6, `-2-5` 10, `-3-5` 14). Controls are drawn 38 px (32 sm, 46 lg) with a 44 px hit
+  area; inputs stay 44 px tall (the project's target rule wins over the mockup's 36).
+- **Two values differ from the mockups for WCAG 1.4.11:** the locked line `#C8CDD5` is 1.6:1 on white, not 3:1. It stays
+  the `border-strong` hairline (buy box, chip edges at rest are `#AEB4BE`, as drawn); the 3:1 outline of inputs,
+  checkboxes and segmented controls (`border-control`) is `#858C98` instead of the mockup's `#8E95A0` (2.7:1 on the
+  well), and the empty well's icon is `#858C98` instead of `#8A919C`.
+- The 12 px photo-well inset is the epic's value; the mockup's own CSS overrides it to 8 px on cards. We followed the
+  epic (the written contract) and record the difference.
+- "Dark-mode-ready": every component reads semantic roles only, so a dark palette is a `roles` block away; no dark
+  palette is built (not asked for).
+- The email palette follows (EmailBrand, the test now also checks `warning`): action blue button and links, ink
+  headings in the same sans, 3/4 px corners. Notices no longer use the commerce colour (ink edge; warnings use warning).
+- Mobile: `generated/theme.json` resolves Plainsight, so `mobile-kit` regenerates `brandFonts.ts` and depends on
+  `@expo-google-fonts/ibm-plex-sans`. The native screens pick up the colours, font and corners (`radius.pill` is 3 px
+  there too); rebuilding them is S-169.
+
+**Components (S-168).** Rebuilt in place on the same class names and props, so screens move without code changes.
+- Selection (audit #3): every choice control styles `aria-pressed`, `aria-selected`, `aria-checked`, a checked native
+  input inside it and `data-state` (on/checked/active/selected). Chips gained `aria-checked` when given a radio role;
+  `Chip` no longer puts `aria-pressed` on a radio or checkbox (it was invalid ARIA there).
+- One tab style (audit #4): `ChipTabs` draw as underline tabs; `UnderlineTabs` takes counts and no longer fills the row
+  by default (`fill` for the auth card).
+- New: `FilterChip` (toggle, or an applied chip that removes itself: one button "✓ label ×" named "Remove filter: …"),
+  `ChoiceTiles`, `OptionCard mark`, `Checkbox count`, `SearchBar scope` (a native select), `StatusTag`, `DealBadge`,
+  `CardSkeleton`, `Toast`/`ToastProvider`/`useToast`, `Pagination`/`pageItems`, `EmptyState icon`. Button variants
+  `tertiary` and `destructive` (ghost and danger are their older names; accent/highlight now equal primary).
+- One price format (audit #8): `Price` draws `formatPrice` ($8.50 / 8,50 $) with the unit price and the earlier price
+  as meta; the superscript style is gone. `formatUnitPrice`, `unitCents`, `formatTimeRange`, `formatDateRange`,
+  `formatWhen` live in `i18n.tsx`; the consumer's `windowRange` uses `formatTimeRange`, which fixes the raw ISO window on
+  the orders page (a range across midnight). Other pages' own money formatting (plain `formatMoney` text) already gives
+  the same `$8.50` string; moving them onto `Price` is page work.
+- Headings (audit #5): the UI sans everywhere (`base.css`, card titles, empty states, the logo). Plainsight has no
+  display face, so `--font-heading`/`--font-display` resolve to the sans too.
+- Overrides: 40 app CSS rules that re-styled library classes only for the old look were removed or trimmed to their
+  layout (44 px chips and buttons, the page builder's hand-made selected chip, auth step bars and checkbox radii,
+  onboarding option borders, pill search fields, oversized tags, console tab overrides, cart superscript fix). Layout
+  overrides (flex, margins, widths) stay.
+- `pnpm lint:tokens` now fails on raw px font sizes and spacing (padding, margin, gap; 0–2 px nudges allowed), raw
+  colours in CSS (hex, rgb/hsl/oklch, named) and the same in inline `style` objects, in `packages/ui/src` and the three
+  app shells (`apps/*/src/features/shell`). Stories, fixtures, the server error page and the printable DataTable report
+  (standalone documents) are exempt. The rest of the apps are page stories' work (S-170+).
+- Gallery: `packages/ui/src/gallery` (one source for Storybook "Gallery" and `web/apps/gallery`, a dev-only Vite app,
+  never deployed, port 3400; preview 4677 for the tests). `pnpm test:visual` / `make ui-visual` compare 60 Playwright
+  baselines (13 sections × en/fr × 1440/390, plus the dialog and the sheet open) with a 0.1 % pixel tolerance; it also
+  fails on a sideways scroll or when IBM Plex Sans did not load. Baselines are Linux Chromium 1194 renders
+  (/opt/pw-browsers); CI is manual-only, so wiring the visual run into a workflow is left to S-180 (the backlog's
+  "run in CI").
+
+**Not done here (later stories):** page layouts (results rail, buy box, home hero, back-office dashboards) are S-170+;
+pages still using their own chip/tab/price markup (e.g. the Studio catalogue's step tabs) move with their page; the
+mobile kit is S-169.
+
+## 2026-10-23 — S-181/S-182 Photography, the image pipeline and screenshot fidelity
+**S-182, the hydration bug (#418).** It came from two places, both fixed in the consumer:
+- *The time zone.* `regionsQuery` configured the platform time zone inside its `queryFn`, which only runs where the
+  query is fetched (the server). The browser received the data hydrated and kept UTC, so "Order by 5:20 p.m." (`/shop`,
+  `/shop/<department>`) and "Next available" (provider page) were written in two zones. The root now configures the
+  platform zone from the hydrated region data before anything renders.
+- *The clock.* A render clock (`lib/renderClock.tsx`): the root loader takes `Date.now()` once on the server
+  (`renderedAt`, hydrated with the loader data) and `ago()`, next-available, order dates, the booking calendar's
+  "today" and the review edit window read it instead of the system clock. Navigations in the browser run the loader
+  again, so the clock moves on with the visit. (Chosen over client-only rendering: the text stays in the server HTML.)
+- *The proof.* `shots/hydration.spec.ts` (`make ui-hydration`) opens every consumer route of `routes.ts` at 1440 and
+  390 in English and French and fails on any hydration warning or React #418–#425; every `make ui-shots` run fails a
+  consumer route with one too. 48/48 routes pass (before the fix: `/shop`, `/shop/bakery`, the provider page failed).
+
+**S-182, screenshot fidelity.** `make ui-shots` no longer draws SVG stand-ins (`shots/photos.mjs` removed):
+fixture listings name photo library slots and `shots/photos.ts` serves the library's source files — the bytes
+`make demo-data` uploads. Stock photos were already the consumer build's real `/photos/` variants. Products of the
+fixtures were renamed to the demo plan's (eggs, croissants, baguette…) so the photo matches the name.
+
+**S-181, the image set.**
+- *Source.* Only Open Images V7 via its CVDF mirror is reachable (Unsplash, Pexels, Openverse, Flickr, Wikimedia are
+  blocked). Its files are mostly 1024 px, but ~1,400 of 1.9 M are the originals; they were found by listing the bucket
+  with sizes and their labels/metadata streamed from Google's CSVs (docs/runbooks/photos.md § 9). Everything is
+  CC BY 2.0 (asserted on import), attributed in `photos.json` (title, photographer, profile, Flickr page, deed, date).
+- *Picks.* 155 photos picked by eye from contact sheets (labels Person/Text/Flag/Logo/Drawing/… excluded up front),
+  product and place shots preferred: 66 fill slots that had none, 89 replace existing ones (the US-flag sign-in hero, the
+  hero/banner set, cuisines, the demo listings). The library has 267 photos for 270 slots; **all 162 leaf categories
+  have their own photo except three that show the designed fallback by choice** (`slots.config.json` `designed`:
+  insurance broker — nothing that is not a cliché; tobacco & vape and cannabis accessories — nothing that would not
+  advertise an age-restricted product). Designed slots have no fallback chain, so they never borrow their group's
+  photo. No photo is used for two slots (`manifest.test.ts`, and the demo test for the uploads).
+- *Size.* Originals saved at ≤ 1600 px long side, JPEG q80; 1024 px files kept as they are. `source/` grew from 23 MB
+  to 35 MB (+12 MB). Originals are not in git; they are refetched by id from the mirror.
+- *Not met everywhere: ≥ 1200 px.* Only 56 of 267 photos are ≥ 1200 px on the long edge (the originals the mirror has
+  for these subjects); the rest are 1024 px. The pipeline therefore never enlarges: variants exist only up to the
+  source's width, and `Scene` caps the displayed picture at its widest variant (`--nl-scene-max`, set from data like
+  Photo's placeholder colour) so a wider box frames it on the photo well. The build lists banner/hero photos under 1440
+  px: hero/courier, hero/home-main, hero/register (all shown far narrower than 1024 px). Replacing the 1024 px files with
+  ≥ 2000 px stock is the follow-up once a photo host is reachable (runbook § 3–5).
+- *People.* New picks avoid identifiable people. Some older library photos (S-151 era) still show people (workwear,
+  paint, sell/provider and a few service categories); flagged, not replaced in this story.
+- *Pipeline.* Already in place (S-151): AVIF/WebP/JPEG srcset at 320–1440, focal-point crops, content-hashed names.
+  Added: `credits.json` written next to the variants (machine-readable attribution, linked from `/credits`), the banner
+  width report, the `designed` slots, the never-upscale cap.
+- *Fallback.* `features/art/PhotoWell.tsx`: grey well, dashed inner line, the category icon (Phosphor light), per
+  design/revamp/a.html. It replaces the illustrated `Art` scenes everywhere (Art.tsx removed): listing cards without
+  a photo (search, shop tiles, "more from"), cart/checkout/menu thumbnails and slots without a photo. Listings no
+  longer fall back to the category's stock photo — that is what repeated one image up to six times on a page.
+  `pnpm lint:tokens` now fails on `fallback={<Scene` / `mark={<Scene` in the consumer. Scene's `tone` prop is kept but
+  no longer drawn (75 callers; removing it is churn for the screen stories).
+- *Demo data.* Every demo business and listing has its own library photo (new test); a product without one stops the
+  run instead of uploading a drawn picture of its name; the presenter's live-listing pictures are library photos. The
+  drawn logo stays only as the path for a business without a photo (none in the plan). No server code changed.
+- *Studio.* "Photo tips" (light, background, size; en + fr-CA) beside the product and service uploaders.
+- Stayed out of `web/packages/tokens` and `web/packages/ui` (S-167/S-168 in flight): the cap and the well live in the
+  consumer's `features/art`.
+
+## 2026-10-23 — S-169 Mobile component kit on tokens v2
+
+**The kit.** `mobile/packages/mobile-kit/src/ui/kit` (exported from `@northline/mobile-kit`) holds the phone apps' components
+on tokens v2 (Plainsight, the phone frames of `design/revamp/a.html`), shared by the consumer and courier apps:
+- Actions and choices: `Button` (`primary | secondary | tertiary | destructive | dark`), `IconButton`, `UnderlineTabs`
+  (with counts), `Segmented` (joined boxes; `stack` for long labels, `fill`, `role="tab"` for modes), `FilterChip` (square;
+  applied = ink edge on the selected tint with ✓, removable ×, named "Remove filter: …"), `ChoiceTiles` (one choice,
+  solid ink), `OptionCard` (radio mark, 2 pt ink edge), `Checkbox`, `Switch`, `Mark`.
+- Commerce: `PhotoWell` (1:1 well, 12 pt inset, product contained; dashed fallback with the category icon and the shop),
+  `ProductCard`, `ServiceCard`, `Price`, `Rating`/`Stars`, `DealBadge`, `StatusTag`, `CountBadge`, `QuantityStepper`,
+  `MetaLine`; formatters `formatPrice` / `formatUnitPrice` / `unitCents` / `formatTime` / `formatTimeRange` /
+  `formatDateRange`, the same rules and strings as the web's `@northline/ui` (`$8.50` / `8,50 $`; "6–9 p.m."). The kit
+  falls back to "start – end" where an engine has no `Intl.DateTimeFormat#formatRange` (older Hermes).
+- Inputs: `TextField`, `SearchBar` (the department scope opens a bottom sheet of scopes; without a field the whole bar
+  is one `search` button that opens the search screen).
+- Feedback: `BottomSheet` (RN `Modal`, slide, grabber, Close), `ToastProvider`/`useToast`/`Toast` (ink, announced,
+  4 s), `EmptyState` (well grey, icon), `Skeleton`/`CardSkeleton`.
+- Navigation: `AppHeader` (44 pt Back, title, actions, optional large title) and `BottomTabBar` (current tab in ink with
+  the filled icon and a 2 pt ink bar on top; the cart count in the round commerce badge). Expo Router's js-tabs and
+  Stack stay the navigators; the kit draws them.
+- Text roles `textStyles` (page title 24, section 18, sub 16, card title 13.5, body 14, label 13, meta 12, caps 11,
+  prices 15/17/28), `TYPE`, `SIZE`, `LINE`, `CAP`, `slopFor`.
+- Its own words (labels for screen readers, the gallery) live in `kit/messages.ts` (en + fr-CA, a test checks keys and
+  parameters); `KitProvider` gives them the app's locale (both apps mount it inside their I18nProvider).
+
+**Decisions the spec didn't make.**
+- **Round stays round:** tokens v2 already emits `radius.round` (999); S-167 mapped `radius.pill` to 3 pt. Circles
+  (avatars, radio dots, switches, the cart count, status dots, the empty-state disc) now use `radius.round`; every other
+  `radius.pill` in the apps became `radius.control` (they were controls), progress tracks `radius.status`. Both apps'
+  conventions tests now refuse `radius.pill`. No token change, so web/packages/tokens is untouched.
+- **Button heights on a phone:** `md` is drawn 44 pt (the project's target rule over the mockup's 38), `lg` 46 (the
+  mockup's sticky bar), `sm` 32 drawn with a vertical hit slop to 44 (`slopFor`), as the web's 38 + 44 hit area.
+- **Dynamic Type:** sizes are points and scale with the system setting (React Native's default); nothing has a fixed
+  text height (controls use `minHeight` and wrap). One-line labels inside a bar cap growth (`CAP`: tab labels 1.3,
+  badges 1.2, control labels 1.6).
+- **The apps' primitives became wrappers:** consumer `src/ui/{primitives,screen,states,TabBar}.tsx`, the shop/services
+  `Chip` and `Stepper`, and courier `src/components/ui.tsx` + its tab bar keep their props and draw with the kit, so
+  every existing screen picked up the new look without page changes. Tone mapping: `accent` → primary (one action
+  blue), `ghost` → tertiary, `danger` → destructive (red, solid: cancel, remove, delete, refuse, sign out everywhere).
+  Account's plain Sign out is not destructive, so it moved from `danger` to `secondary` (the one page edit).
+  The round 44 pt buttons (Back, Share, the bell) are square `IconButton`s with the control edge; Cards are flat white
+  panels with the hairline (no shadow); sunken panels and empty states are the well grey; tags take the status
+  colours; the consumer's illustrated empty-state scenes are replaced by the kit's icon empty state (an icon chosen from
+  the `art` / `draw` words the screens already pass); Account's language switch is the kit `Segmented`.
+- **The kit's lint:** `__tests__/kitRules.test.ts` is the native `lint:tokens`: no raw colour, font size, spacing
+  (beyond 0–2 pt nudges), corner radius or line height, and no `radius.pill`, in `src/ui/kit`. The apps' shared chrome
+  files are checked for raw font sizes and the retired display face.
+- **Gallery:** `KitGallery` (every component and state, an English/Français switch, fixed sample instants in UTC so the
+  pictures don't drift) on `/dev/gallery` in both apps, shown when `__DEV__` (a development build on Metro) or the
+  fixture build; any other build redirects home. It is not a design screen, so it is not in `src/screens.ts`.
+- **Screenshots:** `make mobile-shots` now photographs the gallery (English, the sheet open, French) in both apps. The
+  courier run had been broken since S-159 (the "Sign in" name matched two buttons and the email form needs a
+  password); it now signs in with the fixture's browser passkey and completes all 19 steps.
+
+**Not done here (S-178 consumer screens, S-179 courier screens):** page layouts and page-level markup — the home hero,
+results with the filter rail, product buy box, checkout (still its own blue radio cards and numbered steps), provider,
+orders and the courier's run and stop screens — are unchanged apart from what the primitives draw; screens still format
+money with their own `formatMoney`/`money` (same `$8.50` string) and should move to `Price`/`formatPrice` with their
+page; `ProductCard`/`ServiceCard`/`PhotoWell` are not yet used by the screens (their own `Thumb` and cards stay until
+the page stories). Stock photos don't load in the web shots (the fixture build points at the consumer web's `/photos/`,
+which `shots.mjs` doesn't serve), so photo slots show their placeholder colour in the pictures, before and after; that is
+S-181/S-182's area. Nothing was run on a real device or simulator (no macOS or Android SDK here): native rendering of
+`Modal`, dashed borders and `fontVariant` was checked only in react-native-web and Jest.
+
+## 2026-10-23 — S-174 Studio shell and dashboard
+
+Built to `design/revamp/a.html` screens 7 (Studio dashboard, 1280 and 390) and 8 (the Studio chrome of the orders
+table), on @northline/ui. No backend or BFF contract changed: every figure comes from an endpoint the Studio already
+calls.
+
+**Shell (`AppShell`, rebuilt for the Studio and the console alike).**
+- One white top bar: logo + "Studio", the business switcher (`WorkspaceSwitcher`: name and city in a bordered box; its
+  menu lists the account's businesses with city, type and tier, then "+ Add another business"), the global search
+  (`ShellSearch`, "/" focuses it from anywhere outside a field), the assistant, the account menu (name and role). The
+  tier tag left the bar (it is in the switcher's menu and on Standing); tier tags are now `tag-success` / `tag-warning`
+  instead of the commerce/accent colour (audit #6). "Switch business" left the account menu (the switcher replaces it).
+- The mockup's notification bell is not built: the Studio has no notifications endpoint (the nav badges are the
+  counts). The assistant button stays where it was.
+- Sidebar: every group is a caps heading with all its items visible (the collapsible groups are gone), the current item
+  on the grey tint with the 3 px ink bar. Groups for every portal: Dashboard · Operations · Catalogue · Money · Store ·
+  Account. Sellers: Orders, Messages / Products / Earnings, Payouts, Reports, Refunds & disputes / Store, Reviews,
+  Settings / Standing, Stripe & compliance, Help. Providers swap in Appointments and Services & prices + Availability;
+  kitchens Live orders (the kitchen display) and Menu builder, Modifiers & combos, Hours. Routes and `screensFor`
+  permissions are unchanged except one addition: **kitchens get the Dashboard** (pinned first, as everyone) so the
+  brief's kitchen variant exists; a kitchen still lands on Live orders (`homeScreen`).
+- The mockup's "Runs & pickups" and "Stock" items have no route: runs are on Orders, stock on Products. Not added (no new
+  routes in this story).
+- Items are 44 px tall (the project's target rule) where the mockup draws 36 px; the sidebar is 228 px (scale
+  `size.sidebar` 264 → 228, the mockup's width; the console's sidebar follows).
+- < 1024 px: the 72 px icon rail (label as tooltip and accessible name, "label, badge" when there is one, a dot for a
+  badge); its toggle expands it for the moment. < 768 px: a **disclosure** menu (not a modal sheet any more): the menu
+  button (`aria-expanded`/`aria-controls`) opens a panel under the bar with the switcher, the search, then the
+  navigation; Escape or choosing an item closes it and focus returns to the button. Desktops keep the remembered
+  collapse-to-rail toggle, now at the foot of the sidebar.
+- The page ground is `--color-surface-muted` (the mockup's #F6F7F9) under white panels.
+- Global search has no search API to call, so the query goes where the Studio can already search: "Orders and
+  customers matching …" opens Orders with `?q=` (the orders table searches refs, customers and items), "Products /
+  Services / Listings matching …" opens the catalogue with `?q=`, "Messages from …" opens the first conversation whose
+  name, subject or reference matches. `DataTable` gained `initialSearch`; the orders and listings routes gained an
+  optional `q`. Kitchens have no searchable table: their search is messages only.
+
+**Dashboard.** Order: greeting + date line and the store's state · Needs you now · key figures · sales chart and the
+second panel.
+- Greeting by the hour where the business is ("Good afternoon, Ravi"); the line after the date names the next run's
+  cut-off (sellers), the next booking (providers) or the open tickets (kitchens).
+- Store open/pause: only kitchens can pause themselves (`POST/DELETE …/kitchen/pause`), so only kitchens get the
+  Pause / Resume button; their "until" time comes from today's kitchen hours. Sellers and providers show their state
+  from the merchant status (open / paused), without a button — there is no pause endpoint for them.
+- "Needs you now" cards and their sources, most urgent first (the first card's button is primary, the others
+  secondary; urgent and due-soon cards say so to screen readers):
+  | Card | Source | Urgency |
+  |---|---|---|
+  | n orders to pack, pack by … for run … | dashboard `counts.toPack`, `runCutoff`, `runLabel` | warning; danger within the hour |
+  | n quote requests, reply by … | dashboard `counts.quoteRequestsOpen`, `quoteRespondBy` | warning |
+  | n messages waiting, oldest … | `GET …/threads` (unread customer and case threads) | info |
+  | … is running low | dashboard `lowStock` (first, + "n more") → Products `?q=name` | warning; danger at 0 |
+  | n issues to resolve | dashboard `cases` | danger |
+  | Payout on … to bank ••• last4 | `GET …/payouts/overview` (`nextPayoutAt`, `payableCents`, `account`); a returned payout replaces it | success / danger |
+  | Permit or licence expiry | dashboard `compliance[0]` | danger expired · warning ≤ 30 days or `expiring` · neutral |
+  | n new orders to accept / ready for handoff | `GET …/kitchen/live` counts | danger / info |
+  | n dishes sold out | the live menu's items (`GET …/menus`, `…/menus/{id}`) | warning |
+  | Set up / publish your page, add your first listing | storefront and listings (the former "Get set up" card) | info |
+- Key figures: **Sales today** = the last day of `GET …/reports?period=30d` (day buckets, the business's zone) against
+  the same weekday a week earlier (the mockup's "vs last Friday"); **Orders today** = orders on the order board placed
+  today (sellers); **Bookings today** = `jobsToday` (providers); **Open tickets** (kitchens); **Average order · 30
+  days** = the report's `averageTicketCents` (there is no per-day average), its delta the report's sales change against
+  the 30 days before, labelled as such; **Rating** with the review count. A role that cannot read the report gets the
+  month's net from the dashboard instead, and the chart falls back to the dashboard's 12 weeks of net earnings.
+- The chart: 14 days (the report's last 14 days), 30 days, or 12 months (`period=12mo`, loaded when chosen), today (or
+  this month) in ink, the earlier columns in the 3:1 control grey (`--color-border-control`) instead of the mockup's
+  lighter #C4CAD3 (WCAG 1.4.11, as S-167 did for lines); the numbers are also a hidden table.
+- Second panel: sellers **Top products · 30 days** (units from the listings' `sales30d`, money from the report's
+  `byListing` by name, stock as a status) — the mockup's "today" has no per-listing daily source; providers **Today's
+  bookings**; kitchens **Top dishes today** (`soldToday` of the live menu); "both" shows top products and today's
+  bookings.
+- Left the dashboard (still on their screens): tonight's run list (Orders), the quality score and refund rate
+  (Standing / Reports), "releasing next" (Payouts), the weekly trend line.
+- Audit items fixed here: the dashboard's raw px and inline styles (#7, `Dashboard.css` is tokens only and
+  `pnpm lint:tokens` now checks the dashboard folder strictly and forbids inline `style` in the Studio shell and the
+  dashboard); the storefront preview (#10) is drawn like the real provider page in Plainsight (white header, logo tile
+  with the business colour as its edge only, ink type, verified tier as a success tag, bordered service rows, the
+  action-blue book button, `formatPrice`), in its own token-only `StorefrontPreview.css` (also strictly linted).
+
+**@northline/ui additions** (gallery sections "backoffice" and "shell", 16 new `test:visual` baselines; the 60
+existing ones are unchanged): `ActionGrid`/`ActionCard`, `SummaryTable` (+ `hideOnPhone`), `Thumb`, `ColumnChart`,
+`ShellSearch`, `WorkspaceSwitcher`, `DataTable initialSearch`; `KpiStrip` values are semibold, as drawn, and a delta
+that is a change over time (`arrow`) carries ▲/▼ (aria-hidden) — opt-in, because other screens use `trend` to mean
+good/bad (a low dispute rate is "up"). The shell section is shown on its own gallery page (`?section=shell`, `solo`) because a page
+shell brings its own banner and main landmarks.
+
+**ui-shots:** the dashboard fixtures now happen today (visits, cut-off, quotes), the 30-day/12-month sales report, seller
+threads and payouts, a kitchen dashboard and dishes sold today; new routes `dashboard-kitchen` and `dashboard-menu`
+(the phone's disclosure menu open).
+
+**Not done (later stories):** the work screens' own headers, tables and bulk bars (S-175: orders, catalogue, editors,
+bookings, kitchen display) and money/settings/storefront editor/onboarding screens (S-176) keep their current page
+bodies inside the new chrome; the onboarding wizard's own top bar (S-176). Storybook stories that already failed on
+develop before this story (LocationPill "Detected", SiteHeader "Narrow", Gallery "Sections" landmark-unique) are not
+touched here.
+
+## 2026-10-23 — S-170/S-171 Consumer shell and discovery pages
+
+**Shell (S-170), every consumer route.** Built from `design/revamp/a.html` (header, strip, footer on every frame).
+- Header: logo · "Deliver to (first name)" over the place (the location dialog; still no geolocation prompt on load) ·
+  the search with an All / Services / Shop / Food scope (a native select; the current section's scope by default, the
+  searched one on `/search`) · "Hello, Amara / Account & orders ▾" (guests: "Hello, sign in"), which opens the same
+  account menu (orders, bookings and FR/EN stay there) · cart with its count in the commerce colour. The trigger's
+  visible words are its name (WCAG 2.5.3), so the button is no longer "Account menu".
+- Department strip (well grey): All (the categories sheet) · Services Shop Food · five departments | five service
+  categories (a hairline between groups) · "Today's deals" (commerce colour, tag icon) and "Sell on {brand}" at the
+  right end. Help left the strip: it is in the footer, the account menu and the sheet (the mockup has no Help there).
+- **"Today's deals" opens tonight's pooled-run items** (`/search?scope=shop&delivery=tonight`): the api has no deals
+  feed; the run's shared fee is the offer we can name. Replace the link when a deals feed exists.
+- **Food is shown again** (strip, sheet, search scope, home tiles and rail). The 2026-10-19 thrash list hid it behind
+  `VITE_NL_FULL_NAV`; the locked mockups (and the story) show Food everywhere and "the mockups win". The flag now only
+  covers the account's Wallet & points, Dietary, Plus and Language; runbooks and `.env.example` say so. The footer's
+  "Run a kitchen" stays out (the mockup's footer has no business rows; /sell lists the three ways in). Owner to confirm.
+- Phones (< 900 px): menu button (the same sheet) · logo · user icon · cart; the search (no scope: the mockup drops it)
+  on its own row; "Deliver to Amara Kensington T2N" on one line; the strip. "All" stays in the strip as in the mockup.
+- Delivery cut-off strip (promo tint) on the home and the Shop pages only — the mockups show it on the home; the
+  results page has its own "arrives tonight" note instead. Data: the Shop landing's `run` for the visitor's market (or
+  the page's `?market=`); shown only while `orderBy` is ahead. The countdown ("2 h 48 min left") is computed in the
+  browser after hydration (no server clock in the markup), and the line is held open while the run loads.
+- Footer (audit #9): one grey band, about 60 px at 1440 (was about 400): "© {legal entity}", Help, Returns & refunds
+  (→ orders, where returns start), Sell on {brand}, Offer a service, Privacy, Terms (hreflang en-CA), Photo credits,
+  FR/EN. No year: a clock read at render can differ between server and browser.
+
+**Discovery (S-171).**
+- Home: an sr-only h1 (the hero's headline loads with the place, so the page title can't wait for it), then Main
+  Street's maker-of-the-week hero in Plainsight: a white 4 px panel, the 4:3 photo, kicker, headline, story, two
+  actions, two side tiles. **No "maker of the week" exists in the api; it is derived from the Shop landing**: the
+  highest-tier shop with a photo, one on the next run first, then the one with most products. Headline and story are
+  built from its own fields (name, department, products, tier, the run's order-by time); the actions are "Shop
+  <name>" (its products in search — shops have no page of their own) and "More <department>" (the department page),
+  not "Meet <name>" (there is no maker profile to meet). Side tiles: the top-rated service near the visitor (the
+  services rail sorted by rating) and the kitchens open now; each falls back to a way into its section.
+- Home tiles: departments, services and kitchens as 2×2 pictures from the catalogue (server-rendered, no data wait),
+  and the **deal of the day: the first of the landing's three popular products whose offer has `compareAtCents`** (the
+  product page's; search and the landing carry no earlier price), titled "Popular today" when none has one. "Ends in
+  6 h 12 min" became "Order by 5:20 p.m. for tonight" (deals have no end time; the run's order-by is real).
+- Rails: "Order again" (signed in) = the popular products from shops named in the person's orders (`/me/activity`
+  `with`; there is no order-line history in the api), "Popular near …", "Top-rated pros near …" (`sort=rating`, a
+  frontend parameter the api already takes), "Popular kitchens tonight" (open kitchens by rating). 7 products / 5
+  services a rail at 1280, 44 % a card on phones.
+- Results: the bar "1–24 of 86 results for “q” in Shop · delivering to <place>" and Sort by (Featured, Distance when
+  located, price, Customer rating). The rail (224 px): Department (with every department: Shop/Services/Food with the
+  kinds facet's counts; inside one: "‹ All departments", its name, its categories with counts), Delivery (Tonight, with
+  the run's window) or Availability (open now, instant book), Customer rating (4★/3★ & up → `minRating`), Distance
+  (2/5/10 km in the mockup, our 3/10/25 km `RADII`, joined boxes) or "set your location", Price (the api's
+  `under_10 … 100_plus` buckets with counts → `minPrice`/`maxPrice`, one at a time), Dietary (facet with counts).
+  **No Store group**: the api has a merchants facet but no merchant filter (no contract change). Applied filters are
+  removable chips with Clear all; phones get a Filters button with the number applied, opening the rail in a sheet.
+- Pagination replaces infinite scroll (the mockup's pager). The api pages by cursor, so `?page=n` (a frontend-only URL
+  parameter, never sent) fetches the pages before it once; 24 a page, at most 50 pages.
+- Cards: one `OfferCard` for results, rails and Shop pages. **Unit price from the pack's own words** (`unitPriceOf`:
+  "900 g", "2 lb", "1.5 L", "4-pack", "×4", "dozen"; the Shop landing's `unit` first) — the api has no unit field on
+  search items; no size, no unit price (never a guess). The delivery promise names tonight's window from the run
+  ("Get it Tonight, 6–9 p.m."). Low stock ("Only 4 left") isn't shown: search items carry only `soldOut`.
+- Services, Shop and Food landings: the same system — a white landing head (kicker, 24 px title, lede, a 21:9 picture),
+  square category tiles, 7-up rails with the 18 px section head, Shop products as the results' cards (Add to cart
+  where one shop sells it), kitchens as service cards. Kitchens have no photo of their own, so their cards show S-181's
+  designed `PhotoWell` with the cuisine's icon (S-181: a listing never borrows its category's stock photo); the home's
+  "Kitchens open now" tile and the cuisines strip keep the cuisine photos (they are categories, not listings). Tier tags moved off the commerce colour to the success pair
+  (one role per colour); the current sibling department is a selected chip (chips now show `aria-current`).
+- Density vs targets: filter-rail rows are 32 px full-width targets (WCAG 2.5.8 asks 24) — the project's 44 px rule
+  would double the rail; buttons, links and chips elsewhere keep 44 px hit areas.
+
+**Library (@northline/ui).** `SiteHeader` (menu button, grouped shortcuts, `tone: 'deal'`), `PromoStrip`,
+`AccountMenu greeting`, `LocationPill name`, `FilterGroup`, `RatingFilter`, `Segmented size/fill`, `PanelTile` +
+`PictureGrid` + `PanelTiles`, `.nl-card-grid-results`, `unitPriceOf`; gallery sections `site` and `filters` (8 new
+baselines; the others re-shot for the sections' new positions). `pnpm lint:tokens` now also covers the home, search,
+pages, shop, services and food landing code, and fails on raw border radii (no pills).
+
+**Tooling.** `make ui-shots` routes can fix the page clock (`now`): the home and Shop shots are taken 2 h 48 min
+before the recorded landing's run closes, so the cut-off strip shows. New shots: `search-shop`, `search-filters` (the
+phone sheet open).
+
+**Not done here:** product, store, provider and booking pages (S-172); the results page's store filter and a real
+deals feed need api work; French shots are not in `make ui-shots` (it photographs `?lang=en`; fr-CA is covered by the
+tests and the gallery's fr baselines).
+
+## 2026-10-23 — S-175 Studio work screens
+
+Built to the "Studio orders table" frame of `design/revamp/a.html` (screen 8, 1280 and 390), applied to every Studio work
+screen. No backend, BFF contract, validation or i18n rule changed; every string is en + fr-CA.
+
+**@northline/ui additions (additive; the existing DataTable, tabs and gallery baselines are unchanged).**
+- `DataTable`: `views` (status tabs with counts above the toolbar, drawn with `UnderlineTabs`; a count's `tone: 'danger'`
+  keeps it red; `hideEmpty` drops a tab with nothing in it; controlled with `view` / `onViewChange`), `quickFilters` (toolbar
+  `FilterChip`s, applied ones show ✓ and remove themselves; they combine with *and*), a column's `status` (the cell is a
+  `StatusTag` of that tone; facets and reports still read the text), `nowrap`, and compact phone cards (`card: 'line' |
+  'meta' | 'end' | 'tag'`, `cardFormat`): thumb, primary value and its sub, the tag top right, a body line, a muted meta
+  line with the total at its end, then the row's actions — the mockup's 390 cards. An action's `emphasis: 'primary' |
+  'secondary'` draws it as a small button in the row and in the bulk bar (Mark packed in the action blue). Tag tones gain
+  `tag-success/warning/danger/info`. Counts are over all rows (the mockup's "All 38" with "Today" applied).
+- `UnderlineTabs`: optional `tabId` / `panelId` and a per-tab accessible `name` (the editors' sections).
+- `FormSection` and `SaveBar` (Editor.tsx): a titled editor panel, and the save bar that stays at the bottom of the window
+  (`sticky={false}` draws it in place). Gallery section "worktable" (4 new baselines; 64 total, all others unchanged);
+  `DataTable/worktable.test.tsx`.
+
+**Screens.**
+- *Orders:* tabs All / To pack / Awaiting pickup / Out for delivery (when any) / Delivered / Issues (red) / Cancelled (when
+  any); quick filters Placed today · Today's runs · Tomorrow's runs; columns Order · Placed · Customer · Items · Run ·
+  Total · Status with semantic statuses (to pack warning, awaiting/out for delivery info, delivered success, issue danger,
+  cancelled neutral) in the table and the detail sheet; Mark packed primary inline and in the bulk bar; `?view=` on the
+  route (the dashboard's "orders to pack" card opens the To pack tab). Times through `formatWhen` ("Delivered 12:05 p.m.",
+  "Pack by 5:20 p.m."), amounts through `formatPrice`/`Price`. Returns: statuses (waiting on you warning, refunded
+  success, declined/escalated danger).
+- *KPI deltas (the S-174 note):* in the Studio a delta's colour means good (green) or bad (red), never "went up". Orders
+  had To pack in red; work still to do is not bad, so it is neutral, and only an open issue is red ("none open" green).
+- *Catalogue (products, services, both):* tabs All / Live / Hidden / Drafts / In review / Rejected (when any) / Low stock
+  (products); quick filters No photo · No sales (bookings) in 30 days; vetting and visibility as statuses; stock as a
+  status ("4 in stock" warning, "Out of stock" danger); Publish a secondary button; `?view=` on the route (the dashboard's
+  low-stock card opens Low stock, searched when there is one product).
+- *Stock:* no route of its own (S-174 kept it off the nav); it is the Products table's **Low stock** tab. The list
+  endpoint has no per-listing threshold, so the tab uses the editor's default "Low stock at" (5) — `LOW_STOCK` in the
+  catalogue model. A listing's own threshold still drives its alerts server-side.
+- *Product and service editors:* the hand-made step strip became `UnderlineTabs` with a ✓ on complete sections (ids kept,
+  so `#tab-images` still works); Save draft / Submit for vetting moved from the head into the sticky save bar with the
+  listing's status (draft neutral, in review warning, live success, rejected danger) and "Unsaved changes"; the product's
+  Preview tab is gone — the aside now shows a **live preview** (the real `ProductCard` / `ServiceCard`, inert) updated as
+  the seller types; S-181's photo tips sit beside the uploader (side by side when the form is ≥ 640 px wide); prices
+  through `price`; no inline styles (thumbs and widths are classes). Editors' panels on Plainsight hairlines, no shadow.
+- *Kitchen display:* three lanes New → Cooking → Ready (a refused hand-off stays in Ready), each ticket with its stage
+  colour across the top (new warning, cooking info, ready success, late danger with a "Late" tag and a red timer), the
+  order number at 24 px, dishes at 18 px, one large full-width button; phones stack the lanes. Pause new orders is the
+  destructive (red) button. *Menu builder:* the availability pill became the shared `Switch` (named "Available: dish"),
+  sold out a danger status, prices `Price`, the head `BoHeader`. Modifier prices use the one format ("+$3.00", was "+$3").
+- *Bookings and quotes:* the list view has tabs All / Upcoming / Requested / Done / Disputed / Cancelled and the
+  booking's time range (`formatTimeRange`); quote and approval tags are statuses; the calendar's confirmed bookings and
+  today's date are ink, not the action blue (one role per colour).
+
+**Lint (`pnpm lint:tokens`).** The orders, catalogue, appointments and kitchen folders are now strict (no raw px sizes or
+spacing, no raw colours), with no inline `style` except the calendar's data-driven custom properties (`--top`, `--h`),
+and refuse a hand-made `role="tab"`, the old tag tones (`tag-accent`, `tag-accent-2`, `tag-highlight`), an app-made
+`nl-chip` class, and `formatMoney(`/`money(`.
+
+**Bundle budget.** The Studio's initial JS budget is 260 kB gzip (was 250). The editors' live preview uses
+`ProductCard`/`ServiceCard`; rollup keeps one chunk per module, so they join the `Commerce` chunk the dashboard already
+loads for `Price`/`StatusTag` (+7 kB, 247.1 → 255.6 kB). Splitting `Commerce.tsx` would collide with the consumer stories
+editing it now; S-180 can split the cards into their own module and bring the budget back.
+
+**Departures from the mockup.** No "Print labels", "Message customers" or "Export" header buttons: the Studio has no label
+or bulk-message endpoint, and export is the table's Report. The window column shows the run's start ("Tonight 6:00
+p.m."): orders carry no window end. Rows keep the Open icon (keyboard path to the sheet) and rows are 44 px for the
+target rule where the mockup draws ~40; at 1440 the orders table drops its Placed column to fit (the DataTable layout rule, "Placed hidden to fit"; it is in the sheet and the export). Phone status tabs scroll sideways inside their row, as drawn.
+
+**Left for S-176 and later.** Finance, payouts, messaging, storefront editor, settings and onboarding keep their page
+bodies (and their own raw px, tags and `money`); kitchen Hours and Modifiers & combos got the status tones and the price
+format but not a layout pass; availability is untouched. The DataTable's built-in `money` type still formats with
+`formatMoney` (the same `$8.50` string); the Studio columns pass `formatPrice`.
+
+## 2026-10-23 — S-178/S-179 Consumer and courier app revamp
+
+**What changed.** Both native apps' screens are rebuilt on the S-169 kit in A · Plainsight (`design/revamp/a.html`'s
+390-wide frames; the consumer home hero is `b.html`'s maker of the week). Everything S-169 left for these stories is
+done: the home hero, results, the product's buy box, the one-page checkout, the provider, orders and the courier's run
+and stop screens; money through the kit's `formatPrice` everywhere (`$89.00` / `89,00 $` — the whole-dollar `$89` and
+both apps' own `Intl` currency formatters are gone); `ProductCard`/`ServiceCard`/`PhotoWell` on the screens; stock
+photos in the web screenshots.
+- **Consumer home:** the header (the mark and the name, the bell, the one search bar, "Deliver to …"), the department
+  strip as underline tabs on the well grey (All current; Services, Shop, then the market's departments), the delivery
+  cut-off strip (the next pooled run's order-by time and fee on the info tint, the time left counting down in the
+  commerce colour), the maker of the week with its two side tiles, the departments and services tiles, rewards near
+  you, "Popular near {city}" as product cards with Add to cart, "Popular services near you" as service cards.
+- **Results:** All · Products · Services as underline tabs, the filter chips (applied = ink edge with ✓), S-158's
+  suggestions as applied chips, "{n} results for “…” · delivering to …", the sort as a sheet of option cards, the
+  tonight strip, a two-up grid of kit cards (photo well, name, shop, price + unit price, "Get it Tonight, 6–9 p.m.",
+  Add to cart → stepper).
+- **Product:** the photo edge to edge in the well, the shop as a link, the name, the kit's rating, tags, the options as
+  joined boxes, "About this item", the buy box (price + unit price, delivery on the next run with the order-within
+  countdown, stock, the quantity, Add to cart, sold by, returns, payment held), "Also from {shop}"; the sticky bar keeps
+  the price, the window and Add to cart.
+- **Provider:** photo, caps line, name, rating, the verified figures and credentials as success tags, Services ·
+  Reviews tabs with counts (they scroll to their section), "Choose a service" as option cards, how paying works, the
+  reviews; the sticky bar has the chosen service's price and Book; favourites are the heart in the header.
+- **Cart + one-page checkout:** six numbered sections in one panel (address with Change, window, out of stock as stacked
+  joined boxes, tip as joined boxes, payment, the items), then the summary (Place your order, the terms, promo code
+  and points, the sums, the offers box); the sticky bar has the total and Place your order.
+- **Courier (glanceable in sunlight):** ink on white, 16 pt body, the key numbers at the 28 pt price role (`Figure`:
+  stops done of the total, the run's window, the order reference at pickup, today's and the week's earnings), large
+  status tags, stop numbers in 44 pt ink squares, an ink progress bar, full-width 46 pt actions, "Navigate to stop n"
+  on the route and Navigate on a stop (the hand-off to the phone's maps app), the kit's `Switch` for the sealed bag
+  (replacing React Native's), the PIN at 28 pt.
+- **Every other screen** (account, orders and tracking, bookings, group orders, sign-in/up, the location sheet, help,
+  messages, quotes, cases) moved onto the kit's text roles, the 4 pt scale with its half steps, 3/4 pt corners and the
+  well grey by a token pass; drawn `Scene`s became the library's photo in the grey well or the dashed fallback
+  (consumer `Picture`).
+
+**Decisions the mockups didn't make.**
+- **Tabs, not a header menu:** the app keeps its bottom tab bar (Home · Browse · Activity · Cart · Account), so the
+  mockup's header menu, account and cart icons are not drawn; the bell stays. The department strip has no Food tab
+  (Food is hidden as a vertical, thrash item 7).
+- **The maker of the week** is derived as on the web (S-170): the landing's highest-tier shop with a photo, one on the
+  next run first, then the one with most products; its photo is the shop's own (`imageUrl`, which the api already
+  returns; the mobile type now reads it), else its department's stock photo. The side tiles are "Book a trusted pro"
+  and "Start a group order" (b.html's second tile is a group order; the app has no kitchen list to name one).
+- **One-page checkout:** payment moved from `/pay` into `/checkout` (`usePlaceOrder` in `shop/Pay.tsx` holds the same
+  calls, keys and step-up/enrol/bank steps); `/pay` redirects to `/checkout` so links and `src/screens.ts` stay. Promo
+  code and points sit in the summary box (the mockup has none). The address is a selected option card (the app knows one
+  address at a time: the phone's, else the account's default).
+- **The provider's "Book a time" panel** stays a step later (`/book/…/time`), because a visit needs the job's details
+  first; that step now draws the mockup's day tiles (solid ink when chosen) and the times as the kit's choice tiles.
+- **Providers have no photo:** a provider row shows its initial in the grey well (not the brand colour, which broke
+  "one role per colour"); the category's photo is the page's cover.
+- **Unit prices** come from the listing's size words (`900 g` → per 100 g, `1 kg` → per kg, `mL`/`L`, `dozen` → each);
+  sizes without a unit (each, bunch) show none.
+- **Colour roles:** selections draw in ink (booking days, problem items, after-sale choices, the code boxes, the
+  wizard's bar), the order timeline's done steps in the success colour, rewards in the commerce colour, the schematic
+  maps' routes in ink; the action blue is left to actions.
+- **Windows** read "Tonight, 6–9 p.m." / "Ce soir, 18 h – 21 h" (the kit's `formatTimeRange`, a comma after the day).
+- **Kit additions** (mobile-kit, no token change): `space` gains the scale's half steps `1.5 · 2.5 · 3.5`; `PhotoWell`
+  takes `fit="cover"` (a shop or place photo); `ProductCard`, `ServiceCard` and `OptionCard` take a fuller `label` for
+  screen readers (name, shop, price); card buttons are ≥ 44 pt.
+- **The screens' lint:tokens:** `mobile-kit/src/ui/kit/rules.ts`, run over every screen by both apps' conventions
+  tests, refuses raw colours, font sizes, line heights, spacing (0–2 pt nudges allowed) and radii, the display face,
+  `surface-sunken`, older radius names, drawn scenes, hand-made currency formats and React Native's `Switch`.
+- **No job offer:** the courier api assigns runs (no offer to accept or decline), so "job offer" is Today's run card
+  (the stops, the window, the next stop). No backend or api change was made.
+
+**Screenshots.** React Native Web's `Image` draws nothing for an array of sources — why S-169's shots showed only the
+placeholder colour — so the kit's `Photo` gives the web one source picked by the view's width (iOS and Android keep
+every variant). `shots.mjs` answers the photo base's requests (`…/photos/<slot>/<variant>`) from the variants `make
+photos` builds (`make mobile-shots` builds them when missing) and lists any it lacks; `NL_SHOTS_DIST`/`NL_SHOTS_OUT`
+photograph another build (the before pictures came from develop's build). The fixture listings and shops carry the
+library's demo photos as their own (`listingPhoto`), as S-182 did on the web; the rye and the butcher's items
+without a matching photo show the designed fallback. New steps: forgot password, messages, group order (join and the
+order), the courier's earnings, and the French search, provider and checkout.
+
+**Not done / not verified.** No device or simulator here (no macOS, no Android SDK): everything was checked in
+react-native-web screenshots at 390 × 844 and in Jest — native `Modal`, dashed borders, `fontVariant`, the system
+font-size setting (Dynamic Type: text uses the kit's roles and scales; one-line bar labels are capped) and the small
+Android size of the acceptance criteria were not looked at on a phone. The results' filter sheet with counts (the
+mockup's "Filters (3)") isn't built: the search api answers two goods filters, kept as chips. The cut-off countdown
+doesn't show in the shots because the fixture's run closes before the screenshot time.
+
+## 2026-10-23 — S-172 Consumer detail pages
+
+Built from `design/revamp/a.html` ("Product page with buy box", "Service provider with booking") and, for the pages it
+does not draw, the same system: a breadcrumb, a header with a 1:1 photo well, kicker, the 24 px name, trust badges,
+underline tabs or links, one-choice option cards and tiles, and a bordered 4 px box on the right that is a sticky bar on
+phones. No api or BFF change; what the api does not return is derived or left out, as listed here.
+
+**Product page (`/products/<id>`).**
+- Breadcrumb Shop › department › the shop (its page) › the product; a 58 px thumbnail column (the chosen one has an ink
+  edge) and the 1:1 photo well (reserved, `PhotoWell` without a photo; "1 / 3" and a thumbnail row on phones).
+- Details: "Visit <shop>" (the store page), the 24 px title, the stars, badges (the run tag, a Plus price), the price
+  with its unit price, the GST note, the variant as joined boxes (`Segmented`, "900 g · $8.50"; a sold-out variant
+  stays choosable and reads "· sold out", the buy box then says out of stock), "About this item" and a spec table
+  (brand, size, department, condition, sold by, returns).
+- Buy box: price and unit price; "Delivery tonight, 6–9 p.m.", "Pooled run · $2.99 · or tomorrow, 8–11 a.m.", the
+  cut-off ("Order by 5:20 p.m." in the server's HTML, "Order within 2 h 48 min" once the browser counts — no clock in
+  the markup, `make ui-hydration` stays green), the direct courier, stock (success / warning / danger colours), the
+  ID notice, quantity, Add to cart (action blue) and Buy now (secondary), Sold by / Payment / Returns, other sellers.
+  Phones: price, window and Add to cart in a sticky bottom bar.
+- **Derived or left out (no contract change):**
+  - *Unit price:* `unitPriceOf` over the variant's value, the record's `unit` and the title (S-171's rule; never a
+    guess).
+  - *Rating and "Customer reviews":* the api has no product reviews, only the shop's rating on the offer. The page shows
+    the shop's stars and "4.8 out of 5 · 211 ratings of Glenmore Bakery", and links to the store. **No histogram and no
+    review list** (no distribution or texts exist for products or shops).
+  - *"Often bought with":* no co-purchase data. The rail is the offer's `more` ("More from <shop>"), as results cards
+    without a photo (MoreItem has no image) and without Add to cart (no offer id).
+  - *Allergens, ingredients, storage, "May contain":* not in the product record. Not shown. Bullets and description
+    are shown as written.
+  - *Pickup option:* the product page has no pickup data. Not shown.
+  - *GST:* the api doesn't say whether a product is zero-rated. The note now reads "GST, if any, added at checkout"
+    (was "GST included at checkout", which read as tax-inclusive). Checkout prices the tax.
+  - *"Add to a list":* not built. Favourites are for businesses only.
+  - *Stock count ("14 left today"):* only low stock says a number ("Only 2 left"), as before.
+
+**Store page (`/shop/stores/<merchantId>?dept=&market=`, new route).** The api has no store endpoint. The shop's card
+comes from its department page (`dept`, which every link to it carries) or the Shop landing. Its goods come from the
+public search by its name (`kind=product`), kept to results whose `merchant.id` is the shop's. When the search has none,
+the page shows the products the Shop pages list for it. A shop that neither lists is a 404. The header shows the photo
+well, department · market, the name, tier, product count and the next run with its order-by time, plus "Search this
+store". Shop tiles on the Shop landing and the department pages now open it (they went to a name search or the
+department). Screen `store` (section Shop).
+
+**Provider page (`/providers/<slug>`).**
+- Breadcrumb Services › category › the business. Header: the 136 px photo (logo, else its own service photo, else the
+  category's), kicker category · zones, the name, tagline · since · tier, stars, "98% on time · 71% book again". The
+  api has no job count or reply time, so the track record is the on-time and re-book figures. Verified facts are
+  success badges with a shield, plus the booking mode and a running reward.
+- Underline tabs Services (count) / Reviews (count) / About. Services: "Choose a service" as one-choice option cards
+  (radio mark, duration · what's included, the price). Quoted services can be chosen too, and the box then asks for a
+  quote. Below them come "Recent work" and "What neighbours say" (the first two reviews, "See all N reviews"). About
+  holds the four figures, the about text, FAQ, area and policies, in the page builder's order. A business with no
+  services section keeps the plain booking card.
+- **Booking box** (`BookBox`): the chosen service, the month, five days as one-choice tiles (a day with nothing free is
+  disabled) with earlier/later, that day's times as tiles (taken ones struck through), "Comes to you" with the zones
+  (or "At <business>"), the price lines (service, travel included, tax estimate at the provider's `taxBps`), and "Book
+  Sat, Oct 24 at 9:30 a.m.". It writes the choice into the wizard's per-business draft (`seedDraft`: service, day,
+  time, the calendar's zone and terms) and opens the wizard. The calendar is the public `slots` read, fetched in the
+  browser. "Today" is the render clock's.
+- **Not as drawn:** the mockup's price lines are "Labour / Parts / Call-out fee". The api has a service price and a tax
+  rate, so we show the service, "Travel: Included" and the tax estimate. Its no-charge note reads "Your card is held,
+  not charged, until you confirm the job is done" (escrow: the card is authorized at booking). On phones the box
+  follows the page, not the service list (the mockup puts it between the services and recent work), and the sticky
+  Book bar keeps it in reach. The "21 more photos" tile is not built (no photo count in the api). "Recent work" shows
+  the business's own service photos and is left out when there are none: never its category's stock photos (S-181).
+- The booking wizard (`/providers/<slug>/book`) keeps its steps and behaviour. Done/current steps, options, days and
+  times now show the selected ink, the summary is the bordered box, and the type uses the scale.
+
+**Kitchen page (`/food/<slug>`).** The header in the provider page's system (cuisine picture, cuisine · address, name,
+stars, ETA · fee, the food-permit badge, minimum). The menu's sections are underline links (anchors). Dishes are cards,
+two a row, with a 1:1 photo well and an action-blue "+" in its corner (ink while open), the price in the one format,
+and the dietary and allergen tags. The bordered "Your order" box keeps the group order entry at its top. Phones get a
+sticky "View your order" bar once something is in it. The `.nl-rest-*` rules moved from `food.css` to `restaurant.css`.
+The food checkout and the group order share its line and total rules, so they load it too, and their summary box is
+now the bordered panel (no shadow). Dishes have no photos in the api, so every dish shows the designed well.
+
+**Quote request flow (`/services/<category>/quote`) and the quote pages.** Same system: the step rail in ink, the
+24 px title, providers as checkbox rows that turn ink when picked (tier as a success / neutral tag), the bordered
+accept box. Behaviour is unchanged.
+
+**Library.** No new components. One fix in `primitives.css`: a chosen `ChoiceTiles` tile under the pointer kept the hover
+grey with the white text of the selected state, so the chosen day disappeared. It now stays ink. The baselines don't
+hover, so none change. Also: `pages.css`'s category grid shares the `.nl-tiles` class name with `ChoiceTiles`, which
+gave the booking box's day tiles the category grid's 150 px columns. The box sets its own columns. Renaming one of the
+two is left to the owner of the shared parts. The pages compose
+`Segmented`, `ChoiceTiles`, `OptionCard`, `UnderlineTabs`, `Stars`, `Price`, `ProductCard` (through `OfferCard`).
+
+**Lint and tooling.** `pnpm lint:tokens` now enforces no raw sizes, spacing, radii or colours and no inline `style` in
+`features/product`, `provider`, `booking`, `quotes`, the kitchen screen and `restaurant.css`, and the store page
+(skeletons moved off inline margins). `make ui-shots`: the product, provider and booking shots fix the clock (the
+cut-off countdown, the calendar's today), plus new `store` and `provider-day` shots (a day chosen in the box). The
+fixtures answer the provider's `slots` for any week, give the product bullets and the shop's other products their demo
+names, and give search hits the Shop pages' merchant ids.
+
+**Not done here:** product and shop reviews, a co-purchase rail, allergens and pickup on products, the provider's job
+count and reply time, and a store endpoint all need api work. French shots are still not in `make ui-shots` (fr-CA is
+covered by the tests).
+
+## 2026-10-23 — S-176 Studio money, settings and onboarding
+
+Every remaining Studio route is on the shared system in the Plainsight look, built to the Studio dashboard and orders
+frames of `design/revamp/a.html` (the mockups have no frame for these screens; their language is the page head, the
+KPI strip, white 4 px panels on hairlines over the grey ground, underline status tabs, StatusTag cells and the
+ink/grey columns chart). No backend, BFF contract, validation or i18n rule changed; every new string is en + fr-CA.
+
+**Money (Earnings, Payouts, Reports, Refunds & disputes).**
+- Each screen: `BoHeader` (the screen's name; what matters now as the line under it) and a `KpiStrip`. Amounts are
+  `formatPrice` / `useFormatters().price` only and dates `formatWhen` (finance's own `dayDate`/`dateTime`/`timeOf` now
+  wrap it); `moneyShort` ("$160") is gone, so headings read "$160.00". A chart's y-axis uses whole dollars
+  (`axisDollars`): an axis step is not a price.
+- Earnings: "Net earnings, last 14 days" as a `ColumnChart` built from the ledger's lines by the day they happened
+  (refunds count nothing; there is no daily earnings endpoint). Money in motion's current step is drawn selected (ink
+  edge, ink number), not in the action blue. The ledger has tabs All / In escrow / Released / Disputed (red, when any) /
+  Refunded (when any) and its state is a status (released success, escrow info, disputed danger, refunded neutral). The
+  ledger keeps full phone cards (no compact card hints): its held / tax / fee breakdown must stay readable on a phone.
+- Payouts: the balance is the KPI strip (the old action-blue "available" tile is gone: one role per colour), the account
+  panel shows the account's state as a status (Active / Changing); history has tabs All / Paid / On its way / Failed,
+  Arrives and To columns, and "Your last payouts" as columns (the last 12 paid or moving payouts, newest in ink).
+- Reports: the LineChart (this period vs the one before) became a `ColumnChart` of this period's buckets with the
+  current bucket in ink, as the brief asks; the comparison with the period before stays in the Gross KPI's delta (▲/▼).
+  The refund-rate KPI is green under the category average and red over it. The h1 is "Sales reports"; the period and
+  its dates are the line under it. Sources are a definition list.
+- Refunds & disputes: KPI strip (open disputes, waiting on you, refunds · 30 days, dispute rate against the tier's
+  floor); each open case is a card with its state as a status (waiting on you warning — danger within a day of the
+  reply deadline —, with an agent info, offer sent neutral) and the matching urgency edge; evidence chips are neutral
+  bordered tags with an icon (were the action colour). History: tabs All / In progress / Won / Refunded, an Opened
+  column, outcomes as statuses (won success, awaiting you warning, with an agent info, lost danger).
+
+**Messages.** Page head with the unread count; the conversation list has All / Unread tabs with counts; an unread
+conversation is bold with an ink dot (named "Unread" for screen readers) and its time in ink, the open one sits on the
+grey tint with the 3 px ink bar (the sidebar's current-page style); the reference and subject are a meta line. The
+thread title is an h2 under the page's h1 (was the page's h1). Quick replies are the shared `Chip` (pressed = the reply
+filled in). Help-case conversations use the same composer.
+
+**Store (storefront editor).** The form is three `FormSection` panels; the button-label picker and the section switches
+are the shared Chip / Switch ("Always on" a neutral status); publishing moved into a sticky `SaveBar` with the page's
+state (Published date success / Not published warning) and the approval note; the head keeps Embed code. The live
+preview can show Phone or Web (`Segmented`), and **draws services and products with @northline/ui `ServiceCard` /
+`ProductCard` — the consumer pages' own cards** — inert (stacked two-up on the phone frame, rows on web), with the real
+primary button as the call to action. Listings carry no photo in this endpoint, so the cards show the dashed fallback.
+The unused page builder (`PageBuilder.tsx`, `SectionList.tsx`) is token-only too and kept (its api and tests stay).
+
+**Reviews.** Page head; KPI strip (average with stars, reviews, replied % of the newest page, waiting for a reply);
+the rating summary panel beside the reviews panel with tabs All / Needs a reply / Replied / 1–3 stars; a review still
+waiting for a reply has the warning edge; hidden / edited / reported are statuses; the reply's edge is ink.
+"Replied" counts the reviews loaded so far (the list pages by 20; there is no reply-count endpoint) and says so.
+
+**Settings.** Page head, `UnderlineTabs` with tab/panel ids (was ChipTabs). Business is three `FormSection` panels
+(details, service and bookings, languages) plus Licences & insurance, with the sticky `SaveBar` ("Unsaved changes" /
+"Up to date"); languages are selected chips with × that remove themselves. The other sections keep one white panel. Every
+tag on Team (2FA: passkey/authenticator success, text message warning, none danger), Security, API (deliveries,
+webhooks, integrations), partner access and stock sync is a `StatusTag` of its meaning. Notification cells pressed show
+the selected state (ink edge on the tint), not the link colour.
+
+**Standing, Stripe & compliance, Help & support.** Each: page head + KPI strip (Standing: in force, appealable decisions,
+appeals in review, coaching tasks; compliance: Stripe payouts, documents verified, obligations), panels with an urgency
+edge, statuses for every state (`docState` / `requirementState` return status tones now: verified success, due warning,
+expired/rejected/past due danger). Compliance's h1 is the screen's name and what is due is the line under it. Help: tabs
+as `UnderlineTabs` (open cases as the count); topics show their pressed state; the "Talk to a person" panel is white
+with an info edge (was the brand tint); case and platform status are statuses (operational success, degraded warning,
+outage danger). A Standing fixture was added to `make ui-shots` (it had no recorded answer).
+
+**Availability, kitchen Hours, Modifiers & combos.** Availability: `UnderlineTabs`, the save state as a status beside
+them, the Hours and Rules tabs save through `SaveBar`, free preview slots outlined in ink (were the action blue),
+taken ones struck through on the well; connect / bookable / holiday toggles are the shared Chip. Kitchen Hours: page
+head, KPI strip (days open, default prep, max per 15 min, ways to get food), the five parts as `FormSection` panels in
+two columns with their edit buttons as panel actions, every on/off and evidence state a status. Modifiers & combos: page
+head, panels, options as bordered well tags with "+ option" a small secondary button, combos with status tabs and a
+status column, savings and prices in the one format ("Save $6.00").
+
+**Onboarding (provider, seller, kitchen — one chrome).** The wizard's own top bar: logo, the business and its state
+(status), the step indicator (numbered steps joined by hairlines; the current one solid ink with its name in bold,
+finished ones ✓ in the success colour; below 1280 px only the current step's name shows; below 768 px the bar keeps the
+logo and the account, and a "Step n of 5 · name" line over five segments sits under it), "Finish later" and the account
+menu. The left step rail is gone (its note moved under the card). One column; the Business step's questions are two
+titled groups ("Who the business is" with the province's legal block, "What customers see"); the steps' Back · hint ·
+Continue bar is sticky at the bottom of the window (CSS on the existing `.nl-ob-actions`, so every step and flow gets
+it); the chosen business type is drawn selected (ink edge on the tint, ✓, its icon). The steps' sub-lines stay in each
+step button for screen readers (and as its tooltip). Identity checks are statuses.
+
+**Library (@northline/ui), additive.** `ProductCard` / `ServiceCard` (and `CardBadge`, the prop types) moved to their
+own module, `Cards.tsx`; the package index exports them exactly as before, the strings are shared through an internal
+`commerceText.ts`. No component changed, so no gallery entry or baseline changed. The Studio's dashboard no longer loads
+the cards: **initial JS 255.6 → 247.8 kB gzip and the budget is back to 250 kB** (`scripts/bundle-budget.mjs`).
+
+**Lint (`pnpm lint:tokens`).** Every Studio folder is strict now (no raw px sizes or spacing, no raw colours, no inline
+`style`, no hand-made tabs, old tag tones, app-made chips or `formatMoney`/`money(`): S-176 adds auth, assistant,
+writing, pilot, finance, messages, storefront, reviews, settings, compliance, standing, help, availability and
+onboarding, and the script **fails on a Studio folder that is in none of the lists**. New rules for the Studio: no old
+`<Tag>` (use `StatusTag`) and no `<Alert tone="highlight">` (the promo/commerce colour; paused, instant book paused and
+"redo a check" alerts are `info` now). An inline style may set one custom property from merchant data
+(`style={{ ['--nl-brand' as string]: s.brandColor }}`, the swatches, the review bars' `--pct`): data, not presentation.
+
+**Audit items.** `studio-onboarding-business` (cramped two-panel wizard with an action-blue rail and progress bar, no
+selected type, the Continue bar at the end of a long form), `studio-page` (old card chrome, chips with no shared
+selected state, Publish lost at the bottom; the preview look was fixed in S-174 and now uses the real cards) and
+`studio-settings` (kicker + title head, pill-coloured language tags, inline Save) are gone.
+
+**Departures and limits.**
+- The brief's "one question group per step": the Business step keeps its server step (`business`; changing the step
+  list would change the onboarding contract) and shows two titled groups instead of being split into more steps.
+- Reports lost the line chart's previous-period overlay (now in the KPI delta); Earnings' chart is built client-side
+  from up to 500 ledger lines.
+- Reviews' "Replied" and the tab counts cover the reviews loaded so far, not all reviews.
+- Full-page `ui-shots` draw the sticky save/continue bars where the window's bottom is, over the content below it; in the
+  browser they sit in place at the end of the form.
+- French shots are still not in `make ui-shots` (fr-CA is covered by the tests).
+
+## 2026-10-23 — S-177 Console revamp
+
+Built to `design/revamp/a.html` screen 9 ("Console sellers table", 1280 and 390) and, where the mockups draw no console
+screen (the overview, the detail pages, the other queues), to the same system. No backend, BFF contract or migration
+changed: every figure and action uses an endpoint the console already called.
+
+**Shell (on S-174's `AppShell`).** White top bar: logo + "Console", the **market / province scope** (`WorkspaceSwitcher`:
+"All markets · Alberta + BC pilot", then each open province with its markets indented, from the region model), the
+global search (`ShellSearch`: "Sellers and providers matching …" → `/sellers?q=`, "Orders and bookings with reference …"
+→ `/orders?view=all&q=`, each only when the role opens the screen) and the staff member's full name with the active role.
+- The scope is the console's place filter: every screen that filtered by province/market reads `usePlace()` — a link's
+  own `?province=&market=` (a deep link, a KPI) wins, else the top bar's scope. The per-screen province and market
+  selects are gone (the mockup has none). The choice is remembered on the device (`localStorage nl.console.scope`, a
+  convenience; private mode keeps it for the visit). Choosing a scope drops the screen's own `?province=&market=`.
+- The mockup's notification bell is not built (the console has no notifications endpoint); the overview's queues are
+  the "what needs you" list. The region line text ("Ops · …") left the bar: it is the scope's meta line.
+- Pilot / UAT / Go-live / On-call / API stay out of the sidebar, the account menu and the search unless
+  `VITE_NL_TESTING_TOOLS=1` (unchanged); their routes remain.
+
+**Overview.** KPI strip (unchanged figures), then **Needs attention** as `ActionGrid` cards — one per queue with work
+in it, the SLA and the oldest item, one button into the screen: past the SLA (applications/disputes 48 h, flagged
+listings 4 h), a stuck run or an off-platform-payment flag is urgent; work inside its SLA is due soon; sellers below a
+floor are to know. Most urgent first (its button primary). A queue the active role can't open is left out (the old
+to-do card showed it without the way in); none left → "Nothing needs attention in this scope." The GMV chart's series
+are ink and the 3:1 grey (it used the action blue twice: audit #6).
+
+**Tables.** Every queue/table page: views as `UnderlineTabs` with counts, quick filters in the toolbar, dense rows,
+status tags, the bulk bar.
+| Page | Views (counts) | Quick filters | Bulk |
+|---|---|---|---|
+| Sellers & providers | All · Live · Under review · Paused · Suspended | department (Segmented) · At risk · Licence expiring · saved views | **Suspend…** (red; one audited request per business, same reason) |
+| Applications | Stage 1 · Review · Stage 2 · Decision · Info requested · Approved · All | High risk · saved views | — (the decision is per application, four-eyes) |
+| Orders & bookings | the api's views (needs attention … all) with its counts | type (Segmented) · saved views | — |
+| Disputes & refunds | For an agent · Waiting for a co-sign · Decided · All | kind (Segmented) · saved views | — |
+| Trust & safety flags | Open · Done · All | — | Dismiss (and each rule's action inline; Suspend listing rights red) |
+| Support desk | All · Urgent · Unassigned · Mine · SLA at risk (api counts) | requester (Segmented) | — |
+| Catalogue | All · Services · Shop · Food | Regulated · Not live anywhere | — |
+| Finance reconciliation | All · Mismatch · Matched · Resolved | — | — |
+| Team | People · Roles · Audit log | — | — |
+- Tabs that the api filters (orders, support) keep their server counts; the others count the loaded rows.
+- **Saved views** (`features/shell/tables.tsx`): the viewer names the tab + filters + search they have and gets back to
+  it from a menu; kept on the device (`localStorage nl.console.views.<screen>`), never sent to the api. Built on
+  sellers, applications, orders and disputes (the queues with several filters).
+- The mockup's bulk "Message" is not built: there is no message-a-business endpoint. Export is the DataTable report.
+- Status tones (audit #6, "every status chip is the same grey"; accent/highlight were blue and magenta): a status is
+  a `StatusTag` (dot + semantic pair) — live/approved/done success, waiting/due warning, in review/new info, suspended/
+  failed/escalated danger, paused/neutral grey; a fact (tier, risk, priority) is a plain tag in a status pair. No
+  screen uses the action or commerce colour as a status any more.
+- Destructive actions are red (`btn-destructive`): Suspend… (list bulk bar, seller page), Cancel order…, Suspend
+  listing rights. `ghost`/`danger` button names became `tertiary`/`destructive`.
+- **Money** (audit #8): one format — `formatPrice` ($8.50 / 8,50 $) in tables, facts and sentences; KPI values and
+  chart amounts `formatCompactMoney` ($1.84M, $212k, under $1,000 the price format). The console's three local compact
+  formatters and every `formatMoney(…, { whole })` are gone.
+
+**Detail pages** (new client routes; the old right-hand sheets became pages): `RecordHeader` (back link, h1 + status
+tag, key facts), `RecordLayout` (main column + the 320 px sticky right-hand `ActionPanel`), `RecordTabs`.
+| Page | Route | Tabs | Action panel |
+|---|---|---|---|
+| Seller | `/sellers/$sellerId` (existed) | Standing (signals, consequences, coaching) · Verification on file · Timeline & audit | Suspend… / Reinstate, Require re-verification…, Change tier…, Hide / Show in search… |
+| Application | `/verification/$applicationId` | Business · Checks & identity · History (stages and review above) | Review… / Approve, Request info… (four-eyes reason as the note) |
+| Dispute / refund case | `/disputes/$kind/$caseId` | Both sides · Evidence · History | the decision (outcome tiles, amount, note, co-sign) |
+| Order / booking | `/orders/$orderRef` | Delivery · Cancellations and returns | Cancel order… (support), Open Disputes & refunds |
+| Support case | `/support/$ticketId` | Conversation (with the reply) · Refund requests · Requester context | Assign to me, Request refund…, Escalate to T&S |
+- "Case" is read as the support desk's case (the desk calls its tickets cases); trust appeals and card disputes keep
+  their sheets (not in the brief's list).
+- There is no single-order read endpoint: the order page finds the row through the monitor (`?view=all&q=<ref>`, a
+  reference prefix) and reads the delivery and after-sale endpoints by its id. An unknown reference says so.
+- Notes: no screen has a notes endpoint (sellers, orders, applications). The "notes" of the brief are the support
+  conversation and the dispute statements; no notes tab is invented elsewhere.
+- Old addresses `?seller=`, `?case=`, `?application=`, `?ticket=` are no longer read (the routes' schemas drop them).
+
+**@northline/ui additions** (additive; gallery section `records`, 4 new `test:visual` baselines; the 76 existing ones
+unchanged): `RecordHeader`, `RecordLayout`, `ActionPanel`, `ActionPanelItem`, `RecordTabs` (real ARIA tabs with a
+tabpanel), `RecordHistory`; `formatCompactMoney` (+ `useFormatters().compactMoney`); DataTable `views`, `filters`,
+`dense`, tones `status-*` (drawn as `StatusTag`) and `tag-success|warning|danger|info`. With `filters` the toolbar's
+Filters button reads "More filters" and Columns / Report become named icon buttons, so the row holds at 1280.
+- Fixed in DataTable (all apps): the bulk bar's destructive button rendered ink on ink — base `.btn` won over
+  `.nl-dt-bulk-danger` — so Suspend… was invisible; it now carries `btn-destructive`, and the bulk report button is
+  white (`btn-secondary`) as drawn, instead of the action blue.
+
+**Lint.** `pnpm lint:tokens` now checks all of `apps/console/src` strictly (no raw px sizes/spacing or colours; the
+console's CSS — auth, offers, go-live, UAT … — moved onto the scale) and fails on `tag-accent*`/`tag-highlight`,
+accent/highlight/brand/commerce tag tones, `formatMoney` / `fmt.money` and the `ghost`/`danger` button names anywhere in
+the console.
+
+**ui-shots:** new console routes `verification-registry`, `sellers-selected` (the bulk bar), `order`, `dispute`,
+`disputes-card`, `trust-appeals`, `support-case`, `offers`; the sheets' routes became the pages (`verification-review`
+/`-decide` now `/verification/M2`, `/M1`). A fixture answers an order's after-sale (empty).
+
+**Not done:** the mockup's rows-per-page select (the DataTable keeps its 5/10/25/50 boxes), the bell, bulk Message;
+the secondary sheets (finance day, pilot, partners, AI screening, privacy, retention, UAT feedback, appeals, card
+disputes) keep their drawer layout on the new tones. Storybook stories failing on develop before this story
+(LocationPill "Detected", SiteHeader "Narrow", Gallery "Sections" landmark-unique/banner) are untouched.
+
+## 2026-10-23 — S-173 Consumer cart, checkout, account and auth
+
+Built to "Cart and one-page checkout" and its fr-CA frame in `design/revamp/a.html` (screens 5 and 6, 1280 and 390). The
+mockups draw no cart, account or sign-in page, so those use the same system: a 24 px page title, bordered 4 px panels on
+hairlines (no shadows), ink number boxes, option cards and joined boxes that show their selected ink, `StatusTag`s, the
+one price format. No backend, BFF contract, validation or i18n rule changed; every string is en + fr-CA.
+
+**One-page checkout (`/checkout`).**
+- Six numbered sections in one panel: 1 Delivery address (the saved one as a selected `OptionCard` with the person's
+  name, street, city/province/postal and the courier note; "Change" lists the others and "Add a new address"),
+  2 Delivery window (option cards with the fee; the pooled window's "Pack by 5:45 p.m. · the courier picks up all
+  2 shops in one run" from the option's `packBy`), 3 If an item is out of stock (`Segmented`, stacked on phones),
+  4 Courier tip (`Segmented`: No tip · $2 · $3 · $5 · Other, then an amount field), 5 Payment (the method as a
+  selected option card; under Stripe the Payment Element opens here), 6 Review items **grouped by seller** ("Sold by …",
+  each line with its photo well, a Qty select that changes the cart line, and the line price). The age check sits under
+  the address.
+- The summary box (sticky): Place your order, the terms line, Items (n), Delivery, Courier tip, Plus/promo/points lines,
+  the tax lines (GST 5 % …), the tax note, Order total; then "Promo code or points" (a disclosure — the mockup has none)
+  and the CASL offers box. Phones: the summary follows the panel and a sticky bar keeps the total and Place your order.
+- **Flow (same calls):** the set-up and the live quote as before. "Place your order" checks the page (address errors
+  focus section 1; the age check must be cleared), then opens the checkout (`POST /me/checkouts`, Idempotency-Key and
+  step-up unchanged) and with the local stand-in places it at once (`…/place`). Under Stripe the first press opens the
+  checkout and mounts the Payment Element in section 5 ("Enter your card details, then place your order.", focus moves
+  to Payment); the next press authorizes every intent and places. Any change after a checkout opened (address, window,
+  rule, tip, code, points) drops it and the next press opens a new one with a new key (the old one expires, as before).
+- **Departures from the mockup:** no "+ Add a card" (the shop checkout has no saved-card choice in the api; Stripe's
+  element takes a new card); the tip defaults to No tip (the mockup pre-selects $3 — a pre-chosen tip would be added
+  without the person choosing it); tip boxes are whole dollars as drawn ($2, not $2.00: they are amounts to choose,
+  not prices); the tax note is general ("Tax is worked out item by item: basic groceries are zero-rated.") because the
+  quote does not say which lines were taxed; the window text keeps our range format ("Ce soir, 18 h – 21 h", not
+  "de 18 h à 21 h"). Window, rule and tip wording follow the mockup ("Tonight, 6–9 p.m.", "Pooled run with 5
+  neighbours", "Within 45 minutes", "Replace with similar", "Text me first"; fr "Tournée groupée avec 5 voisins",
+  "D’ici 45 minutes", "Remplacer par un article semblable", "M’écrire d’abord"). The page title is "Checkout" /
+  "Paiement" (was "Secure checkout"; the lock icon stays).
+
+**Cart (`/cart`).** Shops as bordered panels (name and item count), each line with the photo well, name, option · unit,
+stock, Plus price, the quantity stepper, Delete and **Save for later**; the pooled-run note ("Pooled run: Tonight, 6–9
+p.m. All 3 shops deliver together for one $2.99 fee. Order by 5:20 p.m." — the cut-off strip's next run, S-170); the
+subtotal box (sticky; first on phones) with Proceed to checkout. **Saved for later has no api** (no contract change in
+E-15): the saved lines live in this browser (`localStorage['nl.savedForLater']`, what is needed to show the line and to
+put it back), read after hydration; "Move to cart" is the product page's `POST /api/v1/cart/items`. They don't follow
+the person to another device — an api list is the follow-up.
+
+**Order placed, food checkout, group order.**
+- `/checkout/complete`: a bordered panel with the success check, "Thank you — your order is placed.", ref and total,
+  when it arrives, "What happens next" (three ink-numbered steps), the escrow line and the actions, beside the order's
+  summary box (items, delivery, tax, total, the shops). The illustrated banner is gone.
+- `/food/checkout` uses the checkout's sections (`checkout/Section.tsx`, `checkout.css`): When (option cards), Deliver
+  to (the saved place as a selected card, Change → the location screen; drop-off as stacked joined boxes, the note,
+  extras as chips), Courier tip (joined boxes, the food api's own choices: none · $2 · $4 · 15 % · $6), Payment (age
+  check, the Stripe element or the stand-in, promo code in a disclosure, the offers box); the summary box holds Pay, the
+  lines and the totals. `/food/group/<code>`: panels on hairlines, the host's tip as joined boxes, the placed notice on
+  the info tone (was the commerce "highlight").
+
+**Account.**
+- **Hub (audit #9):** the cards fill the row (`auto-fill, minmax(280px, 1fr)` across the page: four a row at 1440, one on
+  a phone) — the old grid stopped at 1100 px and left a dead right column. Square icons in the well grey (not brand
+  circles), the title, one line; "Sell or offer services" is a line under the grid, so the twelve cards make full rows.
+- Sections keep the account list on the left (white panel, the current one in the selected tint with an ink edge).
+  Every section's CSS is on tokens; the notifications matrix uses the library `Switch` (was a hand-made toggle).
+- **Orders & bookings:** `UnderlineTabs` with counts (Orders · Bookings · Quote requests), the views as `Chip`s, and each
+  card's status a `StatusTag` by meaning: a missed delivery, a case or a declined quote danger; waiting on someone
+  (requested, waiting for quotes, quote ready, deposit held, escrow) warning; under way info; done success; cancelled
+  and expired neutral. The api's own `tone` only breaks ties. The primary action is blue on active cards, secondary on
+  past ones.
+- **Order detail and tracking:** the head row in the well grey, the status panel and timeline (done steps success), the
+  shops on the designed photo well (was a stock shop photo — S-181) with Packed success / Packing info tags. Food
+  tracking and the courier box on the same tokens.
+- Addresses, payments, favourites, notifications, profile, security, help and report a problem: the layout pass is the
+  shared CSS (panels, rows, tags, the problem flow's selected rows in ink). Their copy and behaviour are unchanged.
+
+**Sign-in, sign-up, forgot password (audit #9).** One centred block (at most 940 px): the 440 px card first (its title
+is now the page's h1), then a narrow well-grey panel with the kicker, the heading (h2), three ink-numbered points and the
+support line; on phones the panel follows the card. The stock hero photo is gone (audit #1's flag). `/forgot-password`,
+`/reset-password` and `/verify-email` are now auth screens too (the header shows the logo only — they had the site
+navigation).
+
+**The auth server's own pages.** `server/auth` renders no HTML: it is the JSON sign-in API plus redirects, and every
+browser sign-in lands on a web app's page (`LoginPages`: the consumer site's `/sign-in` for consumer clients, couriers
+and the phone apps; the Studio's and the console's for theirs; federation callbacks back to the app that started).
+There are no templates to restyle, so "the auth server's pages match the shell" is met by those pages: the consumer's
+are rebuilt here, and the steps all three apps share come from `@northline/auth-kit` (`account.css`: the password field,
+email code, second-factor enrolment, backup codes, marketing consents), which now uses Plainsight's tokens (IBM Plex
+Sans — no display face —, 3/4 px corners, the scale) and is under `pnpm lint:tokens`. The Studio and console sign-in
+pages themselves belong to S-176/S-177. No Gradle module changed, so no server tests were run.
+
+**Price format.** The services' shared `price()` (provider page, service lists, ProviderList, ItemCard, the booking box)
+and the booking wizard drew round prices without cents ("$89"); they use `formatPrice` now ("$89.00" / "89,00 $"), as
+does the quote page's "other quotes" line. `pnpm lint:tokens` refuses a price made whole when round anywhere in the
+consumer app (`whole: … % 100`); `whole: true` stays for amounts to choose or ranges (tip boxes, "Under $10").
+
+**Wizard clock.** The booking wizard's vehicle years were a fixed list starting at 2026; they now count back from the
+render clock's year (S-182: the same on the server and in the browser's first render). The `provider-book` shot is
+taken with the pinned clock (`now`) and passes the hydration check. The wizard's server render still takes the
+server's own clock (the root loader's `renderedAt`): the shots pin the browser only.
+
+**Library (@northline/ui, additive).** `Segmented stack` (the boxes stack full width under 600 px); gallery section
+"checkout" (4 new baselines; the others unchanged). No other component changed.
+
+**Tooling.** `make ui-shots` routes take `storage` (localStorage entries set before the page loads): the cart shot has a
+saved-for-later line and the cut-off clock, the food checkout shot a food order. New shots `food-group` (fixtures for a
+group order at `/food/group/PHO123`) and `forgot-password`.
+
+**Lint (`pnpm lint:tokens`).** Strict (no raw sizes, spacing, radii or colours; no inline `style`) now also over the
+cart, checkout, orders, tracking, account, auth, help, consent and promotions features, the food checkout, group order,
+tracking and `food.css`, and `@northline/auth-kit`. A data-driven custom property (`style={{ ['--h' as string]: … }}`,
+the wallet chart's bars) is allowed by the no-style rule.
+
+**Not done / not verified.** Saved for later is per browser (needs an api). The checkout's saved cards ("+ Add a card")
+need an api for the shop checkout. French shots are still not in `make ui-shots` (fr-CA covered by the tests and the
+gallery's baselines). Storybook stories failing on develop before this story (LocationPill "Detected", SiteHeader
+"Narrow", Gallery "Sections") are untouched.
+
+## 2026-10-24 — S-180 Revamp QA and sign-off
+
+The last story of E-15: the lead's QA list, WCAG 2.2 AA on every revamped route, both locales in `make ui-shots`, the
+visual regression gate in the web CI, the cleanup of what E-15 retired, the docs, and the owner's walkthrough. No
+backend, BFF contract, migration, validation or i18n rule changed (every new string is en + fr-CA).
+
+**The lead's QA list.**
+| Item | Outcome |
+|---|---|
+| Console seller: empty "Standing" panel | Fixed. The panel rendered nothing while its query loaded and for good when it failed (the shots had no answer for `GET /console/standing/{id}`). It now shows a skeleton, an error with Retry, and is titled "Consequences and coaching" (it repeated the tab's name); `make ui-shots` has a standing fixture (a consequence in force and a coaching plan). |
+| Console sellers: "At risk 41" with 9 businesses | Not an api bug: `SellersService` counts at-risk over the same rows it returns (live and flagged, in scope). The 41 (and 1,204 live) came from the vitest data the shots replay; the test and the shots fixture now count over their rows (2 / 6). The KPI opened every flagged row (a suspended one too); it now opens Live + At risk — exactly what it counts. |
+| "$89" vs "$89.00" | Verified fixed by S-173 (services' `price()` uses `formatPrice`; lint refuses `whole` for a round price). Whole dollars remain only where they are choices or thresholds (tip boxes, "Under $10", a kitchen's minimum order). The Studio dashboard's net-month KPI and chart legends still drew whole dollars; they use `price` now and the axis `axisDollars`. |
+| Storybook: LocationPill Detected, SiteHeader Narrow, Gallery Sections | Fixed (below). |
+| `.nl-tiles` clash | The consumer category grid is `.nl-cat-tiles`; `.nl-tiles` is ChoiceTiles' alone. |
+| French not in `make ui-shots` | Every route is shot in en and fr (below). |
+| Studio initial JS 260 → 250 kB | Done by S-176 (Cards split out); verified: 248.8 kB, budget 250. |
+| Old console sheet links | `/sellers?seller=`, `/verification?application=`, `/disputes?case=kind:id`, `/support?ticket=` redirect (replace) to the record pages. |
+| Mobile apps never on a device | Not a bug we can fix here: backlog S-184 (device pass, iOS + small Android, screen readers). |
+| ColumnChart uneven ticks | `niceTop` picks a round step (1/2/5 × 10ⁿ, 2.5 from 25 up) and the top is four of them: $188 → 0 · 50 · 100 · 150 · 200. Unit test. |
+| Flaky #418 on `provider-book` | Cause: the session is fetched in the browser only; when its answer arrived before the wizard's streamed part hydrated, that part's first render drew the signed-in photo picker the server had not. `useViewer()` now reports "not known" until hydration is over (`lib/hydrated.ts`, `useSyncExternalStore` with a server snapshot), so the browser's first render is the server's. Not reproducible on demand (a race); `make ui-hydration` passes. |
+| Food checkout "Add the address" / "Pay $0.00" | The fixture: saved addresses carry no coordinates (real api too), and the food checkout needs a point. The shot now has a place chosen in the location dialog (`nl.location` with lat/lng), so the quote and the price block are photographed. The real-world gap — the header says "Deliver to 1204 17 Ave SW" while the food checkout asks for an address — is backlog S-186. |
+| Save for later browser-only | Not a bug (S-173's documented scope, no contract change in E-15): backlog S-183. |
+| Food visibility web vs mobile | Left as is, waiting for the owner: the web shows Food (S-170, the mockups), the consumer app hides it (S-178). Backlog S-185; walkthrough § 5. |
+
+**Accessibility (WCAG 2.2 AA).** `make ui-a11y` (new, `shots/a11y.spec.ts` + `shots/keyboard.spec.ts`) runs the S-109
+checks on all 148 `ui-shots` routes (consumer 51, Studio 56, console 41) at 1440 (mouse) and 390 (touch, so
+`pointer: coarse` holds as on a phone), in en and fr — 592 page checks — plus the keyboard paths. Fails on critical /
+serious WCAG, heading order, page language, text-spacing overflow, focus hidden by a sticky bar, running animation under
+reduced motion, a target under 24 px; lists 24–43 px against the project's 44 px rule. Found and fixed: two unnamed
+selects (results sort on phones, Studio bulk template), the sign-in logo's contrast on the dark panel (Studio, console),
+sideways-scrolling tables that could not take focus (consumer notifications/consents, console age checks/cohorts, the
+Studio preview frame), an unmarked link in text (Studio compliance), heading levels (console record pages, Studio
+availability, auth-kit's steps), focus escaping open dialogs (now brought back, topmost dialog only), focus not
+returning to a bulk button that turned busy as its dialog opened (the opener is read while rendering), fields hidden
+under the Studio's sticky save bar and the onboarding's Continue bar (scroll padding), the Studio phone menu staying open
+when Tab left it, a department-strip link focused off-screen, sub-24 px links and the saved-card radios, and
+`/location?lang=fr` losing its language. Final: nothing failing on any route, every keyboard path passes; details and
+the documented 24–43 px exceptions in `docs/a11y/audit.md` § S-180. **`make a11y` now fails under 24 px instead of
+44 px** (the revamp's mockups draw the header search 40, chips 32 and the back-office bar 36–38 px on a mouse screen; on
+touch the tokens make them 44): one rule for both sweeps, with the 44 px list kept as a report and follow-up S-187
+(tickets.csv) for the two bars. The journeys' ARIA snapshots were re-recorded on the revamp after review.
+- Not done: the manual screen-reader pass (S-148 stays In Progress; it should be run on this build) and the phone apps
+  on a device (S-184).
+
+**Both locales.** `make ui-shots` shoots every route in English and French (`<route>-fr-<d|m>.png`; the Studio and the
+console get their language from `nl.locale`, a fresh page per language; `UI_SHOTS_LANGS=en` keeps one) and writes
+`_truncated.txt` (ellipsis, clamp, clipped box) and `_untranslated.txt` (English-looking text on a French page) beside
+`_overflow.txt`. The two French-only routes it had (`home-fr`, `search-shop-fr`) are gone. Fixed: the home's picture-grid
+labels ("Mécanicien mobile", "Fruits et légumes") and the product cards' shop line ("+ 1 autre commerce") now take two
+lines before an ellipsis. `_untranslated.txt` lists only the fixtures' own data (business, product, review and help-article
+texts, the CASL wording and the retention names the api sends per language, recorded in English): no UI string without
+French; `frenchCoverage.test.ts` passes. Ellipses left by design: calendar entries and message previews. One console
+French page (`support-case-fr-d`) measured 1449 px wide in one run; no element reaches past the window when probed, not
+reproduced.
+
+**Visual regression gate.** `.github/workflows/web.yml` job `visual` (input `visual`, default on) and GitLab `web:visual`
+run `make ui-visual` and `make ui-hydration` in `mcr.microsoft.com/playwright:v1.56.1-noble`: Playwright 1.56.1's
+Chromium (build 1194, the baselines') with that Ubuntu 24.04 image's fallback fonts — the same as this sandbox
+(`/opt/pw-browsers`, Ubuntu 24.04). Determinism: IBM Plex Sans self-hosted and checked, the clock pinned
+(2026-10-23 18:00 UTC), zone UTC, reduced motion, 0.1 % tolerance; ran 3× in a row green. Optional `a11y-routes` /
+`web:a11y-routes` (RUN_A11Y) runs `make ui-a11y`. Both workflows stay `workflow_dispatch` / manual pipelines only; CI was
+not run. Never verified in the CI image itself (no CI run): if the first run differs, re-baseline from that job's diffs.
+Baselines changed (intended): `cards-*-m` (the shop line wraps), and the phone sections drawn below it
+(`backoffice`, `checkout`, `formats`, `overlays`, `records`, `states`, `table`, `worktable` `-m`), which the taller card
+section moves by a fraction of a pixel; `records-fr-d` (the DataTable's fitted columns). A failing screenshot stops its
+test, so a change high on the gallery page hides the sections under it until it is re-baselined.
+
+**Cleanup.**
+- Palettes: lakeshore, evergreen and dusk removed (nothing read them), with Storybook's palette switch and
+  `dist/palettes.css`; the four unused `@fontsource` families left `@northline/tokens`. The pre-E-15 aliases
+  (`--color-accent*`, `--color-highlight*`, `--color-neutral-*`, `--color-bg`, `--color-surface-2`, `--color-divider`,
+  `--color-ink`, `--font-body`, `--font-heading-weight` …) are no longer emitted; `generated/theme.json` and the email
+  colours are unchanged (Plainsight's values did not move). `packages/legal/pages/northline.css` keeps its own copies of
+  those names: it is the verbatim legal pages' self-contained stylesheet, not the tokens.
+- The mobile kit still lists `@expo-google-fonts/{dm-sans,fraunces,manrope,plus-jakarta-sans}`; `gen-brand` imports only
+  the palette's family, so they are unused dependencies. Not removed here (mobile was not otherwise touched; a mobile
+  lockfile change needs its own install and test run).
+- `lint:tokens` is strict over all of `packages/ui`, `packages/auth-kit` and the consumer, Studio, console and gallery
+  apps (it grew folder by folder in S-167–S-177): no retired names, raw px sizes/spacing/radii, raw colours, or an inline
+  `style` that sets a CSS property — data goes in a custom property (`--pct`, `--nl-skel-w/h/r`, `--nl-photo-pos`,
+  `--nl-mark-size/bg`, `--nl-swatch`, `--nl-menu-w`, `--nl-sk-w`), passing a caller's `style` on is allowed. The Studio's
+  one-off rules (tabs, tags, chips, `formatMoney`) cover the whole Studio. 79 places moved onto tokens or classes.
+- Dead CSS removed: `.card-kicker`, `.card-meta`, `.elev-*`, `.dialog-backdrop`, `.cmyk`, `.bo-todo-sub`,
+  `.order-crumbs` (no reference). `design/*.dc.html` stay: CLAUDE.md keeps them as the behavioural spec (copy, states,
+  ordering), only their look is superseded. `design/revamp/` kept.
+- Storybook: LocationPill "Detected" (its name is "Deliver to Calgary. Change location" since S-170), SiteHeader
+  "Narrow" (the phone layout follows the window, so the test sizes the window to 320 px) and Gallery "Sections" (one
+  title and one toast region for the page: unique landmarks) pass; all 104 stories pass.
+
+**Docs.** CLAUDE.md § Design system describes the system as built (tokens, roles, components, native kit, rules and
+lints, how to look at it, the page patterns); the source-of-truth and working-order lines point at `revamp-epic.md` and
+the mockups. `redesign-spec.md` is marked superseded. SCREENS.md (shells, sidebar, record pages, courier, status),
+LOCAL_DEVELOPMENT.md (`ui-a11y`, `ui-visual`, French shots, the lists), the CI runbook. The backlog CSV takes the
+trailing `Status` column of `docs/a11y/tickets.csv` (S-165–S-182 Done) and S-181/S-182 regained their empty Epic Name
+cell; follow-ups S-183 (saved for later api), S-184 (device pass), S-185 (Food on the app, owner), S-186 (coordinates on
+saved addresses), a11y S-187. The owner's walkthrough: `docs/design/revamp-walkthrough.md`.
+
+## 2026-10-24 — E-15 brand layer: Plainsight + Chinook (S-188)
+
+Shown the three directions again, the owner said they love direction C (Chinook)'s home page and asked for "a stunning
+UI/UX". The lead recommended keeping Plainsight's pages and adding Chinook's brand layer rather than switching the whole
+look (Chinook's large photos expose the demo photos' quality, and a full switch redoes every screen). The owner approved
+the side-by-side mockup `design/revamp/hybrid/index.html`. Values are in `docs/design/revamp-epic.md` § Brand layer.
+
+
+## 2026-10-24 — S-188 Plainsight + Chinook brand layer (web)
+
+The web half of S-188 (the phone apps follow in a story of their own): the token diff of `design/revamp/hybrid/index.html`
+applied to `palettes/plainsight.json`, the consumer's violet chrome, the home's "tonight" hero band, yellow deal stickers,
+the violet current-page marker of the Studio and the console. Everything the diff does not list stays Plainsight.
+Not marked Done in the backlog: the lead does that after the mobile part.
+
+- **Tokens.** `color.primary/link/focus` #5B34F0 (hover #4A25D6), `focus-ring` and `selection` #D6CCFF; `color.accent`
+  (commerce) #FFD23F with `accentText`/`accentInk` ink, `accentTint` #FFF3C4; the roles `commerce*`, `cart-badge*`,
+  `badge-accent-*`, `surface-accent` follow. The consumer chrome: `header-bg` #1D1442, `header-text` white, `header-muted`
+  #C3BBE6, `header-focus` #B9A8FF, `header-hover-bg` #2A1E5C, `header-indicator` white; `subheader-bg` #2A1E5C,
+  `subheader-hover-bg` #3A2C78; `footer-bg` #1D1442 with white links and #C3BBE6 text. New roles: `subheader-deal` (the
+  yellow "Today's deals" on the strip, the one place yellow is text), `subheader-line`, `header-scope-bg/-text` (the
+  search scope's tint), `hero-bg/-glow/-glow-peak/-accent/-text/-scrim/-tile-text/-tile-meta/-card-line`,
+  `nav-active-marker` (#5B34F0; `nav-active-bg` #F2EFFD, label ink), `mark` / `mark-text` (the logo's disc and glyph;
+  the dot `mark-highlight` is yellow, r 3.2 as drawn), `sticker-edge` (ink). `promo-bg/-text` #EFEBFF / #2A1E5C where a
+  strip remains (the Shop pages' cut-off strip, the cart's run note, the account card).
+- **`header-*` is the consumer's chrome; the back office got `topbar-*`.** The Studio and console top bar used the same
+  `header-*` roles as the consumer header. Turning them violet would have turned the back office violet, which the
+  mockup forbids, so the white bar now reads `topbar-bg/-text/-muted/-hover-bg/-ring/-focus/-border` (the old values;
+  focus violet), as do the SPAs' boot screens and the Studio's onboarding bar. The mobile agent should read
+  `header-*` as the consumer app's chrome and `topbar-*` where the courier app wants the white bar.
+- **Not in the diff, changed for consistency:** `surface-brand` and `badge-brand-*` were Plainsight's blue tint
+  (#EAF0FD / #0E2B7A) — the "New" tag, the store theme's tint, the booking wizard's done circle; next to the violet
+  action they read as a second brand colour, so they are the violet tint #F2EFFD with #2A1E5C text. `focus-on-dark` /
+  `focus-on-inverse` (focus on the ink toasts and the bulk bar) were derived from the old magenta; they are #B9A8FF, the
+  mockup's focus on violet.
+- **`font.display`** is Archivo from `@fontsource-variable/archivo` 5.3.0 (the `wdth` file: weights 100–900, widths
+  62–125 %, latin + latin-ext), declared with its ranges in `tokens.css`; `--font-display-stretch` 125 %. `font.heading`
+  stays the sans (Plainsight has no display headings), so the console's and docs' `--font-heading` users are unchanged.
+  `theme.font.display` now names Archivo; the native kit's `gen-brand` reads `font.heading` for its heading role, so the
+  apps' fonts and `brandFonts.ts` are unchanged until the mobile story adds `@expo-google-fonts/archivo`.
+  The home route preloads the latin face (the same hashed asset `tokens.css` points to) so the headline draws in it
+  at once. Display widths are in `em` (17ch of Archivo expanded = 13.4em, 20ch = 15.8em): Chromium could resolve `ch`
+  against the fallback face before Archivo arrived and keep it, which wrapped the headline onto a third line now and
+  then. Display line heights are rounded to whole pixels.
+- **Contrast.** Every pair of the mockup's table is in the gate (`lib/contrast.mjs`); all pass with the mockup's ratios
+  (white on #5B34F0 6.57, link on the well 5.97, on the Studio page 6.13, ink on yellow 12.77, yellow on the strip 10.11,
+  #C3BBE6 on #1D1442 9.40, hero accent / trust line at the brightest glow #37218B 5.77 / 8.55, nav marker on its tint
+  5.80, tile text on the scrim 17.70 …). The old pair "link on the footer" is gone: footer links are white. The gate
+  refuses a fill-only role as the text of a pair on a light surface and fails if a rejected pair (yellow on white
+  1.44, violet on violet 2.59) ever passes; `lint:tokens` refuses `color`/`fill`/`stroke`/`outline` in a fill-only
+  role, `subheader-deal` outside the site header, and `link`/`action-primary`/`focus` as text or outline in a rule of
+  the violet chrome that sets no background of its own (a focus ring with the `focus-ring` halo is allowed: the halo
+  carries the 3:1 on violet).
+- **Consumer chrome.** The header's search box is the white field itself (no 2 px ink edge on violet; a soft drop
+  shadow), the scope on #EFEDF6, the violet button 56 px. Header items hover with a light ring on the darker violet.
+  The footer shows the logo (the same mark on violet and on white, as drawn). The standalone server error page keeps
+  its white top and gets the violet footer; its wordmark and title are the sans.
+- **Hero band (`HomeHero`, `features/home/HomeBand.tsx`).** Headline `bandTitle` "Everything {place} needs," +
+  `bandAccent` "tonight." (fr "Tout ce dont {place} a besoin," + "ce soir."); the place is the visitor's neighbourhood or
+  city (`shortPlace`), "Everything you need, tonight." until it is known. It is the page's `h1`; the screen-reader-only
+  "{brand}: everything local…" heading is gone (the page `<title>` keeps the brand). The trust line is the mockup's copy
+  ("Payment held until you confirm delivery", "Missing items refunded automatically") plus "{n} verified shops in {market}"
+  from the Shop landing's `shopCount` on wide screens (the mockup's "1,780 verified businesses" has no count in the api).
+  The department tiles' meta use counts the page already loads — the services rail's `total` ("1,240 services · book
+  instantly": services, not pros, because the api has no count of providers), the landing's `shopCount`, the open
+  kitchens — and drop the number until it arrives. Photos: the barber / produce / Vietnamese slots, falling back to the
+  banners. The run card is the next pooled run (`useNextRun`): kicker by day ("Tonight's / Tomorrow's / Tuesday's pooled
+  run"), "Closes {time}", the time left on the yellow sticker, the fee; the countdown starts from the render clock
+  (`lib/renderClock`, server and first browser render agree) and ticks in the browser. With no open run it says "No run
+  open right now"; while it loads it holds its size. It replaces the cut-off strip on the home; the Shop pages keep the
+  strip, its time left now an ink-on-yellow pill.
+- **Layout shift.** Measured with a layout-shift observer on the ui-shots build (1440 and 390, en and fr): the band and
+  its tiles do not move; only the run card's text replaces its skeleton inside its fixed box (≤ 0.004). The whole page
+  is lower than develop (1440 en 0.012 vs 0.033). A shift of 0.37 on phones is the header's first row settling after
+  hydration; it is the same on develop (measured) and outside this story — a follow-up for the lead.
+- **Stickers.** `DealBadge` is the sticker (yellow, ink, bold, −2.5° tilt, 1.5 px ink edge) wherever a deal or discount
+  shows (cards, the deal tile, the gallery). New `CutoffPill` (ink on yellow, a clock, a 1 px edge, upright; it wraps on a
+  phone) replaces commerce-coloured cut-off text on the product's buy box, the home deal tile and the Shop strip; new
+  `Sticker` is the hero's larger countdown. `tag-commerce` / `tag-highlight` are ink on #FFF3C4.
+- **Back office.** The current page: violet tint, a 3 px violet marker, the icon violet, the label ink (side bar and
+  icon rail). Buttons get the violet focus with the #D6CCFF halo (`.btn:focus-visible`); the rest keep the 2 px violet
+  outline. Every Studio and console route passed `ui-a11y` with the violet actions.
+- **Maker of the week.** Its headline is Archivo 800 at 30 px (24 on phones), the panel 500 px / 1fr / 300 px with a
+  1.55:1 photo, as drawn; copy and data unchanged.
+- **Visual gate.** All gallery baselines that moved were re-baselined and reviewed (the violet action, links and focus,
+  yellow stickers, the violet site header, the tokens section's Archivo line and chrome swatch, the new hero section).
+  Three fixes made the gate stable in this container: the spec loads every face before photographing; DataTable's
+  overflow squeeze (S-141, `useOverflowSqueeze`) only ever grew, so a table measured before IBM Plex Sans arrived stayed
+  squeezed (cards at 1440) for good — it now starts over when the fonts finish loading; and the record page's sticky
+  action panel sits in place inside the gallery (its offset depended on the scroll a screenshot made).
+- **Not done here:** the phone apps (the next agent), the 0.37 phone header shift above.
+
+## 2026-10-24 — S-188 Plainsight + Chinook brand layer (mobile)
+
+The phone half of S-188, on the web part's tokens (#253; no token changed here, `theme.json` already carried every
+colour and scale role): the consumer app's violet chrome, the home's "tonight" hero band, yellow deal stickers and
+cut-off pills, violet actions, links and focus in both apps, the courier app's sunlight rules kept. Checked against
+`design/revamp/hybrid/index.html`'s "Consumer home · phone (390)" frame by eye in react-native-web shots at 390 × 844.
+
+- **The display face is a static instance the kit ships.** `@expo-google-fonts/archivo` has the normal width only, and
+  React Native can't set a variable font's width, so `font.display` (Archivo, `stretch` 125 %, 800) is
+  `mobile-kit/assets/fonts/archivo-expanded/800ExtraBold/ArchivoExpanded_800ExtraBold.ttf`: the web's own
+  `@fontsource-variable/archivo` 5.3.0 `wdth` files (latin + latin-ext) instanced at wght 800 / wdth 125 by
+  `scripts/gen-display-font.py` (fontTools; run again only when the web's Archivo changes), laid out like an
+  `@expo-google-fonts` package (an `index.js` that requires the file, its `.d.ts`), OFL 1.1 beside it (Archivo declares
+  no Reserved Font Name). `gen-brand` reads `font.display` and its `stretch` and imports it like the sans, so
+  `fonts.display` is `ArchivoExpanded_800ExtraBold` (it was the heading face at 600, used nowhere) and the apps load it
+  with the other faces; `fonts.heading` stays the sans. 85 KB in each app.
+- **Type roles.** `textStyles.displayHero` 36 / 35, `displayTile` 24 / 24, `displayMaker` 24 / 25 (Archivo; tracking
+  −0.035 / −0.03 em as on the web; whole-point line heights) and `runTime` 18 (the sans, bold, tabular): the scale's
+  `-sm` phone sizes. **The rule** (`mobile-kit/src/ui/kit/rules.ts`): `fonts.display` by name stays refused on every
+  screen; the display roles are allowed only in `src/shop/HomeBand.tsx` and `src/shop/Home.tsx` (the maker headline)
+  — `DISPLAY_FACE_FILES`; the kit's `HomeHero` uses them inside the kit. New rule: a fill-only colour (`commerce`,
+  `cart-badge`, `mark-highlight`, `subheader-deal`, `hero-glow`) as `color` / `fill` / `stroke` / `tintColor` is refused
+  on every screen of both apps (the web's lint:tokens rule); it found four on develop (below).
+- **Consumer chrome.** Home and Browse (the two tabs with the brand, the search and the place) wear the violet header:
+  the mark on violet (the same mark as on white), the white name, the white bell (`IconButton onChrome`), the white
+  search field with no edge and a soft shadow joined to the violet search button (`SearchBar onChrome`), "Deliver to"
+  in `header-muted` with the place in white; Home's department strip is `subheader-bg` with white words and the current
+  one over a 3 pt white bar (`UnderlineTabs chrome`). The status bar's strip is violet with light text while those
+  tabs are in front (`Screen chrome`, `setStatusBarStyle` on focus). Sub-pages keep the white compact header with Back:
+  it is the phone's navigation bar, which the mockup doesn't draw; on the web every page has the violet header, here
+  only the tabs that carry it. No violet text on violet anywhere: text there is white, `header-muted`, `hero-text` or
+  `hero-accent`.
+- **Bottom tab bar: white**, with the current tab marked as the web's back office marks the current page —
+  `nav-active-marker`: a 3 pt violet bar and the violet filled icon over the ink label (`BottomTabBar tone="brand"`);
+  the cart count is the yellow badge with ink. A violet bar would have put a second band of chrome at the bottom of
+  every screen, which the web (one header, a footer you scroll to) doesn't have. The courier's tab bar stays ink.
+- **Hero band** (`HomeBand.tsx` → the kit's `HomeHero`, the web's `HomeHero` on a phone): "Everything {place} needs,"
+  + "tonight." with the web's words (fr "Tout ce dont {place} a besoin," + "ce soir."); the place is the market's city
+  (`useMarket`), "Everything you need, tonight." until it is known. The band is `hero-bg` with the violet glow drawn
+  in react-native-svg (radial gradients; the web's dot grain is left out); its gradient ids are unique per instance
+  (a stack keeps a hidden Home mounted, and a browser draws no gradient defined in a hidden subtree). Trust line: the
+  web's two phone points. Run card: the frosted panel on a `hero-card-line` edge, the kicker by day ("Tonight's /
+  Today's / Tomorrow's / {weekday}'s pooled run"), "Closes {time}", the time left on the yellow `Sticker` (−3°, 2 pt
+  dark edge), the fee; it holds 112 pt while loading and says "No run open right now" when none is open. The
+  countdown is `useMinutesLeft` (now in `shop/common.ts`, shared with the product): the clock read on the first
+  render, then every minute — the app's equivalent of the web's render clock (no server render to agree with). The
+  home's cut-off strip is gone (folded into the run card, as on the web; its `rv.cutoff.*` messages removed). The
+  three tiles are 136 pt photos stacked 10 pt apart under a `hero-scrim` gradient, the band ending 70 pt above the last
+  tile's foot so it reaches onto the white page as drawn; kicker in caps with its icon, the name in `displayTile`, one
+  line of meta, the white arrow square (violet when pressed).
+- **The tiles' words and counts.** Services: "Book a pro", "{n} verified pros · book instantly" — the services
+  landing's `providers` count (the mockup's own words; the web says services because its api call has no provider
+  count). Shop: "Shop local", the landing's `shopCount` stores. **Food is the group order:** the app has no Food
+  vertical (hidden, thrash item 7), so the third tile, "Order in · Local kitchens · group orders", opens `/group` (join
+  or start a group order). Photos: the barber / produce / Vietnamese slots, falling back to the banners (as the web).
+  "Mix shops for a single {fee} delivery" says "a single", not the web's "one": the apps' message test reads
+  "one {" as a plural branch.
+- **Order on Home:** the band, then what's under way (signed in), then the maker of the week (its headline in
+  `displayMaker`), then the tiles and rails as before.
+- **Deals and cut-offs.** `DealBadge` is the sticker (yellow, ink, bold, −2.5°, a 1.5 pt `sticker-edge` hard shadow as
+  RN `boxShadow`); new `CutoffPill` (ink on yellow, a clock, a 1 pt edge, upright, wraps) and `Sticker`. The tilt and
+  edges are the kit's `STICKER` (the web's `--sticker-tilt` / `--shadow-sticker` live in the tokens' CSS build only, not
+  in `theme.json`; not moved there to keep web/packages/tokens untouched). Where they show: the product's buy box
+  ("Order within 2 h 48 min" as the pill; a deal sticker and the struck price when the offer has `compareAtCents`, which
+  the api already returns and the app now reads), the home's run card, rewards near you (the points multiplier on the
+  sticker), the kit's product card (`deal`). The app has no other deal or cut-off on screen (no deals page; search
+  results carry no discount).
+- **Yellow as text, fixed** (develop already drew them, the brand layer having turned `commerce` yellow): the home
+  strip's "2 h 48 min left", the product's "Order within …", the account wallet's points (now ink), the rewards
+  multiplier (now the sticker), the provider's favourite heart (now ink, a choice made).
+- **Violet everywhere else.** Buttons, links and tertiaries were already violet through the theme. The kit's search
+  button is violet everywhere (it was ink: the token diff's `search-button`), as is the search screen's own; text
+  fields and the search field draw a 2 pt violet `focus` edge while typing (the phones' focus; there was none).
+- **Courier:** ink on white and large numbers unchanged; violet only on the primary action. Its ghost buttons map to the
+  kit's new `plain` (an ink tertiary: "Forgot password?", "Open settings", "Retry now"…), Today's "Open run" link and
+  the loading spinner are ink, the tab bar stays ink. A courier conventions test refuses link and action colours, a
+  violet tertiary, the display roles and the brand tab bar.
+- **Screenshots** (`mobile/scripts/shots.mjs`): the page clock is pinned (`page.clock.setFixedTime`, 14:31 UTC today by
+  default, `NL_SHOTS_NOW` to change it), 2 h 48 min before the fixture's tonight run closes, so the run card and the
+  product's pill show their countdown (S-178's shots never did) and the pictures don't depend on when they're taken.
+  The before pictures were retaken with it from develop's build. Tests that read the run card pin `Date.now` the
+  same way.
+- **Not done / not verified.** No device or simulator here: everything was looked at in react-native-web at 390 × 844
+  and in Jest. Not seen on a phone: the Archivo TTF loading natively (expo-font with a local asset, as the sans), RN
+  `boxShadow` for the sticker edges and the tiles' shadow (new architecture; Android draws it since RN 0.76), the
+  react-native-svg gradients natively, the status bar turning light on the violet tabs, Dynamic Type at its largest on
+  the hero (the headline wraps; the tile names are one line and cap at 1.6×). The web's "Today's deals" link on the
+  strip isn't drawn: the app has no deals destination. The kit's `HomeHero` holds no minimum headline height (no
+  server render to shift against).

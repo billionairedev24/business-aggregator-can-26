@@ -1,6 +1,13 @@
 # Redesign spec: the backend as it is, AfroTransact v2 layouts, a new brand
 
-**Status: adopted 2026-10-18** (owner direction; `docs/DECISIONS.md` § "2026-10-18 — Redesign foundation"). This spec
+> **Superseded (2026-10-24, S-180) by [`revamp-epic.md`](./revamp-epic.md)** and its locked mockups
+> (`design/revamp/a.html`, A · Plainsight). The E-15 revamp rebuilt the tokens, the components and every screen on that
+> direction; the Evergreen palette, the Fraunces / DM Sans type, the pill shapes and the page layouts described below
+> are gone from the code. This file is kept for the record (the reasoning behind the 2026-10-18 brand and the
+> AfroTransact layout references); for how the UI looks and is built now, read `revamp-epic.md` and `CLAUDE.md` §
+> Design system.
+
+**Status: adopted 2026-10-18, superseded 2026-10-24** (owner direction; `docs/DECISIONS.md` § "2026-10-18 — Redesign foundation"). This spec
 supersedes the "Spruce & Honey" design lock of 2026-09-28: `CLAUDE.md` § Design system and `docs/SCREENS.md` point here.
 Every backend, validation, escrow, BFF, i18n and region-neutrality rule of `CLAUDE.md` still applies; this changes how
 the screens look and are laid out, not what they do.

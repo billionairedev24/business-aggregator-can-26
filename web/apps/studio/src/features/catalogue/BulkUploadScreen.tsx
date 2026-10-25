@@ -63,18 +63,18 @@ export function BulkUploadScreen({ returned, onReturnSeen }: { returned?: Commer
   const result = (b: ImportBatch) => b.status === 'validated' ? t('resultValidated')
     : b.createCount && b.updateCount ? t('resultBoth', { created: b.createCount, updated: b.updateCount })
     : b.updateCount ? t('resultUpdated', { updated: b.updateCount }) : t('resultImported', { created: b.createCount });
-  const historyRows: HistoryRow[] = (history.data ?? []).map(b => ({ id: b.id, file: b.fileName, rows: b.rowCount, result: result(b), tone: b.status === 'imported' ? 'tag-accent' : 'tag-neutral', when: date(b.createdAt) }));
+  const historyRows: HistoryRow[] = (history.data ?? []).map(b => ({ id: b.id, file: b.fileName, rows: b.rowCount, result: result(b), tone: b.status === 'imported' ? 'tag-success' : 'tag-neutral', when: date(b.createdAt) }));
 
   return (
     <>
       <span className="nl-kicker">{t('bulkKicker', { section: t(`kicker_${portal}`) })}</span>
-      <h1 className="nl-page-title" style={{ marginBottom: 8 }}>{t('bulkTitle')}</h1>
+      <h1 className="nl-page-title">{t('bulkTitle')}</h1>
       <p className="nl-lede nl-bulk-lede">{t('bulkLede')}</p>
       <div className="nl-bulk">
         <section className="bo-card nl-bulk-steps" aria-label={t('bulkTitle')}>
           <Field label={t('step1')}>
             <div className="nl-cat-row">
-              <Select style={{ maxWidth: 300 }} value={template} options={templates.map(v => ({ value: v, label: t(`tpl_${v}`) }))} onChange={e => setTemplate(e.target.value as ImportTemplate)} />
+              <Select className="nl-cat-w-lg" aria-label={t('step1')} value={template} options={templates.map(v => ({ value: v, label: t(`tpl_${v}`) }))} onChange={e => setTemplate(e.target.value as ImportTemplate)} />
               <Button variant="secondary" onClick={() => downloadTemplate(template)}>{t('downloadXlsx')}</Button>
             </div>
           </Field>
@@ -82,7 +82,7 @@ export function BulkUploadScreen({ returned, onReturnSeen }: { returned?: Commer
             <span className="nl-label" id="upload-label">{t('step2')}</span>
             <div className="nl-cat-drop" data-over={over} onDragOver={e => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={onDrop}>
               {t('dropHere')}<br />
-              <Button style={{ marginTop: 12 }} disabled={!can.create || upload.isPending} onClick={() => input.current?.click()}>{upload.isPending ? t('validating') : t('chooseFile')}</Button>
+              <Button className="nl-cat-gap-top-lg" disabled={!can.create || upload.isPending} onClick={() => input.current?.click()}>{upload.isPending ? t('validating') : t('chooseFile')}</Button>
               <input ref={input} type="file" hidden accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" aria-label={t('chooseFile')} data-testid="bulk-input" onChange={e => void onFile(e.target.files?.[0])} />
             </div>
             {!can.create && <span className="nl-hint">{t('viewOnly', { role: shellT(`role_${role}` as Parameters<typeof shellT>[0]) })}</span>}
@@ -92,7 +92,7 @@ export function BulkUploadScreen({ returned, onReturnSeen }: { returned?: Commer
         <div className="bo-card nl-bulk-connect"><CommerceIntegrations canManage={can.manage} canSync={can.update} returned={returned} onReturnSeen={onReturnSeen} /></div>
       </div>
       <div className="nl-bulk-results">
-          {done && <div style={{ marginBottom: 16 }}><Alert tone="info" role="status">{t('imported', { created: done.createCount, updated: done.updateCount })}</Alert></div>}
+          {done && <div className="nl-bulk-done"><Alert tone="info" role="status">{t('imported', { created: done.createCount, updated: done.updateCount })}</Alert></div>}
           {batch ? (
             <section className="bo-card" aria-label={t('validation', { file: batch.fileName })}>
               <h2 className="bo-card-title">{t('validation', { file: batch.fileName })}</h2>
@@ -106,7 +106,7 @@ export function BulkUploadScreen({ returned, onReturnSeen }: { returned?: Commer
                   rows={batch.errors.map((e, i) => ({ id: `e${i}`, row: e.row, sku: e.sku ?? '—', error: mt(e.error) ?? e.error }))}
                   can={{ create: false, update: false, delete: false, export: true }} />
               )}
-              <div className="nl-cat-row" style={{ marginTop: 14 }}>
+              <div className="nl-cat-row nl-cat-gap-top-lg">
                 <Button disabled={!can.create || commit.isPending || batch.createCount + batch.updateCount === 0} onClick={() => void onImport()}>
                   {commit.isPending ? t('importing') : t('importRows', { count: batch.createCount + batch.updateCount })}
                 </Button>

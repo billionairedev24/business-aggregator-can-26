@@ -1,20 +1,22 @@
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
 
-import { Icon, colors, fonts, radius, semantic, space } from '@northline/mobile-kit';
+import { Icon, TYPE, semantic, space, textStyles } from '@northline/mobile-kit';
 
 import type { Stop } from '../../../src/api/courier';
 import { LocationCard, OutboxBar } from '../../../src/components/tracking';
-import { Body, Card, Chip, IconBadge, Loading, Screen } from '../../../src/components/ui';
+import { Body, Button, Card, Chip, Figure, Loading, Progress, Screen, StepNumber } from '../../../src/components/ui';
 import { useMarketZone, useRun } from '../../../src/hooks';
 import { useI18n, type MessageKey } from '../../../src/i18n';
 import { FeedbackButton } from '../../../src/pilot/Feedback';
-import { kindKey, nextStop, orderedStops, stopAddress, stopName } from '../../../src/stops';
+import { kindKey, navigationUrl, nextStop, orderedStops, stopAddress, stopName } from '../../../src/stops';
 
 /**
- * Route (redesign spec § 2.5 → AT DR:132 ROUTE): "{done} of {n} stops done" over a progress bar, location sharing while
- * the run is open, then the stops in the api's order — a marker per kind, "{seq}. {kind} · {name}", the address, when
- * it's due, its state; the next one outlined. A stop opens its screen above the tabs.
+ * Route (S-179, glanceable in sunlight; redesign spec § 2.5 → AT DR:132 ROUTE): the stops done and left as 28 pt
+ * figures over an ink progress bar, the run's window, "Navigate to stop n" (the hand-off to the phone's maps app) for
+ * the next stop, location sharing while the run is open, then the stops in the api's order — the number in a square
+ * (solid ink for the next, ✓ once done), "{kind} · {name}", the address, when it's due, its state as a large tag; the
+ * next one outlined in ink. A stop opens its screen above the tabs.
  */
 export default function RunScreen() {
   const { t, time } = useI18n();
@@ -47,18 +49,22 @@ export default function RunScreen() {
   const done = stops.filter((s) => s.state === 'done').length;
   const stateLabel = (s: Stop) => (unsent.has(s.id) ? t('stop.unsent') : t(`stop.state.${s.state}` as MessageKey));
 
+  const nav = next ? navigationUrl(next, Platform.OS) : null;
+
   return (
     <Screen testID="run-screen" title={title} action={<FeedbackButton />}>
       <OutboxBar />
       <View style={styles.summary} accessible accessibilityLabel={`${t('run.progressBar', { done, total: stops.length })}. ${t('run.stops', { n: stops.length })}`}>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryTitle}>{t('run.progressBar', { done, total: stops.length })}</Text>
-          {run.startsAt && run.endsAt ? <Body muted>{t('run.window', { start: time(run.startsAt, zone), end: time(run.endsAt, zone) })}</Body> : null}
+        <View style={styles.figures}>
+          <Figure label={t('run.doneCount')} value={t('today.doneOf', { done, total: stops.length })} />
+          <Figure label={t('run.left')} value={String(stops.length - done)} sub={run.startsAt && run.endsAt ? t('run.window', { start: time(run.startsAt, zone), end: time(run.endsAt, zone) }) : undefined} />
         </View>
-        <View style={styles.track}>
-          <View style={[styles.fill, { width: `${stops.length ? Math.round((done / stops.length) * 100) : 0}%` }]} />
-        </View>
+        <Progress done={done} total={stops.length} />
+        <Text style={textStyles.label}>{t('run.progressBar', { done, total: stops.length })}</Text>
       </View>
+      {next && nav ? (
+        <Button tone="secondary" large icon="navigation-arrow" label={t('run.navigateNext', { seq: next.seq })} hint={t('stop.navigateHint')} onPress={() => void Linking.openURL(nav)} testID="navigate-next" />
+      ) : null}
       <LocationCard />
       {stops.map((s) => {
         const kind = t(kindKey(s));
@@ -73,23 +79,19 @@ export default function RunScreen() {
             testID={`stop-${s.id}`}
           >
             <View style={styles.stopRow}>
-              <IconBadge name={isDone ? 'check' : s.kind === 'pickup' ? 'storefront' : s.kind === 'return' ? 'arrow-u-up-left' : 'map-pin'} tone={isDone ? 'done' : isNext ? 'dark' : 'brand'} />
+              <StepNumber n={s.seq} state={isDone ? 'done' : isNext ? 'next' : 'later'} />
               <View style={styles.stopText}>
-                <Text style={styles.stopTitle}>
-                  {s.seq}. {kind} · {stopName(s)}
+                <Text style={textStyles.sub}>
+                  {kind} · {stopName(s)}
                 </Text>
-                {stopAddress(s) ? (
-                  <Body muted style={styles.small}>
-                    {stopAddress(s)}
-                  </Body>
-                ) : null}
+                {stopAddress(s) ? <Body muted>{stopAddress(s)}</Body> : null}
                 <View style={styles.meta}>
                   <Chip tone={unsent.has(s.id) ? 'warn' : isDone ? 'done' : isNext ? 'accent' : 'neutral'} label={isNext && !isDone ? t('run.next') : stateLabel(s)} />
-                  {s.eta && !isDone ? <Body muted style={styles.small}>{t('stop.eta', { time: time(s.eta, zone) })}</Body> : null}
-                  {s.orderRef ? <Body muted style={styles.small}>{t('stop.order', { ref: s.orderRef })}</Body> : null}
+                  {s.eta && !isDone ? <Body strong>{t('stop.eta', { time: time(s.eta, zone) })}</Body> : null}
+                  {s.orderRef ? <Body muted>{t('stop.order', { ref: s.orderRef })}</Body> : null}
                 </View>
               </View>
-              <Icon name="caret-right" size={16} color={colors.textMuted} />
+              <Icon name="caret-right" size={TYPE.price} color={semantic['text-muted']} />
             </View>
           </Card>
         );
@@ -100,13 +102,8 @@ export default function RunScreen() {
 
 const styles = StyleSheet.create({
   summary: { gap: space[2] },
-  summaryRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: space[2], flexWrap: 'wrap' },
-  summaryTitle: { fontFamily: fonts.display, fontSize: 20, color: colors.text },
-  track: { height: 8, borderRadius: radius.pill, backgroundColor: semantic['surface-muted'], overflow: 'hidden' },
-  fill: { height: 8, borderRadius: radius.pill, backgroundColor: colors.actionPrimary },
+  figures: { flexDirection: 'row', flexWrap: 'wrap', gap: space[4] },
   stopRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
-  stopText: { flex: 1, minWidth: 0, gap: 4 },
-  stopTitle: { fontFamily: fonts.bold, fontSize: 16, lineHeight: 21, color: colors.text },
-  small: { fontSize: 14, lineHeight: 19 },
+  stopText: { flex: 1, minWidth: 0, gap: space[1] },
   meta: { flexDirection: 'row', alignItems: 'center', gap: space[2], flexWrap: 'wrap' },
 });

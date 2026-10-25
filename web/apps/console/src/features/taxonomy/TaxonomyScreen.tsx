@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BoHeader, Button, ChartCard, DataTable, Dialog, ErrorState, Field, PageSkeleton, Select, TextInput, useFormatters, useLocale, type DataTableColumn } from '@northline/ui';
+import { BoHeader, Button, ChartCard, DataTable, Dialog, ErrorState, Field, FilterChip, formatNumber, PageSkeleton, Select, TextInput, UnderlineTabs, useFormatters, useLocale, type DataTableColumn } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useRegions } from '../shell/api';
 import { useGrant } from '../shell/grant';
@@ -33,15 +33,21 @@ function TaxonomyView({ data }: { data: Screen }) {
   const { can, roleName } = useGrant();
   const regionName = useRegionName();
   const [dialog, setDialog] = useState<{ mode: 'create' } | { mode: 'edit'; category: Category } | null>(null);
+  const [root, setRoot] = useState<'all' | Category['root']>('all');
+  const [regulated, setRegulated] = useState(false);
+  const [notLive, setNotLive] = useState(false);
   const byId = new Map(data.categories.map(c => [c.id, c]));
   const name = (c: Category | undefined) => (c ? (locale === 'fr' ? c.nameFr ?? c.nameEn : c.nameEn) : '');
   const price = (c: Category) => {
     if (c.priceMode === 'quote') return t('quote');
     if (c.medianPriceCents == null) return t('none');
-    const money = fmt.money(c.medianPriceCents, { whole: true });
+    const money = fmt.price(c.medianPriceCents);
     return c.priceMode === 'hourly' ? t('hourly', { price: money }) : money;
   };
-  const rows: Row[] = data.categories.filter(c => !c.group).map(c => ({
+  const isRegulated = (c: Category) => !!c.regulatedRegistry || c.regulators.some(r => !!r.regulator);
+  const leaves = data.categories.filter(c => !c.group && (!regulated || isRegulated(c)) && (!notLive || !c.liveIn.length));
+  const count = (r: 'all' | Category['root']) => formatNumber(leaves.filter(c => r === 'all' || c.root === r).length, locale);
+  const rows: Row[] = leaves.filter(c => root === 'all' || c.root === root).map(c => ({
     id: c.id, name: name(c), root: t('rootPath', { root: t(`root_${c.root}` as TaxonomyKey), group: name(byId.get(c.parentId ?? '')) }),
     reg: regulation(c, data.regulators, t), live: c.liveIn.length ? c.liveIn.map(regionName).join(', ') : t('none'), sellers: c.sellers, price: price(c), src: c,
   }));
@@ -55,7 +61,13 @@ function TaxonomyView({ data }: { data: Screen }) {
       <BoHeader title={t('heading')} sub={t('summary', { services: data.serviceCategories, departments: data.shopDepartments })}
         actions={<><Button disabled={!canEdit} onClick={() => setDialog({ mode: 'create' })}>{t('addCategory')}</Button>
           {!canEdit ? <span className="bo-muted">{t('cannot')}</span> : null}</>} />
-      <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} pageSize={10} roleName={roleName}
+      <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} pageSize={25} roleName={roleName}
+        tabs={<UnderlineTabs aria-label={t('rootViews')} value={root} onChange={setRoot}
+          options={(['all', 'service', 'shop', 'food'] as const).map(r => ({ value: r, label: r === 'all' ? t('rv_all') : t(`root_${r}` as TaxonomyKey), count: count(r) }))} />}
+        filters={<>
+          <FilterChip label={t('regulatedChip')} applied={regulated} onToggle={() => setRegulated(x => !x)} />
+          <FilterChip label={t('notLiveChip')} applied={notLive} onToggle={() => setNotLive(x => !x)} />
+        </>}
         can={{ create: false, update: false, delete: false }} openLabel={t('edit')} onOpen={canEdit ? r => setDialog({ mode: 'edit', category: r.src }) : undefined} reportName="taxonomy" />
       <div className="nl-cols-wrap"><div className="nl-cols">
         <ChartCard id="tx-suggestions" title={t('suggestionsTitle')}>
@@ -92,7 +104,7 @@ function Suggestions({ data, canEdit }: { data: Screen; canEdit: boolean }) {
             {canEdit ? (
               <div className="nl-row-actions">
                 <Button variant="secondary" onClick={() => setApproving(s)}>{t('approve')}</Button>
-                <Button variant="ghost" onClick={() => setMerging(s)}>{t('merge')}</Button>
+                <Button variant="tertiary" onClick={() => setMerging(s)}>{t('merge')}</Button>
               </div>
             ) : null}
           </li>
@@ -119,7 +131,7 @@ function MergeDialog({ data, suggestion, onClose, onResolved }: { data: Screen; 
   const errors = merge.error instanceof ValidationError ? merge.error.byField() : {};
   return (
     <Dialog open onClose={onClose} title={t('mergeTitle', { name: suggestion.name })}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
         <Button disabled={merge.isPending} onClick={() => merge.mutate({ id: suggestion.id, categoryId }, {
           onSuccess: r => { onResolved(t('resolved', { n: r.moved + r.alreadyHeld, name: label(r.category) })); onClose(); },
         })}>{t('mergeCta')}</Button></>}>
@@ -164,7 +176,7 @@ function Regulators({ regulators, canEdit }: { regulators: readonly Regulator[];
     <ChartCard id="tx-regulators" title={t('regulatorsTitle')}
       actions={<Button variant="secondary" disabled={!canEdit} onClick={() => setEditing('new')}>{t('addRegulator')}</Button>}>
       <p className="bo-muted">{t('regulatorsSub')}</p>
-      <DataTable<RegRow> entity={t('regEntity')} plural={t('regPlural')} columns={columns} rows={rows} pageSize={5} roleName={roleName} emptyText={t('noRegulators')}
+      <DataTable<RegRow> dense entity={t('regEntity')} plural={t('regPlural')} columns={columns} rows={rows} pageSize={5} roleName={roleName} emptyText={t('noRegulators')}
         can={{ create: false, update: false, delete: false }} openLabel={t('edit')} onOpen={canEdit ? r => setEditing(r.src) : undefined} />
       {editing ? <RegulatorDialog regulator={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} /> : null}
     </ChartCard>
@@ -184,7 +196,7 @@ function RegulatorDialog({ regulator, onClose }: { regulator?: Regulator; onClos
   const submit = () => save.mutate({ create: !regulator, code: code.trim(), name, province, website: website.trim() || undefined }, { onSuccess: onClose });
   return (
     <Dialog open onClose={onClose} title={regulator ? t('regEditTitle', { name: regulator.name }) : t('regNewTitle')}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={save.isPending} onClick={submit}>{regulator ? t('save') : t('create')}</Button></>}>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button><Button disabled={save.isPending} onClick={submit}>{regulator ? t('save') : t('create')}</Button></>}>
       {!regulator ? <Field label={t('f_code')} error={errors.code}><TextInput value={code} maxLength={40} onChange={e => setCode(e.target.value)} /></Field> : null}
       <Field label={t('f_name')} error={errors.name}><TextInput value={name} maxLength={80} onChange={e => setName(e.target.value)} /></Field>
       <Field label={t('f_province')} error={errors.province}>

@@ -83,7 +83,8 @@ function NotificationsForm({ initial, consents }: { initial: NotificationPrefs; 
   const user = session.data?.user;
   return (
     <>
-      <div className="nl-acct-table">
+      {/* S-180: a table wider than a phone scrolls sideways in its box; the box takes focus so keyboards can scroll it */}
+      <div className="nl-acct-table" role="group" tabIndex={0} aria-label={t('notifTitle')}>
         <table className="table nl-notif-table">
           <thead><tr><th scope="col">{t('colEvent')}</th>{NOTIFY_CHANNELS.map(c => <th key={c} scope="col" className="nl-center">{t(`ch_${c}`)}</th>)}</tr></thead>
           <tbody>
@@ -95,9 +96,8 @@ function NotificationsForm({ initial, consents }: { initial: NotificationPrefs; 
                   const locked = e === 'security';
                   return (
                     <td key={c} className="nl-center">
-                      <button type="button" role="switch" aria-checked={on} className="nl-toggle" disabled={locked}
-                        aria-label={t('cell', { channel: t(`ch_${c}`), event: t(`ev_${e}`), state: t(on ? 'on' : 'off') })}
-                        onClick={() => toggle(e, c)} />
+                      <Switch checked={on} disabled={locked} onChange={() => toggle(e, c)}
+                        label={t('cell', { channel: t(`ch_${c}`), event: t(`ev_${e}`), state: t(on ? 'on' : 'off') })} />
                     </td>
                   );
                 })}
@@ -162,7 +162,7 @@ function MarketingConsents({ consents }: { consents: Consents }) {
       <p className="nl-small nl-muted">{t('consentRequester', { requester: consents.requester })}</p>
       <h3 className="nl-acct-h3">{t('consentHistory')}</h3>
       {consents.history.length === 0 ? <p className="nl-small nl-muted">{t('consentHistoryEmpty')}</p> : (
-        <div className="nl-acct-table">
+        <div className="nl-acct-table" role="group" tabIndex={0} aria-label={t('consentHistory')}>
           <table className="table">
             <thead><tr><th scope="col">{t('colDate')}</th><th scope="col">{t('consentWhat')}</th><th scope="col">{t('consentAction')}</th><th scope="col">{t('consentWhere')}</th></tr></thead>
             <tbody>

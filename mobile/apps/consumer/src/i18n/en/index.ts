@@ -13,11 +13,13 @@ import { screens } from './screens';
 import { services } from './services';
 import { shop } from './shop';
 import { s159 } from './s159';
+import { revamp } from './revamp';
+import { brandLayer } from './brand';
 
 /**
  * The consumer app's English copy: one file per area so the journeys' stories (S-98 … S-101) edit their own file.
  * Design 01's words where it has them (exactly), ours otherwise; fr-CA has exactly these keys (a test checks). Place
  * names, times, prices and counts are parameters (region-neutral).
  */
-export const en = { ...common, ...screens, ...journeyA, ...shop, ...services, ...account, ...pilot, ...aftercare, ...afterSale, ...redesign, ...light, ...loyalty, ...hire, ...ai, ...s159 };
+export const en = { ...common, ...screens, ...journeyA, ...shop, ...services, ...account, ...pilot, ...aftercare, ...afterSale, ...redesign, ...light, ...loyalty, ...hire, ...ai, ...s159, ...revamp, ...brandLayer };
 export type MessageKey = keyof typeof en;

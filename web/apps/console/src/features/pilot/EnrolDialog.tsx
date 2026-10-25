@@ -32,7 +32,7 @@ export function EnrolDialog({ markets, market, onClose, onDone }: { markets: Mar
   const items = found.data?.items.slice(0, 8) ?? [];
   return (
     <Dialog open onClose={onClose} title={t('title')}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
         <Button disabled={!picked || !marketId || enrol.isPending}
           onClick={() => picked && enrol.mutate({ businessId: picked.id, marketId }, { onSuccess: d => onDone(picked.name, d.row.id) })}>{t('confirm')}</Button></>}>
       <p className="nl-q-lede">{t('lede')}</p>
@@ -47,7 +47,7 @@ export function EnrolDialog({ markets, market, onClose, onDone }: { markets: Mar
         found.isPending ? <p className="bo-muted" role="status">{t('loading')}</p>
           : items.length === 0 ? <p className="bo-muted">{t('noMatch')}</p>
           : <ul className="nl-q-list">{items.map(s => (
-            <li key={s.id}><Button variant="ghost" aria-label={t('pick', { name: s.name })} onClick={() => setPicked({ id: s.id, name: s.name })}>{s.name}</Button>
+            <li key={s.id}><Button variant="tertiary" aria-label={t('pick', { name: s.name })} onClick={() => setPicked({ id: s.id, name: s.name })}>{s.name}</Button>
               <span className="bo-muted"> · {[s.city, s.province].filter(Boolean).join(', ')}</span></li>
           ))}</ul>
       ) : null}

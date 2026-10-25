@@ -3,7 +3,7 @@ import { defineMessages } from '@northline/ui';
 /** Settings (design 02 lines 964–1018). French follows design/i18n-fr.js where it has the wording. */
 export const useSettingsT = defineMessages({
   en: {
-    kicker: 'Settings', title: 'Business, team, security, API', tabs: 'Settings sections',
+    kicker: 'Settings', title: 'Your business, your team, how you sign in, what we tell you and your API.', tabs: 'Settings sections',
     tab_business: 'Business', tab_team: 'Team & roles', tab_security: 'Security', tab_notifications: 'Notifications', tab_api: 'API & integrations',
     viewOnly: 'View only · {role}', ownerOnly: 'Only the owner can change these settings.',
     role_owner: 'Owner', role_technician: 'Technician', role_bookkeeper: 'Bookkeeper', role_cook: 'Cook',
@@ -15,6 +15,7 @@ export const useSettingsT = defineMessages({
     autoAccept: 'Auto-accept quotes under', autoAcceptHint: 'Leave empty to review every quote yourself.',
     languages: 'Languages served', addLanguage: '+ {language}', removeLanguage: 'Remove {language}', moreLanguages: 'Add a language…',
     lang_en: 'English', lang_fr: 'Français', lang_pa: 'Punjabi', lang_hi: 'Hindi', lang_zh: 'Chinese', lang_tl: 'Tagalog', lang_es: 'Spanish', lang_ar: 'Arabic', lang_vi: 'Vietnamese', lang_uk: 'Ukrainian',
+    secDetails: 'Business details', secDetailsNote: 'How customers and {brand} know your business.', secService: 'Service and bookings', secServiceNote: 'Where you work and how bookings are cancelled.', secLanguages: 'Languages served', secLanguagesNote: 'Shown on your page; customers can filter by language.', saveBusiness: 'Save business details', unsaved: 'Unsaved changes', upToDate: 'Up to date', removeX: 'Remove',
     save: 'Save changes', saving: 'Saving…', saved: 'Saved', legalReview: 'Changing the legal entity or GST number sends it back to {brand} for a quick re-check.',
     licencesTitle: 'Licences & insurance', manageCompliance: 'Manage in Stripe & compliance', noLicences: 'No licences or insurance on file yet.',
     lic_renews: 'Verified · renews {month}', lic_to: 'Verified · to {month}', lic_verified: 'Verified',
@@ -103,7 +104,7 @@ export const useSettingsT = defineMessages({
     actionFailed: 'That didn’t work. Try again.',
   },
   fr: {
-    kicker: 'Paramètres', title: 'Entreprise, équipe, sécurité, API', tabs: 'Sections des paramètres',
+    kicker: 'Paramètres', title: 'Votre entreprise, votre équipe, votre connexion, vos notifications et votre API.', tabs: 'Sections des paramètres',
     tab_business: 'Entreprise', tab_team: 'Équipe et rôles', tab_security: 'Sécurité', tab_notifications: 'Notifications', tab_api: 'API et intégrations',
     viewOnly: 'Lecture seule · {role}', ownerOnly: 'Seul le propriétaire peut modifier ces paramètres.',
     role_owner: 'Propriétaire', role_technician: 'Technicien', role_bookkeeper: 'Comptable', role_cook: 'Cuisinier',
@@ -114,6 +115,7 @@ export const useSettingsT = defineMessages({
     autoAccept: 'Accepter automatiquement les devis de moins de', autoAcceptHint: 'Laissez vide pour examiner chaque devis vous-même.',
     languages: 'Langues de service', addLanguage: '+ {language}', removeLanguage: 'Retirer {language}', moreLanguages: 'Ajouter une langue…',
     lang_en: 'English', lang_fr: 'Français', lang_pa: 'Pendjabi', lang_hi: 'Hindi', lang_zh: 'Chinois', lang_tl: 'Tagalog', lang_es: 'Espagnol', lang_ar: 'Arabe', lang_vi: 'Vietnamien', lang_uk: 'Ukrainien',
+    secDetails: 'Détails de l’entreprise', secDetailsNote: 'Comment les clients et {brand} connaissent votre entreprise.', secService: 'Service et réservations', secServiceNote: 'Où vous travaillez et comment les réservations s’annulent.', secLanguages: 'Langues offertes', secLanguagesNote: 'Affichées sur votre page; les clients peuvent filtrer par langue.', saveBusiness: 'Enregistrer les détails de l’entreprise', unsaved: 'Changements non enregistrés', upToDate: 'À jour', removeX: 'Retirer',
     save: 'Enregistrer', saving: 'Enregistrement…', saved: 'Enregistré', legalReview: 'Modifier l’entité juridique ou le numéro de TPS entraîne une courte revérification par {brand}.',
     licencesTitle: 'Permis et assurances', manageCompliance: 'Gérer dans Stripe et conformité', noLicences: 'Aucun permis ni assurance au dossier pour l’instant.',
     lic_renews: 'Vérifié · renouvellement {month}', lic_to: 'Vérifié · jusqu’en {month}', lic_verified: 'Vérifié',

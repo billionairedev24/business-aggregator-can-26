@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Chip, ErrorState, Field, OptionCard, PageSkeleton, RadioGroup, Select, formatMoney, useLocale } from '@northline/ui';
+import { Alert, Chip, ErrorState, Field, OptionCard, PageSkeleton, RadioGroup, SaveBar, Select, StatusTag, formatPrice, useLocale } from '@northline/ui';
 import { useMerchantId, useRole } from '../shell/api';
 import { ApiError, ValidationError } from '../../lib/http';
 import { rulesQuery, useSaveRules, type Rules, type RulesInput } from './api';
@@ -34,7 +34,7 @@ export function RulesTab({ onState }: { onState: (s: SaveState) => void }) {
 
   if (q.isPending || !form) return q.isError ? <ErrorState message={t('loadError')} onRetry={() => void q.refetch()} /> : <PageSkeleton kpis={0} rows={6} />;
   const set = (patch: Partial<RulesInput>) => setForm(f => f && { ...f, ...patch });
-  const money = (c: number) => formatMoney(c, locale, { whole: true });
+  const price = (c: number) => formatPrice(c, locale);
   const serverErrors = save.error instanceof ValidationError ? save.error.byField() : {};
   const maxWindowMin = q.data?.maxCancelWindowHours == null ? null : q.data.maxCancelWindowHours * 60;
   const pctAllowed = q.data?.maxCancelFeeBps == null || q.data.maxCancelFeeBps >= 5000;
@@ -48,7 +48,7 @@ export function RulesTab({ onState }: { onState: (s: SaveState) => void }) {
     <div>
       <div className="nl-av-rules">
         <div className="nl-av-col nl-av-card">
-          <h3 className="nl-av-h3">{t('timing')}</h3>
+          <h2 className="nl-av-h3">{t('timing')}</h2>
           {sel(t('interval'), String(form.intervalMin), ['15', '30', '60'].map(v => ({ value: v, label: v })), v => set({ intervalMin: Number(v) }), undefined, serverErrors.intervalMin)}
           {sel(t('buffer'), String(form.bufferMin), ['0', '15', '20', '30', '45'].map(v => ({ value: v, label: v })), v => set({ bufferMin: Number(v) }), t('bufferHint'), serverErrors.bufferMin)}
           {sel(t('notice'), noticeValue(form), [
@@ -58,11 +58,11 @@ export function RulesTab({ onState }: { onState: (s: SaveState) => void }) {
           {sel(t('maxJobs'), String(form.maxJobsPerDay), ['3', '4', '5', '6', '99'].map(v => ({ value: v, label: v })), v => set({ maxJobsPerDay: Number(v) }), undefined, serverErrors.maxJobsPerDay)}
         </div>
         <div className="nl-av-col nl-av-card">
-          <h3 className="nl-av-h3">{t('acceptance')}</h3>
+          <h2 className="nl-av-h3">{t('acceptance')}</h2>
           <div className="nl-field">
             <span className="nl-label" id="av-accept">{t('howBookings')}</span>
             {paused ? (
-              <Alert tone="highlight" title={t('instantPaused')}>
+              <Alert tone="info" title={t('instantPaused')}>
                 {instant?.pausedReason ? `${instant.pausedReason} ` : ''}<a href={screenHref(merchantId, 'standing')}>{t('instantPausedLink')}</a>
               </Alert>
             ) : null}
@@ -77,15 +77,15 @@ export function RulesTab({ onState }: { onState: (s: SaveState) => void }) {
           {/* S-153: the region caps the window and the percentage fee; the options past them aren't offered */}
           {sel(t('reschedule'), String(form.rescheduleFreeMin), [180, 720, 1440].filter(v => v === form.rescheduleFreeMin || maxWindowMin == null || v <= maxWindowMin).map(v => ({ value: String(v), label: t(`reschedule${v}` as Parameters<T>[0]) })), v => set({ rescheduleFreeMin: Number(v) }), undefined, serverErrors.rescheduleFreeMin)}
           {sel(t('lateFee'), lateValue(form), [
-            { value: '0', label: money(0) }, { value: '2500', label: money(2500) }, { value: '3500', label: money(3500) },
+            { value: '0', label: price(0) }, { value: '2500', label: price(2500) }, { value: '3500', label: price(3500) },
             ...(pctAllowed || form.lateCancelFeeBps ? [{ value: 'pct', label: t('lateFeePct') }] : []),
           ], v => set(v === 'pct' ? { lateCancelFeeBps: 5000, lateCancelFeeCents: null } : { lateCancelFeeCents: Number(v), lateCancelFeeBps: null }), t('lateFeeHint'), serverErrors.lateCancelFee)}
           {sel(t('premium'), premiumValue(form), [
-            { value: 'off', label: t('premiumOff') }, { value: '2500', label: `+${money(2500)}` }, { value: '5000', label: `+${money(5000)}` }, { value: 'pct', label: t('premiumPct') },
+            { value: 'off', label: t('premiumOff') }, { value: '2500', label: `+${price(2500)}` }, { value: '5000', label: `+${price(5000)}` }, { value: 'pct', label: t('premiumPct') },
           ], v => set(v === 'off' ? { emergencyPremiumCents: null, emergencyPremiumBps: null } : v === 'pct' ? { emergencyPremiumBps: 2500, emergencyPremiumCents: null } : { emergencyPremiumCents: Number(v), emergencyPremiumBps: null }), undefined, serverErrors.emergencyPremium)}
           <div className="nl-field">
             <span className="nl-label" id="av-area">{t('serviceArea')}</span>
-            <div className="nl-chips" role="group" aria-labelledby="av-area">
+            <div className="nl-av-chips" role="group" aria-labelledby="av-area">
               {(q.data?.zones ?? []).map(z => {
                 const on = form.serviceAreas.includes(z);
                 return <Chip key={z} selected={on} disabled={!canEdit} onClick={() => set({ serviceAreas: on ? form.serviceAreas.filter(x => x !== z) : [...form.serviceAreas, z].sort() })}>{z}</Chip>;
@@ -97,7 +97,9 @@ export function RulesTab({ onState }: { onState: (s: SaveState) => void }) {
       </div>
       {save.isError && !(save.error instanceof ValidationError) ? <Alert tone="error">{save.error instanceof ApiError && save.error.status === 409 ? t('instantPausedSave') : t('saveError')}</Alert> : null}
       {canEdit
-        ? <button type="button" className="btn btn-primary nl-av-saverules" disabled={save.isPending || !dirty} onClick={() => save.mutate(form)}>{t('saveRules')}</button>
+        ? <SaveBar label={t('saveRules')} status={<StatusTag tone={dirty ? 'warning' : 'success'}>{dirty ? t('statusDirty') : t('upToDate')}</StatusTag>}>
+            <button type="button" className="btn btn-primary" disabled={save.isPending || !dirty} onClick={() => save.mutate(form)}>{t('saveRules')}</button>
+          </SaveBar>
         : <p className="nl-small nl-muted">{t('readOnly', { role: t(`role_${role}` as Parameters<T>[0]) })}</p>}
     </div>
   );

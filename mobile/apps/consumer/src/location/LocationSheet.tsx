@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ApiError, Icon, MIN_TARGET, colors, fonts, radius, randomToken, semantic, shadow, space, type IconName } from '@northline/mobile-kit';
+import { ApiError, colors, Icon, LINE, MIN_TARGET, radius, randomToken, semantic, shadow, space, textStyles, type IconName } from '@northline/mobile-kit';
 
 import type { Address as AccountAddress } from '../api/account';
 import { geoApi, type Address, type Market, type Province } from '../api/geo';
@@ -439,42 +439,32 @@ const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   scrim: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: colors.overlay },
   sheetWrap: { maxHeight: '94%' },
-  sheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.surface, ...shadow.lg, maxHeight: '100%' },
-  grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, marginTop: space[2], backgroundColor: colors.borderStrong },
+  sheet: { borderTopLeftRadius: radius.panel, borderTopRightRadius: radius.panel, backgroundColor: semantic.surface, ...shadow.lg, maxHeight: '100%' },
+  grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: radius.control, marginTop: space[2], backgroundColor: semantic['border-strong'] },
   head: { flexDirection: 'row', alignItems: 'center', gap: space[3], paddingHorizontal: space[4], paddingTop: space[2], paddingBottom: space[2] },
-  title: { flex: 1, fontFamily: fonts.display, fontSize: 24, lineHeight: 30, color: colors.text },
+  title: { ...StyleSheet.flatten(textStyles.pageTitle), flex: 1 },
   body: { gap: space[4], paddingHorizontal: space[4], paddingBottom: space[4] },
-  current: { flexDirection: 'row', gap: space[2], alignItems: 'flex-start', padding: space[3], borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'] },
+  current: { flexDirection: 'row', gap: space[2], alignItems: 'flex-start', padding: space[3], borderRadius: radius.panel, backgroundColor: semantic.well },
   here: {
     minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: space[2],
-    borderRadius: radius.pill,
+    borderRadius: radius.control,
     borderWidth: 1,
     borderColor: colors.borderControl,
     backgroundColor: colors.surface,
   },
-  hereText: { fontFamily: fonts.bold, fontSize: 15, color: colors.text },
+  hereText: { ...StyleSheet.flatten(textStyles.bodyStrong) },
   pressed: { backgroundColor: semantic['surface-hover'] },
   gap: { gap: space[2] },
-  list: { borderWidth: 1, borderColor: semantic['border-card'], borderRadius: radius.lg, backgroundColor: colors.surface, overflow: 'hidden' },
+  list: { borderWidth: LINE.hair, borderColor: semantic['border-card'], borderRadius: radius.panel, backgroundColor: semantic.surface, overflow: 'hidden' },
   listNote: { paddingHorizontal: space[4], paddingVertical: space[2] },
-  choice: { minHeight: MIN_TARGET + 12, flexDirection: 'row', alignItems: 'center', gap: space[3], paddingHorizontal: space[4], paddingVertical: space[2], borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  choice: { minHeight: MIN_TARGET + 12, flexDirection: 'row', alignItems: 'center', gap: space[3], paddingHorizontal: space[4], paddingVertical: space[2], borderBottomWidth: LINE.hair, borderBottomColor: semantic.border },
   markets: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
-  market: {
-    minHeight: MIN_TARGET,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: space[4],
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.borderControl,
-    backgroundColor: colors.surface,
-  },
-  marketCity: { fontFamily: fonts.bold, fontSize: 14, color: colors.text },
-  marketProvince: { fontFamily: fonts.regular, fontSize: 14, color: colors.textMuted },
-  chosen: { gap: space[3], padding: space[4], borderRadius: radius.lg, borderWidth: 1, borderColor: semantic['border-card'], backgroundColor: colors.surface },
+  market: { minHeight: MIN_TARGET, flexDirection: 'row', alignItems: 'center', gap: space[1.5], paddingHorizontal: space[4], borderRadius: radius.control, borderWidth: LINE.hair, borderColor: semantic['border-control'], backgroundColor: semantic.surface },
+  marketCity: { ...StyleSheet.flatten(textStyles.bodyStrong) },
+  marketProvince: { ...StyleSheet.flatten(textStyles.body), color: semantic['text-muted'] },
+  chosen: { gap: space[3], padding: space[4], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-card'], backgroundColor: semantic.surface },
 });

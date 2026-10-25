@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate, useSearch } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { IdentificationCard, ListChecks, Scales, ShieldWarning, Truck, UsersThree, type Icon } from '@phosphor-icons/react';
 import {
-  BoHeader, ChartCard, ErrorState, FactList, formatDate, formatMoney, formatNumber, KpiStrip, PageSkeleton, StackedBarChart, TodoCard, useLocale,
-  type KpiItem, type Locale, type TodoItem,
+  ActionCard, ActionGrid, BoHeader, ChartCard, ErrorState, FactList, formatCompactMoney, formatDate, formatNumber, formatPrice, KpiStrip, PageSkeleton, StackedBarChart, useLocale,
+  type KpiItem, type Locale, type StatusTone,
 } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { meQuery, opens } from '../shell/api';
 import { useActiveGrant } from '../shell/ConsoleLayout';
-import { PlaceFilters } from '../shell/PlaceFilters';
+import { usePlace } from '../shell/scope';
 import { SCREEN_PATH, type ScreenKey } from '../shell/screens';
 import { overviewQuery, type Overview as OverviewData } from './api';
 import { useOverviewT, type OverviewKey, type OverviewT } from './messages';
@@ -16,13 +16,8 @@ import './overview.css';
 
 const INTL: Record<Locale, string> = { en: 'en-CA', fr: 'fr-CA' };
 
-/** "$212k", "$24.1k", "$2.71": whole thousands from $100k, one decimal below, cents under $1,000. */
-export function compactMoney(cents: number, locale: Locale): string {
-  const dollars = cents / 100;
-  if (Math.abs(dollars) < 1000) return formatMoney(cents, locale);
-  return new Intl.NumberFormat(INTL[locale], { style: 'currency', currency: 'CAD', currencyDisplay: 'narrowSymbol', notation: 'compact', maximumFractionDigits: Math.abs(dollars) >= 100_000 ? 0 : 1 })
-    .format(dollars).replace('K', 'k');
-}
+/** "$212k", "$24.1k", "$2.71": the shared compact format (S-177: one money format across the console). */
+export const compactMoney = (cents: number, locale: Locale): string => formatCompactMoney(cents, locale);
 
 const pct = (ratio: number, locale: Locale, digits = 1) => formatNumber(ratio, locale, { style: 'percent', minimumFractionDigits: digits, maximumFractionDigits: digits });
 
@@ -47,20 +42,18 @@ const sameDay = (a: string, b: string, zone: string) => {
   return f.format(new Date(a)) === f.format(new Date(b));
 };
 
-type Filter = { province?: string; market?: string };
-
 /**
- * The console overview (S-91; redesign § 2.3 → BO:263 dashboard): the page head with the day and the place filters,
- * the KPI strip of the last 7 days, GMV of the last 12 weeks (goods vs services), the "To do" queues, what is live now
- * and system health — for every province, one, or one market (region model). Every staff role opens it.
+ * The console overview (S-91; E-15 S-177): the page head with the day, the KPI strip of the last 7 days, the queues that
+ * need attention as action cards (most urgent first, one button each into its screen), GMV of the last 12 weeks
+ * (goods vs services), what is live now and system health — for the top bar's scope (every market, a province, a
+ * market; region model). Every staff role opens it.
  */
 export function Overview() {
   const t = useOverviewT();
-  const search = useSearch({ strict: false }) as Filter;
-  const filter = { province: search.province, market: search.market };
+  const filter = usePlace();
   const query = useQuery(overviewQuery(filter));
   const { locale } = useLocale();
-  const head = (sub?: string) => <BoHeader title={t('title')} sub={sub} actions={<PlaceFilters to={SCREEN_PATH.overview} filter={filter} />} />;
+  const head = (sub?: string) => <BoHeader title={t('title')} sub={sub} />;
   if (query.isPending) return <div className="bo-page">{head()}<PageSkeleton kpis={6} rows={6} /></div>;
   if (query.isError && !query.data) {
     const bad = query.error instanceof ValidationError;
@@ -88,25 +81,26 @@ function OverviewView({ data }: { data: OverviewData }) {
       trend: k.onTimeRatio == null ? 'flat' : k.onTimeRatio >= 0.95 ? 'up' : 'down', onClick: go('delivery') },
     { key: 'disputes', label: t('kpiDisputes'), value: k.disputeRate == null ? t('unknown') : pct(k.disputeRate, locale), delta: t('kpiDisputesTarget'),
       trend: k.disputeRate == null ? 'flat' : k.disputeRate < 0.012 ? 'up' : 'down', onClick: go('disputes') },
-    { key: 'fee', label: t('kpiFee'), value: k.averageDeliveryFeeCents == null ? t('unknown') : formatMoney(k.averageDeliveryFeeCents, locale) },
+    { key: 'fee', label: t('kpiFee'), value: k.averageDeliveryFeeCents == null ? t('unknown') : formatPrice(k.averageDeliveryFeeCents, locale) },
   ];
   return (
     <>
       <KpiStrip label={t('kpis')} items={kpis} />
+      <WorkQueue data={data} />
       <div className="nl-ov-wrap"><div className="nl-ov-grid">
+        {/* E-15 colour roles: chart series are ink and the 3:1 grey, never the action colour */}
         <ChartCard id="ov-gmv" title={t('gmvTitle')} className="nl-ov-gmv">
-          <StackedBarChart title={t('gmvTitle')} height={260} format={c => compactMoney(c, locale)}
-            series={[{ key: 'goods', label: t('goods'), color: 'var(--color-action-primary)' }, { key: 'services', label: t('services'), color: 'var(--color-action-accent)' }]}
+          <StackedBarChart title={t('gmvTitle')} height={240} format={c => compactMoney(c, locale)}
+            series={[{ key: 'goods', label: t('goods'), color: 'var(--color-selected)' }, { key: 'services', label: t('services'), color: 'var(--color-border-control)' }]}
             data={data.weeks.map((w, i) => ({ label: t('week', { n: i + 1 }), values: { goods: w.goodsCents, services: w.servicesCents } }))} />
         </ChartCard>
-        <WorkQueue data={data} />
         <ChartCard id="ov-live" title={t('liveTitle')} className="nl-ov-live">
           <FactList rows={[
             [t('couriers'), `${formatNumber(data.live.couriersOnRuns, locale)} / ${formatNumber(data.live.couriersActive, locale)}`],
             [t('providers'), formatNumber(data.live.providersOnJobs, locale)],
             ...data.live.pools.map(p => [t(sameDay(p.startsAt, data.asOf, zone) ? 'poolTonight' : 'poolTomorrow', { city: p.city }),
               t('poolValue', { n: formatNumber(p.orders, locale), time: formatDate(p.closesAt, locale, 'time', zone) })] as const),
-            [t('escrow'), formatMoney(data.live.escrowHeldCents, locale, { whole: true })],
+            [t('escrow'), formatPrice(data.live.escrowHeldCents, locale)],
           ]} />
         </ChartCard>
         <ChartCard id="ov-health" title={t('healthTitle')} className="nl-ov-hc">
@@ -144,24 +138,40 @@ function healthValue(h: OverviewData['health'][number], t: OverviewT, locale: Lo
   }
 }
 
-/** The "To do" card (BO:273): each queue's count, what it is and its SLA; a row opens its screen when the role may. */
+const RANK: Record<StatusTone, number> = { danger: 0, warning: 1, info: 2, success: 3, neutral: 4 };
+const olderThan = (iso: string | null | undefined, asOf: string, hours: number) => !!iso && Date.parse(asOf) - Date.parse(iso) > hours * 3_600_000;
+
+/**
+ * "Needs attention" (E-15 S-177, the console's ActionGrid): one card per queue with work in it — the job and its count,
+ * the SLA and the oldest item, one button into the screen. Past its SLA (or a stuck run, an off-platform payment) a
+ * card is urgent; with work inside its SLA it is due soon; sellers below a floor are to know. Most urgent first, its
+ * button primary. A queue the active role can't open is left out (the api refuses it too).
+ */
 function WorkQueue({ data }: { data: OverviewData }) {
   const t = useOverviewT();
   const { locale } = useLocale();
   const go = useGo();
   const q = data.workQueue;
   const since = (iso: string | null | undefined) => (iso ? age(iso, data.asOf, t, locale) : undefined);
-  const rows: { screen: ScreenKey; icon: Icon; n: number; what: OverviewKey; note: string }[] = [
-    { screen: 'verify', icon: IdentificationCard, n: q.verifications.count, what: 'q_verifications', note: since(q.verifications.oldest) ? t('sla_verifications', { age: since(q.verifications.oldest)! }) : t('sla_verifications_none') },
-    { screen: 'vetting', icon: ListChecks, n: q.flaggedListings.count, what: 'q_flagged', note: since(q.flaggedListings.oldest) ? t('sla_flagged', { age: since(q.flaggedListings.oldest)! }) : t('sla_flagged_none') },
-    { screen: 'disputes', icon: Scales, n: q.disputes.count, what: 'q_disputes', note: since(q.disputes.oldest) ? t('sla_disputes', { age: since(q.disputes.oldest)! }) : t('sla_disputes_none') },
-    { screen: 'delivery', icon: Truck, n: q.stuckRuns.count, what: 'q_stuck', note: since(q.stuckRuns.oldestOverdue) ?? '' },
-    { screen: 'trust', icon: ShieldWarning, n: q.trustFlags.count, what: 'q_flags', note: q.trustFlags.offPlatformPayment ? t('flags_offPlatform') : '' },
-    { screen: 'sellers', icon: UsersThree, n: q.sellersBelowFloor, what: 'q_floor', note: t('floor_note') },
+  const cards: { screen: ScreenKey; icon: Icon; n: number; what: OverviewKey; action: OverviewKey; note: string; tone: StatusTone }[] = [
+    { screen: 'verify', icon: IdentificationCard, n: q.verifications.count, what: 'n_verifications', action: 'act_verifications',
+      note: since(q.verifications.oldest) ? t('sla_verifications', { age: since(q.verifications.oldest)! }) : t('sla_verifications_none'), tone: olderThan(q.verifications.oldest, data.asOf, 48) ? 'danger' : 'warning' },
+    { screen: 'vetting', icon: ListChecks, n: q.flaggedListings.count, what: 'n_flagged', action: 'act_flagged',
+      note: since(q.flaggedListings.oldest) ? t('sla_flagged', { age: since(q.flaggedListings.oldest)! }) : t('sla_flagged_none'), tone: olderThan(q.flaggedListings.oldest, data.asOf, 4) ? 'danger' : 'warning' },
+    { screen: 'disputes', icon: Scales, n: q.disputes.count, what: 'n_disputes', action: 'act_disputes',
+      note: since(q.disputes.oldest) ? t('sla_disputes', { age: since(q.disputes.oldest)! }) : t('sla_disputes_none'), tone: olderThan(q.disputes.oldest, data.asOf, 48) ? 'danger' : 'warning' },
+    { screen: 'delivery', icon: Truck, n: q.stuckRuns.count, what: 'n_stuck', action: 'act_stuck', note: since(q.stuckRuns.oldestOverdue) ? t('stuck_note', { age: since(q.stuckRuns.oldestOverdue)! }) : '', tone: 'danger' },
+    { screen: 'trust', icon: ShieldWarning, n: q.trustFlags.count, what: 'n_flags', action: 'act_flags', note: q.trustFlags.offPlatformPayment ? t('flags_offPlatform') : '', tone: q.trustFlags.offPlatformPayment ? 'danger' : 'warning' },
+    { screen: 'sellers', icon: UsersThree, n: q.sellersBelowFloor, what: 'n_floor', action: 'act_floor', note: t('floor_note'), tone: 'info' },
   ];
-  const items: TodoItem[] = rows.map(r => ({
-    key: r.screen, icon: r.icon, meta: formatNumber(r.n, locale), onClick: go(r.screen),
-    text: <>{t(r.what, { n: r.n })}{r.note ? <span className="bo-todo-sub">{r.note}</span> : null}</>,
-  }));
-  return <div className="nl-ov-todo"><TodoCard id="ov-todo" title={t('queueTitle')} items={items} empty="" /></div>;
+  const shown = cards.filter(c => c.n > 0 && go(c.screen)).sort((a, b) => RANK[a.tone] - RANK[b.tone]);
+  if (!shown.length) return <ChartCard id="ov-todo" title={t('queueTitle')}><p className="bo-muted">{t('nothing')}</p></ChartCard>;
+  return (
+    <ActionGrid title={t('queueTitle')} count={shown.length}>
+      {shown.map((c, i) => (
+        <ActionCard key={c.screen} tone={c.tone} icon={c.icon} primary={i === 0} title={t(c.what, { n: c.n })}
+          detail={c.note || undefined} action={{ label: t(c.action), href: SCREEN_PATH[c.screen], onClick: go(c.screen) }} />
+      ))}
+    </ActionGrid>
+  );
 }

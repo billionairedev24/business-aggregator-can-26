@@ -317,7 +317,7 @@ function ReviewSkeleton() {
 
 const styles = StyleSheet.create({
   form: { gap: space[3], paddingTop: space[3] },
-  lines: { gap: 10 },
+  lines: { gap: space[2.5] },
   escrow: { color: colors.accent900 },
   cards: { gap: space[2] },
 });

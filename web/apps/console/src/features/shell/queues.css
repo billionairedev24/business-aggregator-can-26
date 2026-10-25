@@ -20,10 +20,10 @@
 .nl-q-row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; padding: var(--space-3) 0; border-bottom: 1px solid var(--color-border); }
 .nl-q-row:last-child { border-bottom: 0; }
 .nl-q-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
-.nl-q-actions .btn { min-height: var(--size-touch); }
-.nl-q-checks { display: flex; flex-wrap: wrap; gap: 6px; }
-.nl-q-field { display: flex; flex-direction: column; gap: 6px; margin-top: var(--space-3); font-size: var(--text-sm); }
+.nl-q-checks { display: flex; flex-wrap: wrap; gap: var(--space-1-5); }
+.nl-q-field { display: flex; flex-direction: column; gap: var(--space-1-5); margin-top: var(--space-3); font-size: var(--text-sm); }
 .nl-q-field textarea { min-height: 70px; }
-.nl-q-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.nl-q-chips { display: flex; gap: var(--space-1-5); flex-wrap: wrap; }
 .nl-q-section { margin-top: var(--space-10); border-top: 1px solid var(--color-border); padding-top: var(--space-5); }
 .nl-q-tablewrap { overflow-x: auto; margin-top: var(--space-3); }
+.nl-views-none { margin: 0; padding: var(--space-2) var(--space-4); font-size: var(--type-label); color: var(--color-text-muted); }

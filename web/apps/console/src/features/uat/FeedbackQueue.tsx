@@ -43,8 +43,8 @@ export function FeedbackQueue() {
     { key: 'received', label: t('colReceived') },
   ];
   const tones = (r: Row): Partial<Record<keyof Row, DataTableTone>> => ({
-    state: r.item.state === 'new' ? 'tag-highlight' : r.item.state === 'accepted' || r.item.state === 'fixed' ? 'tag-accent' : 'tag-neutral',
-    blocking: r.item.blocking ? 'tag-accent-2' : 'tag-neutral',
+    state: r.item.state === 'new' ? 'status-warning' : r.item.state === 'accepted' || r.item.state === 'fixed' ? 'status-success' : 'status-neutral',
+    blocking: r.item.blocking ? 'status-danger' : 'tag-neutral',
   });
   const blocking = queue.data.filter(i => i.blocking && (i.state === 'accepted' || i.state === 'fixed')).length;
   return (
@@ -63,7 +63,7 @@ export function FeedbackQueue() {
       <h1 className="nl-q-title">{t('title', { n: queue.data.length, blocking })}</h1>
       <p className="nl-q-lede">{t('lede')}</p>
       <div className="nl-q-actions"><a className="btn btn-secondary" href={exportUrl(filter)} download>{t('exportCsv')}</a></div>
-      <DataTable<Row> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
+      <DataTable<Row> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
         can={{ create: false, update: false, delete: false, export: false }} roleName={roleName} emptyText={t('empty')} pageSize={25}
         onOpen={r => go({ item: r.id })} />
       {search.item ? <ItemDrawer id={search.item} canAct={can('uat')} candidates={queue.data} t={t} onClose={() => go({ item: undefined })} /> : null}
@@ -84,7 +84,7 @@ function ItemDrawer({ id, canAct, candidates, t, onClose }: { id: string; canAct
       {detail.isPending ? <PageSkeleton kpis={0} rows={4} /> : detail.isError || !d ? <ErrorState message={t('loadError')} onRetry={() => void detail.refetch()} /> : (
         <div>
           <p>
-            <Tag tone={d.item.blocking ? 'accent-2' : 'neutral'}>{t(`s_${d.item.state}`)}{d.item.blocking ? ` · ${t('blocks')}` : ''}</Tag>{' '}
+            <Tag tone={d.item.blocking ? 'danger' : 'neutral'}>{t(`s_${d.item.state}`)}{d.item.blocking ? ` · ${t('blocks')}` : ''}</Tag>{' '}
             <Tag tone="outline">{t(`v_${d.item.severity}` as UatKey)}</Tag>
           </p>
           <p className="nl-q-note">{t('from', { participant: d.item.participant, persona: t(`p_${d.item.persona}`), date: date(d.item.createdAt, 'dateTime') })}</p>

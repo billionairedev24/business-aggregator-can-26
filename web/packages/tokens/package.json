@@ -2,14 +2,14 @@
   "name": "@northline/tokens",
   "version": "0.1.0",
   "type": "module",
-  "description": "The brand (brand.json + palettes/*.json) and the fixed rhythm (scale.json): dist/tokens.css for the web, generated/theme.json for TypeScript and the native apps, the contrast gate.",
+  "description": "The brand (brand.json + palettes/*.json) and the fixed rhythm (scale.json): dist/tokens.css for the web, generated/theme.json for TypeScript and the native apps, the contrast gate. Fonts are self-hosted from @fontsource (IBM Plex Sans) and @fontsource-variable (Archivo, the hero's display face).",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
     "./tokens.css": "./dist/tokens.css",
-    "./palettes.css": "./dist/palettes.css",
     "./theme.json": "./generated/theme.json",
+    "./fonts/*": "./dist/fonts/*",
     "./brand.json": "./brand.json",
     "./vite": {
       "types": "./vite.d.mts",
@@ -21,9 +21,7 @@
     "test": "node build.mjs --check"
   },
   "dependencies": {
-    "@fontsource/dm-sans": "5.3.0",
-    "@fontsource/fraunces": "5.3.0",
-    "@fontsource/manrope": "5.3.0",
-    "@fontsource/plus-jakarta-sans": "5.3.0"
+    "@fontsource-variable/archivo": "5.3.0",
+    "@fontsource/ibm-plex-sans": "5.3.0"
   }
 }

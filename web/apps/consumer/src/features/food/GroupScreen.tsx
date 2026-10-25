@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { isNotFound, newIdempotencyKey, ValidationError } from '@northline/client';
-import { Alert, Button, Dialog, EmptyState, ErrorState, Field, Skeleton, SiteLink, TextInput, useFormatters } from '@northline/ui';
+import { Alert, Button, Dialog, Segmented, EmptyState, ErrorState, Field, Skeleton, SiteLink, TextInput, useFormatters } from '@northline/ui';
 import { StripePayment } from '../cart/Payment';
 import { StepUpDialog } from '../cart/StepUpDialog';
 import type { Started as CartStarted } from '../cart/api';
@@ -38,7 +38,7 @@ export function GroupScreen({ code }: { code: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 
-  if (loading || (user && preview.isPending)) return <div className="nl-page"><Skeleton width={360} height={36} /><Skeleton height={200} style={{ marginTop: 20 }} /></div>;
+  if (loading || (user && preview.isPending)) return <div className="nl-page nl-skel-stack"><Skeleton width={360} height={36} /><Skeleton height={200} /></div>;
   if (!user) {
     return (
       <div className="nl-page nl-grp">
@@ -105,7 +105,7 @@ function GroupPanel({ id }: { id: string }) {
   const [copied, setCopied] = useState(false);
   const keys = useRef({ start: newIdempotencyKey(), confirm: newIdempotencyKey() });
 
-  if (q.isPending) return <div className="nl-page"><Skeleton width={360} height={36} /><Skeleton height={200} style={{ marginTop: 20 }} /></div>;
+  if (q.isPending) return <div className="nl-page nl-skel-stack"><Skeleton width={360} height={36} /><Skeleton height={200} /></div>;
   if (q.isError) return <div className="nl-page"><ErrorState message={t('loadError')} onRetry={() => void q.refetch()} /></div>;
   const g = q.data;
   const set = (view: GroupView) => qc.setQueryData(groupQuery(id).queryKey, view);
@@ -157,7 +157,7 @@ function GroupPanel({ id }: { id: string }) {
 
   return (
     <div className="nl-page nl-grp">
-      <h1 className="nl-page-title">{t('groupTitle', { kitchen: g.kitchen })}</h1>
+      <h1 className="co-title">{t('groupTitle', { kitchen: g.kitchen })}</h1>
       <p className="nl-rest-muted">
         {[t('hostedBy', { name: hostName }), g.mode === 'pickup' ? t('modePickup') : g.area ? t('modeDelivery', { area: g.area }) : t('modeDeliveryNoArea'),
           g.payment === 'split' ? t('paySplit') : t('payHost'), t('people', { count: g.members.length, max: g.groupMax })].join(' · ')}
@@ -166,7 +166,7 @@ function GroupPanel({ id }: { id: string }) {
       {g.state === 'cancelled' && <Alert tone="neutral" role="status">{t('cancelled')}</Alert>}
       {g.state === 'expired' && <Alert tone="neutral" role="status">{t('expired')}</Alert>}
       {g.state === 'placed' && (
-        <Alert tone="highlight" role="status" actions={g.host && g.orderId ? <Link to="/food/orders/$orderId" params={{ orderId: g.orderId }} className="btn btn-secondary">{t('track')}</Link> : undefined}>
+        <Alert tone="info" role="status" actions={g.host && g.orderId ? <Link to="/food/orders/$orderId" params={{ orderId: g.orderId }} className="btn btn-secondary">{t('track')}</Link> : undefined}>
           {t('placed', { ref: g.ref ?? '' })}{g.tracking ? ` · ${t(`stage_${g.tracking.stage}`)}` : ''}
         </Alert>
       )}
@@ -237,9 +237,11 @@ function GroupPanel({ id }: { id: string }) {
         {open && g.host && (
           <>
             {g.mode === 'delivery' && (
-              <fieldset className="nl-fco-chips"><legend>{t('tip')}</legend>
-                {TIPS.map((x, i) => <button key={i} type="button" className="nl-chip" aria-pressed={tip === i} onClick={() => setTip(i)}>{x.kind === 'none' ? t('noTip') : x.kind === 'percent' ? `${x.value}%` : money(x.value, { whole: true })}</button>)}
-              </fieldset>
+              <div className="nl-fco-group nl-grp-tip co-tip-seg-host">
+                <span className="nl-fco-label">{t('tip')}</span>
+                <Segmented name="grp-tip" aria-label={t('tip')} value={String(tip)} onChange={v => setTip(Number(v))}
+                  options={TIPS.map((x, i) => ({ value: String(i), label: x.kind === 'none' ? t('noTip') : x.kind === 'percent' ? `${x.value} %` : money(x.value, { whole: true }) }))} />
+              </div>
             )}
             <Button variant="secondary" disabled={busy || g.subtotalCents === 0} onClick={() => void act(() => lockGroup(id, g.mode === 'delivery' ? TIPS[tip]! : TIPS[0]!))}>{t('lock')}</Button>
             <p className="nl-rest-muted">{t('lockHint')}</p>

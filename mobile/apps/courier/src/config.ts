@@ -27,3 +27,6 @@ export const RUN_REFRESH_MS = 30_000;
 
 /** Redesign § 3.5: the pilot's "Feedback" control is a testing tool — only builds with EXPO_PUBLIC_TESTING_TOOLS=1 show it. */
 export const testingTools = () => process.env.EXPO_PUBLIC_TESTING_TOOLS === '1';
+
+/** S-169: dev-only screens (the kit's gallery at /dev/gallery) — a development build (Metro, `__DEV__`) or the fixture build, never a store build. */
+export const devTools = () => (typeof __DEV__ !== 'undefined' && __DEV__) || config.fixtures;

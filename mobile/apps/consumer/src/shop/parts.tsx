@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { Icon, MIN_TARGET, colors, fonts, radius, semantic, space, type IconName, Scene } from '@northline/mobile-kit';
+import { colors, FilterChip, fonts, Icon, LINE, MIN_TARGET, QuantityStepper, radius, semantic, space, textStyles, type IconName } from '@northline/mobile-kit';
 
-import { config } from '../config';
 import { useI18n, type MessageKey } from '../i18n';
 import { type } from '../ui/primitives';
+import { Picture } from '../ui/commerce';
 import { GUTTER } from '../ui/screen';
 import type { StepState } from '../api/shop';
 
@@ -14,45 +14,6 @@ import type { StepState } from '../api/shop';
  * of the thing — `Art`, the web's drawn still lifes), the − n + pill stepper, pill chips, a sums row, the vertical
  * status timeline, illustrated tiles, the product card of a rail and a section head.
  */
-
-/** A photo url the api names (absolute, or a path on the api's origin), else null. */
-export const photoUri = (uri?: string | null) => (uri ? (/^https?:\/\//.test(uri) ? uri : uri.startsWith('/') ? `${new URL(config.apiUrl).origin}${uri}` : null) : null);
-
-/**
- * An image the api names; none → the designed no-photo picture: an illustrated scene of `subject` (the product's,
- * shop's or category's name or slug — `Art` picks the drawing from its words), never a grey box.
- */
-export function Thumb({
-  uri,
-  size,
-  height,
-  label,
-  subject,
-  slot,
-  icon: _icon,
-  style,
-}: {
-  uri?: string | null;
-  size?: number;
-  height?: number;
-  label?: string;
-  /** What the picture shows when there is no photo (a name or slug). */
-  subject?: string;
-  /** The photo library's slot shown when there is no photo (a category's), before the drawing of `subject`. */
-  slot?: string | null;
-  /** @deprecated the no-photo picture is drawn from `subject` now. */
-  icon?: IconName;
-  style?: StyleProp<ViewStyle>;
-}) {
-  const src = photoUri(uri);
-  const box = [styles.thumb, size ? { width: size, height: size } : { height: height ?? 200 }, style];
-  if (src) return <Image source={{ uri: src }} style={box as never} accessibilityLabel={label} accessibilityRole="image" />;
-  return (
-    <View style={box} accessible={!!label} accessibilityLabel={label} accessibilityRole={label ? 'image' : undefined} testID="no-photo">
-      <Scene slot={[slot]} subject={subject ?? label ?? 'shop'} crop="square" style={StyleSheet.absoluteFill} />
-    </View>
-  );
-}
 
 export function Kicker({ children }: { children: ReactNode }) {
   return <Text style={type.kicker}>{children}</Text>;
@@ -74,7 +35,7 @@ export function SectionHead({ title, link, onLink, testID }: { title: string; li
   );
 }
 
-/** − n + : a pill with 44 pt targets (52 pt tall in the bottom action bar), the count announced with the item's name. */
+/** − n + : the kit's QuantityStepper (ink edge on the selected tint, 44 pt targets; 46 pt in the bottom action bar), the count announced with the item's name. */
 export function Stepper({
   value,
   onLess,
@@ -99,35 +60,27 @@ export function Stepper({
   testID?: string;
 }) {
   return (
-    <View style={[styles.stepper, compact && styles.stepperCompact]} testID={testID}>
-      <Pressable accessibilityRole="button" accessibilityLabel={lessLabel} accessibilityState={{ disabled: !canLess }} disabled={!canLess} onPress={onLess} style={[styles.step, compact && styles.stepCompact]}>
-        <Icon name="minus" size={18} color={canLess ? colors.text : colors.textSubtle} />
-      </Pressable>
-      <Text accessibilityLabel={valueLabel} accessibilityLiveRegion="polite" style={styles.stepValue}>
-        {value}
-      </Text>
-      <Pressable accessibilityRole="button" accessibilityLabel={moreLabel} accessibilityState={{ disabled: !canMore }} disabled={!canMore} onPress={onMore} style={[styles.step, compact && styles.stepCompact]}>
-        <Icon name="plus" size={18} color={canMore ? colors.text : colors.textSubtle} />
-      </Pressable>
+    <View style={compact ? styles.stepperCompact : styles.stepper}>
+      <QuantityStepper
+        value={value}
+        onLess={onLess}
+        onMore={onMore}
+        lessLabel={lessLabel}
+        moreLabel={moreLabel}
+        valueLabel={valueLabel}
+        canLess={canLess}
+        canMore={canMore}
+        text={null}
+        size={compact ? 'sm' : 'lg'}
+        testID={testID}
+      />
     </View>
   );
 }
 
-/** A pill chip (MA's recent searches, reasons, kinds): the primary colour when on, a hairline otherwise. */
+/** A square chip (the kit's FilterChip): chosen = the ink edge on the selected tint with ✓, for one choice (radio) or many (checkbox). */
 export function Chip({ label, on, onPress, role = 'checkbox', icon, testID }: { label: string; on: boolean; onPress: () => void; role?: 'checkbox' | 'radio'; icon?: IconName; testID?: string }) {
-  return (
-    <Pressable
-      accessibilityRole={role}
-      accessibilityLabel={label}
-      accessibilityState={{ checked: on, selected: on }}
-      onPress={onPress}
-      style={[styles.chip, on && styles.chipOn]}
-      testID={testID}
-    >
-      {icon ? <Icon name={icon} size={16} color={on ? colors.actionPrimaryText : colors.text} /> : null}
-      <Text style={[styles.chipText, on && styles.chipTextOn]}>{label}</Text>
-    </Pressable>
-  );
+  return <FilterChip label={label} selected={on} onPress={onPress} role={role} icon={icon} testID={testID} />;
 }
 
 export function SumRow({ label, value, strong, tone }: { label: string; value: string; strong?: boolean; tone?: 'accent2' }) {
@@ -184,54 +137,33 @@ export function InfoLine({ icon, children, color }: { icon: IconName; children: 
  */
 export function Strip({ children, edge, testID }: { children: ReactNode; edge?: boolean; testID?: string }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={!edge && styles.strip} contentContainerStyle={styles.stripContent} testID={testID}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.stripBox, !edge && styles.strip]} contentContainerStyle={styles.stripContent} testID={testID}>
       {children}
     </ScrollView>
   );
 }
 
 /**
- * An illustrated tile (the web's `Tile`): a picture with rounded corners — the photo, else the scene of `subject` — the
- * name (two lines at most) and a muted line under it ("22 pros", "Coming soon"). `width` sets a rail's tile; without
- * it the tile fills its column (grids).
+ * A tile (the web's `Tile`): the photo in the grey well — the library's for its slot, else the dashed well with the
+ * icon — the name (two lines at most) and a muted line under it ("22 pros", "Coming soon"). `width` sets a rail's
+ * tile; without it the tile fills its column (grids).
  */
-export function Tile({ label, sub, slot, subject, imageUrl, onPress, width, testID }: { label: string; sub?: string; slot?: string | null; subject: string; imageUrl?: string | null; onPress: () => void; width?: number; testID?: string }) {
-  const w = width ?? undefined;
+export function Tile({ label, sub, slot, icon = 'storefront', onPress, width, testID }: { label: string; sub?: string; slot?: string | null; icon?: IconName; onPress: () => void; width?: number; testID?: string }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={sub ? `${label}, ${sub}` : label}
       onPress={onPress}
-      style={({ pressed }) => [styles.tileBox, w ? { width: w } : styles.tileFill, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.tileBox, width ? { width } : styles.tileFill, pressed && styles.pressed]}
       testID={testID}
     >
-      <View style={[styles.tilePic, { aspectRatio: 4 / 3 }]}>
-        {photoUri(imageUrl) ? <Image source={{ uri: photoUri(imageUrl)! }} style={StyleSheet.absoluteFill} /> : <Scene slot={[slot]} subject={subject} style={StyleSheet.absoluteFill} />}
-      </View>
-      <Text style={styles.tileName} numberOfLines={2}>
+      <Picture slot={[slot]} crop="card" icon={icon} style={styles.tilePic} />
+      <Text style={textStyles.bodyStrong} numberOfLines={2}>
         {label}
       </Text>
       {sub ? (
-        <Text style={styles.tileSub} numberOfLines={1}>
+        <Text style={textStyles.meta} numberOfLines={1}>
           {sub}
-        </Text>
-      ) : null}
-    </Pressable>
-  );
-}
-
-/** A rail's product card (photo first): a 156 pt square picture, the name on two lines, the price and the shop. */
-export function ProductTile({ name, price, imageUrl, onPress, label, meta, testID }: { name: string; price: string; imageUrl?: string | null; onPress: () => void; label: string; meta?: string; testID?: string }) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.tile, pressed && styles.pressed]} testID={testID}>
-      <Thumb uri={imageUrl} size={156} subject={name} />
-      <Text style={styles.productName} numberOfLines={2}>
-        {name}
-      </Text>
-      <Text style={styles.tilePrice}>{price}</Text>
-      {meta ? (
-        <Text style={styles.tileSub} numberOfLines={1}>
-          {meta}
         </Text>
       ) : null}
     </Pressable>
@@ -246,55 +178,43 @@ export const shopStyles = StyleSheet.create({
   right: { alignItems: 'flex-end', gap: 2 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
   strong: { fontFamily: fonts.bold },
-  price: { fontFamily: fonts.bold, fontSize: 15, color: colors.text },
-  bigPrice: { fontFamily: fonts.bold, fontSize: 28, color: colors.text },
+  price: { ...StyleSheet.flatten(textStyles.bodyStrong) },
+  bigPrice: { ...StyleSheet.flatten(textStyles.pageTitle) },
   accentText: { color: semantic['badge-brand-text'] },
   accent800: { color: semantic['badge-brand-text'] },
 });
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  thumb: { borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'], overflow: 'hidden' },
   pressed: { opacity: 0.85 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[2] },
   headLink: { minHeight: MIN_TARGET, justifyContent: 'center' },
-  headLinkText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.link },
-  stepper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.borderControl, borderRadius: radius.pill, minHeight: 52 },
-  stepperCompact: { minHeight: MIN_TARGET },
-  step: { width: 48, height: 52, alignItems: 'center', justifyContent: 'center' },
-  stepCompact: { width: MIN_TARGET, height: MIN_TARGET },
-  stepValue: { minWidth: 24, textAlign: 'center', fontFamily: fonts.bold, fontSize: 15, color: colors.text },
-  chip: { minHeight: MIN_TARGET, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderControl, backgroundColor: colors.surface },
-  chipOn: { backgroundColor: colors.actionPrimary, borderColor: colors.actionPrimary },
-  chipText: { fontFamily: fonts.medium, fontSize: 14, color: colors.text },
-  chipTextOn: { fontFamily: fonts.semibold, color: colors.actionPrimaryText },
+  headLinkText: { ...StyleSheet.flatten(textStyles.bodyStrong), color: semantic.link },
+  stepper: { minWidth: space[16] + space[12] },
+  stepperCompact: { minWidth: space[16] + space[8] },
   sum: { flexDirection: 'row', gap: space[2] },
-  sumStrong: { paddingTop: 6 },
-  sumTotal: { fontFamily: fonts.black, fontSize: 17, color: colors.text },
+  sumStrong: { paddingTop: space[1.5] },
+  sumTotal: { ...StyleSheet.flatten(textStyles.sub) },
   sumAccent2: { color: semantic.success },
   ladder: { gap: 0 },
   rung: { flexDirection: 'row', gap: space[3] },
   rail: { width: 24, alignItems: 'center' },
-  dot: { width: 16, height: 16, borderRadius: 8, marginTop: 3 },
-  dotDone: { backgroundColor: colors.actionPrimary, borderWidth: 2, borderColor: colors.actionPrimary },
-  dotCurrent: { backgroundColor: colors.surface, borderWidth: 3, borderColor: colors.actionPrimary },
-  dotTodo: { backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.borderStrong },
-  line: { flex: 1, width: 2, minHeight: 22, backgroundColor: colors.borderStrong },
-  lineDone: { backgroundColor: colors.actionPrimary },
-  rungText: { flex: 1, paddingBottom: 14, gap: 2 },
-  muted: { color: colors.textMuted },
-  panel: { padding: space[4], borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'], gap: space[2] },
-  panelAccent: { backgroundColor: semantic['surface-brand'] },
-  panelDark: { backgroundColor: semantic['surface-brand'] },
+  dot: { width: space[4], height: space[4], borderRadius: radius.round, marginTop: space[1] },
+  dotDone: { backgroundColor: semantic['status-success-fg'], borderWidth: LINE.bold, borderColor: semantic['status-success-fg'] },
+  dotCurrent: { backgroundColor: semantic.surface, borderWidth: LINE.bold + 1, borderColor: semantic.selected },
+  dotTodo: { backgroundColor: semantic.surface, borderWidth: LINE.bold, borderColor: semantic['border-strong'] },
+  line: { flex: 1, width: 2, minHeight: 22, backgroundColor: semantic['border-strong'] },
+  lineDone: { backgroundColor: semantic['status-success-fg'] },
+  rungText: { flex: 1, paddingBottom: space[3.5], gap: 2 },
+  muted: { color: semantic['text-muted'] },
+  panel: { padding: space[4], borderRadius: radius.panel, backgroundColor: semantic.well, gap: space[2] },
+  panelAccent: { backgroundColor: semantic['status-info-bg'] },
+  panelDark: { backgroundColor: semantic['status-info-bg'] },
   info: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   strip: { marginHorizontal: -GUTTER },
+  stripBox: { flexGrow: 0 },
   stripContent: { paddingHorizontal: GUTTER, gap: space[3] },
-  tileBox: { gap: 4, minHeight: MIN_TARGET },
+  tileBox: { gap: space[1], minHeight: MIN_TARGET },
   tileFill: { flex: 1 },
-  tilePic: { width: '100%', borderRadius: radius.lg, overflow: 'hidden', backgroundColor: semantic['surface-sunken'], marginBottom: 4 },
-  tileName: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 20, color: colors.text },
-  tileSub: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.textMuted },
-  tile: { width: 156, gap: 4, minHeight: MIN_TARGET },
-  productName: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 19, color: colors.text, marginTop: 4 },
-  tilePrice: { fontFamily: fonts.bold, fontSize: 15, color: colors.text },
+  tilePic: { width: '100%', aspectRatio: 4 / 3, marginBottom: space[1] },
 });

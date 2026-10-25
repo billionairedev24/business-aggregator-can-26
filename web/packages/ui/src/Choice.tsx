@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, type ButtonHTMLAttributes, type HTMLAttributes, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, type ButtonHTMLAttributes, type HTMLAttributes, type KeyboardEvent, type ReactNode } from 'react';
 import clsx from 'clsx';
-import { Check, Minus } from '@phosphor-icons/react';
+import { Check, Minus, X } from '@phosphor-icons/react';
 import { defineMessages } from './i18n';
 
-export interface CheckboxProps { checked: boolean; onChange: (checked: boolean) => void; label?: ReactNode; indeterminate?: boolean; disabled?: boolean; className?: string; 'aria-label'?: string; name?: string }
-export function Checkbox({ checked, onChange, label, indeterminate, disabled, className, name, ...aria }: CheckboxProps) {
+export interface CheckboxProps { checked: boolean; onChange: (checked: boolean) => void; label?: ReactNode; indeterminate?: boolean; disabled?: boolean; className?: string; 'aria-label'?: string; name?: string; /** A count after the label, right-aligned (a filter rail: "Vegan 31"). */ count?: ReactNode }
+/** A checkbox: 17 px, 2 px corners, solid ink when checked (with its label bold). */
+export function Checkbox({ checked, onChange, label, indeterminate, disabled, className, name, count, ...aria }: CheckboxProps) {
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => { if (ref.current) ref.current.indeterminate = !!indeterminate && !checked; }, [indeterminate, checked]);
   return (
@@ -12,6 +13,7 @@ export function Checkbox({ checked, onChange, label, indeterminate, disabled, cl
       <input ref={ref} type="checkbox" name={name} checked={checked} disabled={disabled} onChange={e => onChange(e.target.checked)} aria-label={aria['aria-label']} />
       <span className="nl-box" aria-hidden>{checked ? <Check size={12} weight="bold" /> : indeterminate ? <Minus size={12} weight="bold" /> : null}</span>
       {label ? <span>{label}</span> : null}
+      {count != null ? <span className="nl-check-count">{count}</span> : null}
     </label>
   );
 }
@@ -22,25 +24,102 @@ export function Switch({ checked, onChange, label, disabled }: SwitchProps) {
   return <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} className="nl-switch" onClick={() => onChange(!checked)}><span className="nl-switch-knob" /></button>;
 }
 
-export interface OptionCardProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'title'> { selected: boolean; title: ReactNode; description?: ReactNode; trailing?: ReactNode }
+export interface OptionCardProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'title'> { selected: boolean; title: ReactNode; description?: ReactNode; trailing?: ReactNode; /** A radio (or checkbox) mark at the start, as the mockups' delivery and tip options. */ mark?: 'radio' | 'checkbox' }
 /**
  * Selectable row: MFA method pickers, business type, verification options. A toggle button (aria-pressed) by default;
  * given a `role` (radio in a radiogroup, option…) it states `aria-checked` instead — aria-pressed is not allowed there
  * (S-109: axe critical aria-allowed-attr on the sign-up factor picker).
  */
-export function OptionCard({ selected, title, description, trailing, className, ...p }: OptionCardProps) {
+export function OptionCard({ selected, title, description, trailing, mark, className, ...p }: OptionCardProps) {
   const checkable = p.role === 'radio' || p.role === 'menuitemradio' || p.role === 'checkbox' || p.role === 'switch';
   return (
     <button type="button" aria-pressed={p.role ? undefined : selected} aria-checked={checkable ? selected : undefined} className={clsx('nl-option', className)} {...p}>
-      <span style={{ flex: 1, minWidth: 0 }}><span className="nl-option-title">{title}</span>{description ? <span className="nl-option-desc">{description}</span> : null}</span>
+      {mark ? <span className="nl-option-mark" data-kind={mark} aria-hidden /> : null}
+      <span className="nl-option-body"><span className="nl-option-title">{title}</span>{description ? <span className="nl-option-desc">{description}</span> : null}</span>
       {trailing}
     </button>
   );
 }
 
 export interface ChipProps extends ButtonHTMLAttributes<HTMLButtonElement> { selected?: boolean }
-// A chip inside a tablist carries aria-selected instead; aria-pressed is not allowed on role="tab".
-export const Chip = ({ selected = false, className, ...p }: ChipProps) => <button type="button" aria-pressed={p.role === 'tab' ? undefined : selected} className={clsx('nl-chip', className)} {...p} />;
+/**
+ * A square-cornered chip (3 px): a toggle (aria-pressed) that shows its applied state — the ink edge on the selected
+ * tint and a check. A chip inside a tablist carries aria-selected instead (aria-pressed is not allowed on role="tab");
+ * one in a radiogroup carries aria-checked.
+ */
+export const Chip = ({ selected = false, className, ...p }: ChipProps) => {
+  const checkable = p.role === 'radio' || p.role === 'checkbox' || p.role === 'menuitemradio';
+  return <button type="button" aria-pressed={p.role ? undefined : selected} aria-checked={checkable ? selected : undefined} className={clsx('nl-chip', className)} {...p} />;
+};
+
+const useChipT = defineMessages({ en: { remove: 'Remove filter: {label}' }, fr: { remove: 'Retirer le filtre : {label}' } });
+
+export interface FilterChipProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick' | 'children'> {
+  label: string;
+  /** The filter is on: the applied state (✓, ink edge on the tint). */
+  applied: boolean;
+  /** Toggles the filter (a filter bar's quick chips). */
+  onToggle?: () => void;
+  /** An applied chip that removes itself (the applied-filter row): one button "✓ label ×", named "Remove filter: label". */
+  onRemove?: () => void;
+  /** A count after the label ("Vegan 31"). */
+  count?: ReactNode;
+}
+/** A filter chip: square-cornered, applied = ✓ on the selected tint; removable chips end in × and remove on press. */
+export function FilterChip({ label, applied, onToggle, onRemove, count, className, ...p }: FilterChipProps) {
+  const t = useChipT();
+  if (applied && onRemove) {
+    return (
+      <button type="button" className={clsx('nl-chip', className)} data-state="on" aria-label={t('remove', { label })} onClick={onRemove} {...p}>
+        <span>{label}</span>{count != null ? <span className="nl-check-count">{count}</span> : null}<span className="nl-chip-x" aria-hidden><X size={13} weight="bold" /></span>
+      </button>
+    );
+  }
+  return (
+    <button type="button" className={clsx('nl-chip', className)} aria-pressed={applied} onClick={onToggle} {...p}>
+      <span>{label}</span>{count != null ? <span className="nl-check-count">{count}</span> : null}
+    </button>
+  );
+}
+
+/**
+ * A titled group of a filter rail (the results page's Department, Delivery, Price…): a bold 13.5 heading over its
+ * options (Checkbox `count`, RatingFilter, Segmented). The heading level follows the page's outline (default 2).
+ */
+export function FilterGroup({ label, children, level = 2, className }: { label: ReactNode; children: ReactNode; level?: 2 | 3; className?: string }) {
+  const id = useId();
+  const H = `h${level}` as 'h2';
+  return (
+    <section className={clsx('nl-fgroup', className)} aria-labelledby={id}>
+      <H id={id} className="nl-fgroup-label">{label}</H>
+      <div className="nl-fgroup-items">{children}</div>
+    </section>
+  );
+}
+
+export interface ChoiceTilesProps<V extends string> {
+  options: readonly { value: V; label: ReactNode; sub?: ReactNode; disabled?: boolean }[];
+  value: V | null;
+  onChange: (v: V) => void;
+  'aria-label': string;
+  /** `row` wraps (times, tips); `grid` lays them out evenly (days of a booking calendar). */
+  layout?: 'row' | 'grid';
+}
+/**
+ * One-choice tiles (a delivery time, a tip, a day): boxes in a radiogroup that turn solid ink when chosen; the arrows
+ * move and choose (RadioGroup), one Tab stop.
+ */
+export function ChoiceTiles<V extends string>({ options, value, onChange, layout = 'row', ...aria }: ChoiceTilesProps<V>) {
+  return (
+    <RadioGroup className={clsx('nl-tiles', layout === 'grid' && 'nl-tiles-grid')} aria-label={aria['aria-label']}>
+      {options.map(o => (
+        <button key={o.value} type="button" role="radio" aria-checked={o.value === value} disabled={o.disabled} className="nl-tile-choice" onClick={() => onChange(o.value)}>
+          <span>{o.label}</span>{o.sub ? <span className="nl-tile-choice-sub">{o.sub}</span> : null}
+        </button>
+      ))}
+    </RadioGroup>
+  );
+}
 
 /**
  * ARIA tabs keyboard model (S-109): one tab stop for the row (the selected tab), ←/→ (and ↑/↓) move and select,
@@ -70,18 +149,44 @@ export function ChipTabs<V extends string>({ options, value, onChange, ...aria }
   return <div className="nl-chips" role="tablist" aria-label={aria['aria-label']} onKeyDown={tablistKeyDown(options.map(o => o.value), value, onChange)}>{options.map((o, i) => <Chip key={o.value} role="tab" aria-selected={o.value === value} tabIndex={rovingIndex(options, value, i)} selected={o.value === value} onClick={() => onChange(o.value)}>{o.label}</Chip>)}</div>;
 }
 
-export interface SegmentedProps<V extends string> { name: string; options: readonly { value: V; label: ReactNode }[]; value: V; onChange: (v: V) => void; 'aria-label'?: string }
-export function Segmented<V extends string>({ name, options, value, onChange, ...aria }: SegmentedProps<V>) {
+export interface SegmentedProps<V extends string> {
+  name: string; options: readonly { value: V; label: ReactNode }[]; value: V; onChange: (v: V) => void; 'aria-label'?: string;
+  /** `sm`: 32 px boxes (a filter rail's distance). */
+  size?: 'sm';
+  /** The boxes share the full width (a narrow rail, a phone). */
+  fill?: boolean;
+  /** S-173: on phones (< 600 px) the boxes stack, full width, one per row (long choices: checkout's out-of-stock rule). */
+  stack?: boolean;
+}
+export function Segmented<V extends string>({ name, options, value, onChange, size, fill, stack, ...aria }: SegmentedProps<V>) {
   return (
-    <div className="seg" role="radiogroup" aria-label={aria['aria-label']}>
+    <div className={clsx('seg', size === 'sm' && 'seg-sm', fill && 'seg-fill', stack && 'seg-stack')} role="radiogroup" aria-label={aria['aria-label']}>
       {options.map(o => <label key={o.value} className="seg-opt"><input type="radio" name={name} checked={o.value === value} onChange={() => onChange(o.value)} /><span>{o.label}</span></label>)}
     </div>
   );
 }
 
-export interface UnderlineTabsProps<V extends string> { options: readonly { value: V; label: ReactNode }[]; value: V; onChange: (v: V) => void; 'aria-label': string }
-export function UnderlineTabs<V extends string>({ options, value, onChange, ...aria }: UnderlineTabsProps<V>) {
-  return <div className="nl-utabs" role="tablist" aria-label={aria['aria-label']} onKeyDown={tablistKeyDown(options.map(o => o.value), value, onChange)}>{options.map((o, i) => <button key={o.value} type="button" role="tab" aria-selected={o.value === value} tabIndex={rovingIndex(options, value, i)} className="nl-utab" onClick={() => onChange(o.value)}>{o.label}</button>)}</div>;
+export interface UnderlineTabsProps<V extends string> {
+  /** `count`: a number after the label in a small box (solid ink on the current tab); `tone: 'danger'` keeps it red (Issues 1). */
+  options: readonly { value: V; label: ReactNode; count?: ReactNode; tone?: 'danger'; /** S-175: the tab's own accessible name ("Images · complete"). */ name?: string }[];
+  value: V; onChange: (v: V) => void; 'aria-label': string;
+  /** The tabs share the row's width (auth: Sign in | Create account). */
+  fill?: boolean;
+  /** S-175: each tab's id, and the id of the panel the current tab controls (an editor's sections). */
+  tabId?: (v: V) => string;
+  panelId?: (v: V) => string;
+}
+/** Underline tabs — the one tab style: the current tab bold ink with a 3 px ink underline, counts in boxes. */
+export function UnderlineTabs<V extends string>({ options, value, onChange, fill, tabId, panelId, ...aria }: UnderlineTabsProps<V>) {
+  return (
+    <div className={clsx('nl-utabs', fill && 'nl-utabs-fill')} role="tablist" aria-label={aria['aria-label']} onKeyDown={tablistKeyDown(options.map(o => o.value), value, onChange)}>
+      {options.map((o, i) => (
+        <button key={o.value} type="button" role="tab" id={tabId?.(o.value)} aria-controls={panelId && o.value === value ? panelId(o.value) : undefined} aria-label={o.name} aria-selected={o.value === value} tabIndex={rovingIndex(options, value, i)} className="nl-utab" onClick={() => onChange(o.value)}>
+          {o.label}{o.count != null ? <span className="nl-utab-count" data-tone={o.tone}>{o.count}</span> : null}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;

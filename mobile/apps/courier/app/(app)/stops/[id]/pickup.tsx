@@ -1,18 +1,19 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { Switch, View, StyleSheet } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, radius, space, Scene } from '@northline/mobile-kit';
+import { Switch, space, textStyles } from '@northline/mobile-kit';
 
-import { Banner, Body, Button, Card, Heading, Screen } from '../../../../src/components/ui';
+import { Banner, Body, Button, Card, Figure, Heading, Screen } from '../../../../src/components/ui';
 import { useRun } from '../../../../src/hooks';
 import { useI18n } from '../../../../src/i18n';
 import { RUN_KEY, services } from '../../../../src/services';
 import { stopName } from '../../../../src/stops';
 
 /**
- * Pickup confirm (light direction: the shop's picture first — its drawn scene until shops have photos): the courier confirms the sealed, labelled bag (recorded as the scan). The shop must have packed: the
+ * Pickup confirm (S-179, glanceable in sunlight): the shop, the order's reference as a 28 pt figure, whether it is
+ * packed, and the kit's switch for the sealed, labelled bag (recorded as the scan) — the whole row is the target. The shop must have packed: the
  * api refuses otherwise (409 not_packed, shown from the outbox) — the run read here may be older than the packing.
  * Saved on the phone first; sent when there is a connection.
  */
@@ -49,28 +50,22 @@ export default function PickupScreen() {
       onBack={back}
       footer={<Button label={t('pickup.confirm')} large icon="package" disabled={!sealed} onPress={() => void confirm()} testID="confirm-pickup" />}
     >
-      <Scene slot="hero/courier" subject={stopName(stop)} fit="contain" style={styles.art} />
+      <Text style={textStyles.caps}>{t('stop.seqKind', { seq: stop.seq, kind: t('stop.pickup') })}</Text>
       <Heading>{stopName(stop)}</Heading>
-      {stop.orderRef ? <Body muted>{t('stop.order', { ref: stop.orderRef })}</Body> : null}
+      {stop.orderRef ? (
+        <View style={styles.figure}>
+          <Figure label={t('pickup.orderRef')} value={stop.orderRef} />
+        </View>
+      ) : null}
       {!stop.packed ? <Banner tone="warn">{t('pickup.waitPacked')}</Banner> : null}
       <Card>
-        <View style={styles.switchRow}>
-          <Body style={styles.label}>{t('pickup.sealed', { ref: stop.orderRef ?? '' })}</Body>
-          <Switch
-            value={sealed}
-            onValueChange={setSealed}
-            accessibilityLabel={t('pickup.sealed', { ref: stop.orderRef ?? '' })}
-            trackColor={{ true: colors.actionPrimary, false: colors.borderControl }}
-            testID="sealed"
-          />
-        </View>
+        <Switch value={sealed} onChange={setSealed} label={t('pickup.sealed', { ref: stop.orderRef ?? '' })} testID="sealed" />
       </Card>
+      <Body muted>{t('pickup.explain')}</Body>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  switchRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 48 },
-  label: { flex: 1 },
-  art: { height: 160, borderRadius: radius.lg },
+  figure: { flexDirection: 'row', paddingVertical: space[1] },
 });

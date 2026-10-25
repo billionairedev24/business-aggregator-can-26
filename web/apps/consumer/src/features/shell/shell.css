@@ -1,23 +1,31 @@
-/* Consumer shell (redesign § 1.2–1.3): the page grid (max 1500px, the fluid gutter), the skip link, the dark footer.
-   Semantic tokens only. */
+/* Consumer shell (E-15): the page grid (max 1500px, the fluid gutter), the skip link, the compact footer. Semantic
+   tokens only. */
 body { text-wrap: pretty; }
 .nl-app { min-height: 100vh; display: flex; flex-direction: column; font-family: var(--font-sans); color: var(--color-text); background: var(--color-canvas); }
-.nl-main { flex: 1; width: 100%; max-width: var(--page-max); margin: 0 auto; padding: 0 var(--page-gutter) var(--space-16); box-sizing: border-box; min-width: 0; }
+.nl-main { flex: 1; width: 100%; max-width: var(--page-max); margin: 0 auto; padding: 0 var(--page-gutter) var(--space-10); box-sizing: border-box; min-width: 0; }
 .nl-main:focus { outline: none; }
-.nl-page { padding-top: var(--space-6); }
+.nl-page { padding-top: var(--space-4); }
 .nl-skip { position: absolute; left: 12px; top: -60px; z-index: var(--z-toast); display: inline-flex; align-items: center; min-height: var(--size-touch); padding: 0 var(--space-4); background: var(--color-surface); color: var(--color-link); border-radius: var(--radius-pill); box-shadow: var(--shadow-md); font-weight: var(--weight-bold); }
 .nl-skip:focus { top: 12px; }
 
-/* footer: light — a linen band with a hairline on top, link groups, the language switch, the company line */
-.nl-footer { background: var(--color-footer-bg); color: var(--color-footer-text); border-top: 1px solid var(--color-footer-border); padding: var(--space-10) var(--page-gutter) var(--space-6); font-size: var(--text-md); }
-.nl-footer-cols { max-width: var(--page-max); margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: var(--space-6) var(--space-8); }
-.nl-footer-head { font-family: var(--font-heading); font-size: var(--text-lg); font-weight: var(--weight-semibold); letter-spacing: 0; text-transform: none; color: var(--color-footer-text); margin: 0 0 var(--space-2); }
-.nl-footer-links { display: flex; flex-direction: column; align-items: flex-start; }
-.nl-footer a, .nl-footer-lang { display: inline-flex; align-items: center; min-height: var(--size-touch); min-width: var(--size-touch); color: var(--color-footer-text); text-decoration: none; }
-.nl-footer a:hover, .nl-footer-lang:hover { color: var(--color-link); text-decoration: underline; }
-.nl-footer :focus-visible { outline-color: var(--color-focus); }
-.nl-footer-lang { font: inherit; font-weight: var(--weight-semibold); background: var(--color-surface); border: 1px solid var(--color-border-card); border-radius: var(--radius-pill); padding: 0 var(--space-4); cursor: pointer; color: var(--color-footer-text); }
-.nl-footer-legal { max-width: var(--page-max); margin: var(--space-8) auto 0; padding-top: var(--space-4); border-top: 1px solid var(--color-footer-border); font-size: var(--text-sm); color: var(--color-footer-muted); }
+/* footer (E-15, audit #9; S-188 brand layer): one compact deep-violet band that bookends the page with the header — the
+   logo and the company line in the light violet meta, then the links in white in one wrapping row (never the action
+   violet: no violet text on violet) */
+.nl-footer { background: var(--color-footer-bg); color: var(--color-footer-muted); font-size: var(--type-label); }
+.nl-footer-in { max-width: var(--page-max); margin: 0 auto; padding: var(--space-4) var(--page-gutter); box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-5); }
+.nl-footer-legal { margin: 0 auto 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.nl-footer-copy { margin: 0; }
+.nl-footer-logo { color: var(--color-footer-text); font-size: var(--text-base); font-weight: var(--weight-bold); }
+.nl-footer-links { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-5); }
+.nl-footer a, .nl-footer-lang { display: inline-flex; align-items: center; min-height: var(--size-touch); color: var(--color-footer-text); text-decoration: none; }
+.nl-footer a:hover, .nl-footer-lang:hover { color: var(--color-footer-text); text-decoration: underline; text-underline-offset: 3px; }
+.nl-footer :focus-visible { outline: 2px solid var(--color-header-focus); outline-offset: 2px; }
+.nl-footer-lang { font: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+@media (max-width: 599.98px) {
+  .nl-footer-in { padding-block: var(--space-3); }
+  .nl-footer-legal { flex-basis: 100%; }
+  .nl-footer-links { gap: 0 var(--space-3-5); }
+}
 
 /* no such page / a page that failed: a picture, one line, the ways back (centred) */
 .nl-lost { max-width: 640px; margin: 0 auto; text-align: center; display: flex; flex-direction: column; align-items: center; padding-top: var(--space-10); }

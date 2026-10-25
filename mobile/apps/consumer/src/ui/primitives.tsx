@@ -1,47 +1,49 @@
 import { forwardRef, type ReactNode } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  type StyleProp,
-  type TextInputProps,
-  type TextStyle,
-  type ViewStyle,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type TextInput, type TextStyle, type ViewStyle } from 'react-native';
 
-import { MIN_TARGET, colors, fonts, radius, semantic, shadow, space } from '@northline/mobile-kit';
+import {
+  Button as KitButton,
+  CAP,
+  LINE,
+  MIN_TARGET,
+  Mark,
+  OptionCard,
+  TYPE,
+  TextField,
+  radius,
+  semantic,
+  space,
+  textStyles,
+  type ButtonVariant,
+  type TextFieldProps,
+} from '@northline/mobile-kit';
 
 /**
- * The consumer app's building blocks on the light, photo-first direction (owner 2026-10-19, palette Evergreen; the
- * consumer web's look): white surfaces, the palette's display face (Fraunces) for titles and sections at 600 and its
- * sans (DM Sans) for everything else, pill buttons (44 / 52 pt) in the brand colour, 48 pt inputs, soft cards with a
- * visible edge (`border-card`, 3:1) and a small shadow, linen (`surface-sunken`) for sunken panels. Colours, radii,
- * spacing and fonts come from @northline/mobile-kit (brand.json's palette), never literals; every control is ≥ 44 pt
- * (MIN_TARGET). Text sizes scale with the person's Dynamic Type / font size setting (React Native's default), capped
- * only where a one-line label would break its bar.
+ * The consumer app's building blocks, on the shared kit (S-169, tokens v2 · Plainsight): these keep the props the
+ * screens were written against and draw with @northline/mobile-kit's components and text roles, so every screen moved
+ * to IBM Plex Sans, 3 / 4 pt corners, the action blue, ink selection and flat white panels at once. Page layouts are
+ * S-178. Colours, radii, spacing and type come from the kit (no literals); every control is ≥ 44 pt (MIN_TARGET);
+ * text scales with Dynamic Type.
  */
 
 export const type = StyleSheet.create({
-  /** Welcome's and Home's hero (the display face). */
-  hero: { fontFamily: fonts.display, fontSize: 36, lineHeight: 41, letterSpacing: -0.5, color: colors.text },
-  /** A screen's title (the display face, 28). */
-  title: { fontFamily: fonts.display, fontSize: 28, lineHeight: 34, letterSpacing: -0.3, color: colors.text },
-  /** A section (the display face, 20). */
-  section: { fontFamily: fonts.display, fontSize: 20, lineHeight: 26, color: colors.text },
-  /** A card's or row's title (the sans, 16 / 600). */
-  item: { fontFamily: fonts.semibold, fontSize: 16, lineHeight: 21, color: colors.text },
-  body: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.text },
-  lead: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 23, color: colors.textMuted },
-  muted: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.textMuted },
-  small: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.textMuted },
-  strong: { fontFamily: fonts.bold },
-  /** MA's group labels: 12 / 700 uppercase, .04em. */
-  kicker: { fontFamily: fonts.bold, fontSize: 12, letterSpacing: 0.5, textTransform: 'uppercase', color: colors.textMuted },
-  link: { fontFamily: fonts.semibold, color: colors.link, textDecorationLine: 'underline' },
-  error: { fontFamily: fonts.medium, fontSize: 13, lineHeight: 18, color: colors.danger },
+  /** Welcome's and Home's hero: the page title role. */
+  hero: textStyles.pageTitle,
+  /** A screen's title (24 / 700). */
+  title: textStyles.pageTitle,
+  /** A section (18 / 700). */
+  section: textStyles.section,
+  /** A card's or row's title (16 / 600). */
+  item: textStyles.sub,
+  body: textStyles.body,
+  lead: { ...StyleSheet.flatten(textStyles.body), fontSize: TYPE.sub, lineHeight: Math.round(TYPE.sub * 1.45), color: semantic['text-muted'] },
+  muted: { ...StyleSheet.flatten(textStyles.body), color: semantic['text-muted'] },
+  small: textStyles.meta,
+  strong: { fontFamily: textStyles.section.fontFamily },
+  /** Group labels: 11 / 700 uppercase. */
+  kicker: textStyles.caps,
+  link: { ...StyleSheet.flatten(textStyles.link), textDecorationLine: 'underline' },
+  error: { ...StyleSheet.flatten(textStyles.label), fontFamily: textStyles.cardTitle.fontFamily, color: semantic.danger },
 });
 
 export function Title({ children, hero, testID }: { children: ReactNode; hero?: boolean; testID?: string }) {
@@ -69,8 +71,8 @@ export function Body({ children, tone = 'body', style, lines }: { children: Reac
 }
 
 /**
- * A soft card (light direction): white, radius 12, the 3:1 edge and a small shadow; `sunken` = a linen panel without
- * the edge (info boxes, the parts of a page that recede). With `onPress` it is one button named by `label`.
+ * A flat panel (Plainsight): white, 4 pt corners, the hairline edge, no shadow; `sunken` = the well grey without the
+ * edge (info boxes, the parts of a page that recede). With `onPress` it is one button named by `label`.
  */
 export function Card({
   children,
@@ -114,7 +116,7 @@ export function Card({
   );
 }
 
-/** A text link standing on its own ("Edit", "Call me instead"): a 48 dp target around the words. */
+/** A text link standing on its own ("Edit", "Call me instead"): a 44 pt target around the words. */
 export function Link({ label, onPress, hint, testID }: { label: string; onPress: () => void; hint?: string; testID?: string }) {
   return (
     <Pressable accessibilityRole="link" accessibilityLabel={label} accessibilityHint={hint} onPress={onPress} hitSlop={4} style={styles.link} testID={testID}>
@@ -124,11 +126,11 @@ export function Link({ label, onPress, hint, testID }: { label: string; onPress:
 }
 
 /**
- * primary = the brand colour (Place order, Continue, Add to cart — the one main action of a screen); accent = the
- * palette's accent, for a rare highlight; secondary = white with an edge; dark = the brand-dark panel colour; ghost =
- * text only; danger = red text on white (Sign out).
+ * The older tone names on the kit's four actions: primary (and accent, which is the same action blue in Plainsight),
+ * secondary, ghost = tertiary (a link), danger = destructive (red: cancel, remove, delete), dark.
  */
 export type ButtonTone = 'primary' | 'accent' | 'secondary' | 'dark' | 'ghost' | 'danger';
+const VARIANT: Record<ButtonTone, ButtonVariant> = { primary: 'primary', accent: 'primary', secondary: 'secondary', dark: 'dark', ghost: 'tertiary', danger: 'destructive' };
 
 export function Button({
   label,
@@ -147,88 +149,22 @@ export function Button({
   disabled?: boolean;
   busy?: boolean;
   hint?: string;
-  /** The screen's main call to action (52 pt, 16 / 700 — MA's bottom action bar). */
+  /** The screen's main call to action (46 pt, a sticky bar's). */
   large?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 }) {
-  const off = disabled || busy;
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityHint={hint}
-      accessibilityState={{ disabled: !!off, busy: !!busy }}
-      disabled={off}
-      onPress={onPress}
-      testID={testID}
-      style={({ pressed }) => [styles.button, large && styles.buttonLarge, buttonTone[tone], pressed && pressedTone[tone], off && styles.disabled, style]}
-    >
-      {busy ? <ActivityIndicator color={buttonText[tone].color as string} /> : null}
-      <Text style={[styles.buttonText, large && styles.buttonTextLarge, buttonText[tone]]}>{label}</Text>
-    </Pressable>
-  );
+  return <KitButton label={label} onPress={onPress} variant={VARIANT[tone]} size={large ? 'lg' : 'md'} disabled={disabled} busy={busy} hint={hint} style={style} testID={testID} />;
 }
 
-const buttonTone: Record<ButtonTone, ViewStyle> = {
-  primary: { backgroundColor: semantic['action-primary'] },
-  accent: { backgroundColor: semantic['action-accent'] },
-  secondary: { backgroundColor: semantic['action-neutral'], borderColor: semantic['action-neutral-border'], borderWidth: 1 },
-  dark: { backgroundColor: semantic['action-dark'] },
-  ghost: { backgroundColor: 'transparent' },
-  danger: { backgroundColor: semantic.surface, borderColor: semantic['border-control'], borderWidth: 1 },
-};
-const pressedTone: Record<ButtonTone, ViewStyle> = {
-  primary: { backgroundColor: semantic['action-primary-press'] },
-  accent: { backgroundColor: semantic['action-accent-hover'] },
-  secondary: { backgroundColor: semantic['action-neutral-hover'] },
-  dark: { backgroundColor: semantic['action-dark-hover'] },
-  ghost: { backgroundColor: semantic['surface-hover'] },
-  danger: { backgroundColor: semantic['danger-bg'] },
-};
-const buttonText: Record<ButtonTone, TextStyle> = {
-  primary: { color: semantic['action-primary-text'] },
-  accent: { color: semantic['action-accent-text'] },
-  secondary: { color: semantic['action-neutral-text'] },
-  dark: { color: semantic['action-dark-text'] },
-  ghost: { color: semantic.link },
-  danger: { color: semantic.danger },
-};
+export type FieldProps = TextFieldProps;
 
-export interface FieldProps extends Omit<TextInputProps, 'style'> {
-  label: string;
-  error?: string | null;
-  hint?: string;
-  testID?: string;
-}
-
-/** A label above (13 / 600), a 48 pt input (16 pt so iOS doesn't zoom), the error under it in the danger colour (and announced). */
-export const Field = forwardRef<TextInput, FieldProps>(function Field({ label, error, hint, testID, ...input }, ref) {
-  return (
-    <View style={styles.field}>
-      <Text style={styles.label} nativeID={testID ? `${testID}-label` : undefined}>
-        {label}
-      </Text>
-      <TextInput
-        ref={ref}
-        accessibilityLabel={label}
-        accessibilityHint={hint}
-        aria-invalid={!!error}
-        placeholderTextColor={colors.textSubtle}
-        style={[styles.input, !!error && styles.inputError]}
-        testID={testID}
-        {...input}
-      />
-      {error ? (
-        <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={type.error}>
-          {error}
-        </Text>
-      ) : null}
-    </View>
-  );
+/** The kit's labelled field: label above, a 44 pt input (16 pt text), the error under it (announced). */
+export const Field = forwardRef<TextInput, FieldProps>(function Field(props, ref) {
+  return <TextField ref={ref} {...props} />;
 });
 
-/** A checkbox row (`radio` with a square dot): the label may hold links. */
+/** A checkbox row (the label may hold links): the kit's square mark, solid ink when checked. */
 export function Checkbox({ checked, onChange, label, children, error, testID }: { checked: boolean; onChange: (v: boolean) => void; label: string; children: ReactNode; error?: string | null; testID?: string }) {
   return (
     <View style={styles.field}>
@@ -240,7 +176,7 @@ export function Checkbox({ checked, onChange, label, children, error, testID }: 
         style={styles.checkRow}
         testID={testID}
       >
-        <View style={[styles.box, checked && styles.boxOn]}>{checked ? <View style={styles.tick} /> : null}</View>
+        <Mark on={checked} />
         <View style={styles.checkText}>{children}</View>
       </Pressable>
       {error ? (
@@ -252,33 +188,23 @@ export function Checkbox({ checked, onChange, label, children, error, testID }: 
   );
 }
 
-/** accent = brand (primary tint), accent2 = attention (danger tint), neutral; success / warning for states. */
+/** accent = information (the blue tint), accent2 = attention (danger), neutral; success / warning for states. */
 export type TagTone = 'accent' | 'accent2' | 'neutral' | 'success' | 'warning';
+const TAG: Record<TagTone, 'info' | 'danger' | 'neutral' | 'success' | 'warning'> = { accent: 'info', accent2: 'danger', neutral: 'neutral', success: 'success', warning: 'warning' };
 
+/** A square tag (2 pt corners) in a status's tint and colour. */
 export function Tag({ label, tone = 'neutral', small }: { label: string; tone?: TagTone; small?: boolean }) {
+  const s = TAG[tone];
   return (
-    <View style={[styles.tag, tagTone[tone], small && styles.tagSmall]}>
-      <Text style={[styles.tagText, tagText[tone], small && styles.tagTextSmall]}>{label}</Text>
+    <View style={[styles.tag, small && styles.tagSmall, { backgroundColor: semantic[`status-${s}-bg`] }]}>
+      <Text style={[styles.tagText, small && styles.tagTextSmall, { color: semantic[`status-${s}-fg`] }]} maxFontSizeMultiplier={CAP.bar}>
+        {label}
+      </Text>
     </View>
   );
 }
 
-const tagTone: Record<TagTone, ViewStyle> = {
-  accent: { backgroundColor: semantic['badge-brand-bg'] },
-  accent2: { backgroundColor: semantic['danger-bg'] },
-  neutral: { backgroundColor: semantic['badge-neutral-bg'] },
-  success: { backgroundColor: semantic['success-bg'] },
-  warning: { backgroundColor: semantic['warning-bg'] },
-};
-const tagText: Record<TagTone, TextStyle> = {
-  accent: { color: semantic['badge-brand-text'] },
-  accent2: { color: semantic.danger },
-  neutral: { color: semantic['badge-neutral-text'] },
-  success: { color: semantic.success },
-  warning: { color: semantic.warning },
-};
-
-/** A selectable card (MA's radio cards): a 2 pt border, the primary colour and the brand tint when chosen. */
+/** A selectable row (radio cards): the kit's OptionCard — a radio mark, an ink edge when chosen. */
 export function Option({
   selected,
   onPress,
@@ -301,21 +227,17 @@ export function Option({
   testID?: string;
 }) {
   return (
-    <Pressable
-      accessibilityRole={role}
-      accessibilityLabel={[title, description, tag].filter(Boolean).join(', ')}
-      accessibilityState={{ selected, checked: role === 'radio' ? selected : undefined, disabled: !!disabled }}
-      disabled={disabled}
+    <OptionCard
+      title={title}
+      description={description}
+      right={tag ? <Tag label={tag} small /> : undefined}
+      selected={selected}
       onPress={onPress}
+      disabled={disabled}
+      role={role}
+      style={style}
       testID={testID}
-      style={({ pressed }) => [styles.option, selected && styles.optionOn, pressed && !selected && styles.optionPressed, disabled && styles.optionOff, style]}
-    >
-      <View style={styles.optionText}>
-        <Text style={[type.body, type.strong, styles.optionTitle]}>{title}</Text>
-        {description ? <Text style={[type.small, styles.optionDesc]}>{description}</Text> : null}
-      </View>
-      {tag ? <Tag label={tag} small /> : null}
-    </Pressable>
+    />
   );
 }
 
@@ -343,71 +265,21 @@ export function Spacer() {
 }
 
 const styles = StyleSheet.create({
-  button: {
-    minHeight: MIN_TARGET,
-    minWidth: MIN_TARGET,
-    paddingHorizontal: space[5],
-    paddingVertical: space[2],
-    borderRadius: radius.pill,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space[2],
-  },
-  buttonLarge: { minHeight: 52, paddingHorizontal: space[6] },
-  buttonText: { fontFamily: fonts.bold, fontSize: 15, textAlign: 'center' },
-  buttonTextLarge: { fontSize: 16 },
-  disabled: { opacity: 0.45 },
-  field: { gap: 6 },
-  label: { fontFamily: fonts.semibold, fontSize: 14, color: colors.text },
-  input: {
-    minHeight: 48,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontFamily: fonts.regular,
-    fontSize: 16,
-    color: colors.text,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderControl,
-    borderRadius: radius.lg,
-  },
-  inputError: { borderColor: semantic['danger-border'] },
-  checkRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, minHeight: MIN_TARGET, paddingVertical: space[2] },
-  box: { width: 20, height: 20, marginTop: 1, borderRadius: radius.xs, borderWidth: 1.5, borderColor: colors.borderControl, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
-  boxOn: { backgroundColor: colors.actionPrimary, borderColor: colors.actionPrimary },
-  tick: { width: 8, height: 8, borderRadius: 2, backgroundColor: colors.actionPrimaryText },
+  field: { gap: space[1] + LINE.bold },
+  checkRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space[3], minHeight: MIN_TARGET, paddingVertical: space[2] },
   checkText: { flex: 1 },
-  tag: { alignSelf: 'flex-start', borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 3 },
-  tagSmall: { paddingHorizontal: 8, paddingVertical: 2 },
-  tagText: { fontFamily: fonts.bold, fontSize: 12 },
-  tagTextSmall: { fontSize: 11 },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    minHeight: 52,
-    paddingHorizontal: 14,
-    paddingVertical: space[3],
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: semantic['border-card'],
-    backgroundColor: colors.surface,
-  },
-  optionOn: { borderWidth: 2, paddingHorizontal: 13, borderColor: colors.actionPrimary, backgroundColor: semantic['surface-brand'] },
-  optionPressed: { backgroundColor: semantic['surface-hover'] },
-  optionOff: { opacity: 0.45 },
-  optionText: { flex: 1, gap: 2 },
-  optionTitle: { fontSize: 15 },
-  optionDesc: { color: colors.textMuted },
-  notice: { borderRadius: radius.lg, padding: space[3] },
-  noticeError: { backgroundColor: semantic['danger-bg'] },
+  tag: { alignSelf: 'flex-start', borderRadius: radius.status, paddingHorizontal: space[2], paddingVertical: LINE.bold },
+  tagSmall: { paddingHorizontal: space[1] + LINE.bold, paddingVertical: LINE.hair },
+  tagText: { ...StyleSheet.flatten(textStyles.metaStrong), fontFamily: textStyles.section.fontFamily },
+  tagTextSmall: { fontSize: TYPE.caps },
+  notice: { borderRadius: radius.panel, padding: space[3], borderLeftWidth: LINE.bold + LINE.hair },
+  noticeError: { backgroundColor: semantic['status-danger-bg'], borderLeftColor: semantic['status-danger-fg'] },
   noticeErrorText: { color: semantic.danger },
-  noticeInfo: { backgroundColor: semantic['info-bg'] },
+  noticeInfo: { backgroundColor: semantic['status-info-bg'], borderLeftColor: semantic['status-info-fg'] },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   wrap: { flexWrap: 'wrap' },
-  card: { gap: space[2], padding: space[4], borderRadius: radius.lg, borderWidth: 1, borderColor: semantic['border-card'], backgroundColor: colors.surface, ...shadow.sm },
-  cardSunken: { borderWidth: 0, backgroundColor: semantic['surface-sunken'], shadowOpacity: 0, elevation: 0 },
+  card: { gap: space[2], padding: space[4], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-strong'], backgroundColor: semantic.surface },
+  cardSunken: { borderWidth: 0, backgroundColor: semantic.well },
   cardFlush: { padding: 0, overflow: 'hidden' },
   cardPressed: { backgroundColor: semantic['surface-hover'] },
   spacer: { flex: 1, minHeight: space[6] },

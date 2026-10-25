@@ -44,7 +44,7 @@ export function CategoryDialog({ data, category, suggestion, onClose, onResolved
   const title = category ? t('editTitle', { name: category.nameEn }) : suggestion ? t('approveTitle', { name: suggestion.name }) : t('newTitle');
   return (
     <Dialog open onClose={onClose} title={title} width={640}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={run.isPending} onClick={submit}>{category ? t('save') : t('create')}</Button></>}>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button><Button disabled={run.isPending} onClick={submit}>{category ? t('save') : t('create')}</Button></>}>
       {!category ? (
         <>
           <Field label={t('f_root')} error={errors.root}>

@@ -199,7 +199,7 @@ describe('the run', () => {
     const { server, view } = await start({ url: '/stops/st-1/pickup' });
     const confirm = await screen.findByRole('button', { name: 'Confirm pickup' });
     expect(confirm.props.accessibilityState).toMatchObject({ disabled: true });
-    fireEvent(screen.getByTestId('sealed'), 'valueChange', true);
+    fireEvent.press(screen.getByTestId('sealed'));
     fireEvent.press(screen.getByRole('button', { name: 'Confirm pickup' }));
     await waitFor(() => expect(server.run!.stops.find((s) => s.id === 'st-1')!.state).toBe('done'));
     await waitFor(() => expect(view.getPathname()).toBe('/run'));
@@ -208,7 +208,7 @@ describe('the run', () => {
   it("shows the api's refusal when the shop hasn't packed", async () => {
     await start({ url: '/stops/st-1/pickup', fixture: { packed: false } });
     expect(await screen.findByText(/Wait until the shop has packed/)).toBeTruthy();
-    fireEvent(screen.getByTestId('sealed'), 'valueChange', true);
+    fireEvent.press(screen.getByTestId('sealed'));
     fireEvent.press(screen.getByRole('button', { name: 'Confirm pickup' }));
     expect(await screen.findByText("Couldn't save: This shop hasn't packed the order yet.")).toBeTruthy();
   });

@@ -11,6 +11,8 @@
 .nl-rg-dot[data-stage='pilot'] { background: var(--color-warning); }
 .nl-rg-dot[data-stage='live'] { background: var(--color-success); }
 .nl-rg-meta { font-size: var(--text-xs); color: var(--color-text-muted); }
+/* S-180: the Go-live link is a 24 px target (WCAG 2.5.8) */
+a.nl-rg-meta { display: inline-block; padding-block: var(--space-1); margin-block: calc(-1 * var(--space-1)); }
 .nl-rg-block { display: block; }
 .nl-rg-fields { display: flex; flex-direction: column; gap: var(--space-4); font-size: var(--text-sm); }
 .nl-rg-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: var(--space-4); }
@@ -45,5 +47,5 @@
 .nl-rg-actions { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; }
 .nl-rg-note { font-size: var(--text-xs); color: var(--color-text-muted); }
 .nl-rg-error { font-size: var(--text-xs); color: var(--color-danger); }
-.nl-rg-checklist { margin: 0; padding-left: 18px; }
+.nl-rg-checklist { margin: 0; padding-left: var(--space-4); }
 .nl-rg-checklist li[data-done='false'] { color: var(--color-danger); }

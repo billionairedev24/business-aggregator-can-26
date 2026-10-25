@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import { StyleSheet, View } from 'react-native';
 
-import { Logo, radius, semantic, space } from '@northline/mobile-kit';
+import { Logo, SIZE, radius, semantic, space } from '@northline/mobile-kit';
 
 import { useAuth } from '../../../src/auth';
 import { LanguageSwitch } from '../../../src/components/LanguageSwitch';
@@ -36,7 +36,7 @@ export default function AccountScreen() {
         <View style={styles.head}>
           <IconBadge name="truck" tone="dark" size={52} />
           <View style={styles.flex}>
-            <Logo size={26} portal={t('signIn.portal')} />
+            <Logo size={SIZE['header-mark'] - space[1.5]} portal={t('signIn.portal')} />
             {me.data?.vehicle ? <Body muted>{t('shift.vehicle', { vehicle: t(`vehicle.${me.data.vehicle}` as MessageKey) })}</Body> : null}
           </View>
         </View>
@@ -58,5 +58,5 @@ export default function AccountScreen() {
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
   flex: { flex: 1, minWidth: 0, gap: space[1] },
-  sunken: { padding: space[4], borderRadius: radius.lg, backgroundColor: semantic['surface-sunken'] },
+  sunken: { padding: space[4], borderRadius: radius.panel, backgroundColor: semantic.well },
 });

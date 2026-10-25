@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button, ChartCard, Dialog, Field, formatDate, TextArea, TextInput, useLocale } from '@northline/ui';
+import { Button, ChartCard, Dialog, ErrorState, Field, formatDate, Skeleton, TextArea, TextInput, useLocale } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import { sellerStandingQuery, useCloseCoaching, useLift, useStartCoaching, type StandingConsequence } from './standingApi';
@@ -8,7 +8,9 @@ import { useSellerStandingT, type SellerStandingKey } from './standingMessages';
 
 /**
  * S-156: the business's standing on its seller detail — the consequences in force (lift one with a reason: role
- * `suspend`), its appeals and the coaching plan (start or close one: role `decide`).
+ * `suspend`), its appeals and the coaching plan (start or close one: role `decide`). S-180: inside the record's Standing
+ * tab it is titled "Consequences and coaching" (it repeated the tab's name), and it shows its loading and error states
+ * (it was an empty panel until the answer came, and for good when it failed).
  */
 export function StandingCard({ businessId }: { businessId: string }) {
   const t = useSellerStandingT();
@@ -22,7 +24,7 @@ export function StandingCard({ businessId }: { businessId: string }) {
   const what = (c: StandingConsequence) => t(`k_${c.kind}` as SellerStandingKey);
   return (
     <ChartCard id="sl-standing" title={t('title')}>
-      {!s ? null : (
+      {q.isPending ? <Skeleton height={96} /> : q.isError ? <ErrorState message={t('loadError')} onRetry={() => void q.refetch()} /> : !s ? null : (
         <>
           {s.active.length ? (
             <ul className="nl-rows">
@@ -31,7 +33,7 @@ export function StandingCard({ businessId }: { businessId: string }) {
                   <span>{t('since', { what: what(c), by: c.cause === 'staff' ? t('by_staff') : t('by_rules'), date: formatDate(c.startedAt, locale) })}</span>
                   <span className="bo-muted"> — {c.reason}</span>
                   {c.appeal ? <span className="bo-muted"> · {t('appeal', { number: c.appeal.number, state: c.appeal.state })}</span> : null}
-                  {can('suspend') ? <> <Button variant="ghost" onClick={() => setLifting(c)}>{t('lift')}</Button></> : null}
+                  {can('suspend') ? <> <Button variant="tertiary" onClick={() => setLifting(c)}>{t('lift')}</Button></> : null}
                 </li>
               ))}
             </ul>
@@ -44,7 +46,7 @@ export function StandingCard({ businessId }: { businessId: string }) {
               {can('decide') ? (
                 <div className="nl-q-actions">
                   <Button variant="secondary" disabled={close.isPending} onClick={() => close.mutate({ planId: s.coaching!.id, completed: true })}>{t('complete')}</Button>
-                  <Button variant="ghost" disabled={close.isPending} onClick={() => close.mutate({ planId: s.coaching!.id, completed: false })}>{t('cancelPlan')}</Button>
+                  <Button variant="tertiary" disabled={close.isPending} onClick={() => close.mutate({ planId: s.coaching!.id, completed: false })}>{t('cancelPlan')}</Button>
                 </div>
               ) : null}
             </>

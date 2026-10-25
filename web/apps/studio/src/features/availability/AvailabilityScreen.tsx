@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChipTabs, formatDate, useLocale, BoHeader } from '@northline/ui';
+import { StatusTag, UnderlineTabs, formatDate, useLocale, BoHeader } from '@northline/ui';
 import { useMerchantId } from '../shell/api';
 import { hoursQuery, rulesQuery } from './api';
 import { HoursTab } from './HoursTab';
@@ -29,11 +29,11 @@ export function AvailabilityScreen({ returned, onReturnSeen }: { returned?: Cale
     <div className="nl-av">
       <BoHeader title={t('title')} sub={t('lede')} />
       <div className="nl-av-tabs">
-        <ChipTabs<AvTab> aria-label={t('tabs')} value={tab} onChange={v => { setTab(v); setState(s => (s === 'saved' ? 'clean' : s)); }}
+        <UnderlineTabs<AvTab> aria-label={t('tabs')} value={tab} tabId={v => `av-tab-${v}`} panelId={v => `av-panel-${v}`} onChange={v => { setTab(v); setState(s => (s === 'saved' ? 'clean' : s)); }}
           options={(['hours', 'rules', 'timeoff', 'sync'] as const).map(v => ({ value: v, label: t(`tab_${v}`) }))} />
-        <span className="nl-av-status" role="status">{status}</span>
+        <span className="nl-av-status" role="status"><StatusTag tone={state === 'dirty' ? 'warning' : state === 'saved' ? 'success' : 'neutral'}>{status}</StatusTag></span>
       </div>
-      <div role="tabpanel" aria-label={t(`tab_${tab}`)}>
+      <div role="tabpanel" id={`av-panel-${tab}`} aria-labelledby={`av-tab-${tab}`}>
         {tab === 'hours' && <HoursTab onState={change} />}
         {tab === 'rules' && <RulesTab onState={change} />}
         {tab === 'timeoff' && <TimeOffTab />}

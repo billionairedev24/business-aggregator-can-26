@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { colors, radius, space } from '@northline/mobile-kit';
+import { colors, LINE, radius, space, semantic } from '@northline/mobile-kit';
 
 import { usePhonePush } from '../account/phonePush';
 import { useI18n } from '../i18n';
@@ -60,6 +60,6 @@ export function PushPrompt({ what }: { what: 'order' | 'booking' }) {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: space[2], padding: space[3], borderRadius: radius.md, borderWidth: 1, borderColor: colors.accent, backgroundColor: colors.accent100 },
+  card: { gap: space[2], padding: space[3], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-strong'], backgroundColor: colors.accent100 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
 });

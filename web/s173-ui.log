@@ -1,0 +1,19 @@
+info Using tsconfig paths for react-docgen
+
+ RUN  v3.2.7 /tmp/claude-0/-home-claude-repo/bf185b81-5a0f-55ec-8f30-c3534bbf7899/scratchpad/wt-s173/web/packages/ui
+
+ ✓ |unit| src/regionLiterals.test.ts (2 tests) 324ms
+   ✓ region-neutral web code (S-134) > names no province, city or time zone outside the region model, tests and fixtures  320ms
+ ✓ |unit| src/server/error-page.test.ts (10 tests) 90ms
+ ✓ |unit| src/contrast.test.ts (419 tests) 61ms
+ ✓ |unit| src/i18n.test.ts (9 tests) 57ms
+ ✓ |unit| src/DataTable/report.test.ts (10 tests) 38ms
+ ✓ |unit| src/DataTable/model.test.ts (36 tests) 33ms
+ ✓ |unit| src/frenchCoverage.test.ts (1 test) 7151ms
+   ✓ French coverage (make i18n-check) > every customer-facing string has fr-CA  7148ms
+
+ Test Files  7 passed (7)
+      Tests  487 passed (487)
+   Start at  23:55:12
+   Duration  7.98s (transform 978ms, setup 0ms, collect 6.15s, tests 7.75s, environment 2ms, prepare 1.65s)
+

@@ -205,7 +205,7 @@ function Who({ slug, providers, areaLabel, draft, update, send, onBack }: {
       <h1 id="qt-who" className="nl-qt-title">{t('whoTitle')}</h1>
       <p className="nl-qt-lede">{t('whoLede')}</p>
       <p className="nl-qt-muted" aria-live="polite">{t('whoCount', { count: draft.providers.length })}{draft.providers.length >= MAX ? ` · ${t('whoMax')}` : ''}</p>
-      {providers.isPending ? <div aria-busy="true">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} height={64} style={{ marginTop: 8 }} />)}</div>
+      {providers.isPending ? <div className="nl-qt-skeleton" aria-busy="true">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} height={64} />)}</div>
         : providers.isError ? <ErrorState message={t('providersError')} onRetry={() => void providers.refetch()} />
           : items.length === 0
             ? <EmptyState action={<Link to="/services/$category" params={{ category: slug }} className="btn btn-secondary">{t('back')}</Link>}>{t('noProviders', { area: areaLabel })}</EmptyState>
@@ -221,7 +221,7 @@ function Who({ slug, providers, areaLabel, draft, update, send, onBack }: {
                       <button type="button" className="nl-qt-pick-row" aria-pressed={on} disabled={!on && draft.providers.length >= MAX} onClick={() => toggle(p.slug)}>
                         <span className="nl-qt-box" aria-hidden>{on ? '✓' : ''}</span>
                         <BrandMark name={p.name} color={p.brandColor} size={44} />
-                        <span className="nl-qt-pick-text"><span className="nl-qt-pick-name">{p.name} <span className="tag nl-qt-tier">{t(`tier_${p.tier === 'master' || p.tier === 'trusted' ? p.tier : 'registered'}`)}</span></span><span className="nl-qt-muted">{meta}</span></span>
+                        <span className="nl-qt-pick-text"><span className="nl-qt-pick-name">{p.name} <span className={`tag ${p.tier === 'master' || p.tier === 'trusted' ? 'tag-success' : 'tag-neutral'} nl-qt-tier`}>{t(`tier_${p.tier === 'master' || p.tier === 'trusted' ? p.tier : 'registered'}`)}</span></span><span className="nl-qt-muted">{meta}</span></span>
                       </button>
                     </li>
                   );

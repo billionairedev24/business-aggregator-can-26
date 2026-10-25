@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Dialog, EmptyState, ErrorState, Field, FormGrid, PageSkeleton, Select, Switch, TextInput, formatDate, useFormatters, useLocale, BoHeader } from '@northline/ui';
+import { Alert, Dialog, EmptyState, ErrorState, Field, FormGrid, PageSkeleton, SaveBar, Select, StatusTag, Switch, TextInput, formatDate, useFormatters, useLocale, BoHeader } from '@northline/ui';
 import { ApiError } from '../../lib/http';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { useShellT } from '../shell/messages';
@@ -56,7 +56,11 @@ function Loaded({ storefront: s, title, canEdit, role }: { storefront: Storefron
 
   return (
     <>
-      <BoHeader title={title} sub={<>{lede} <strong className="nl-pp-url">{s.url}</strong></>} actions={canEdit ? undefined : <span className="tag tag-neutral">{t('viewOnly', { role: roleName })}</span>} />
+      <BoHeader title={title} sub={<>{lede} <strong className="nl-pp-url">{s.url}</strong></>}
+        actions={<>
+          {canEdit ? null : <StatusTag tone="neutral">{t('viewOnly', { role: roleName })}</StatusTag>}
+          <button type="button" className="btn btn-secondary" onClick={() => setDialog('embed')}>{t('embedCode')}</button>
+        </>} />
       <PublicPageForm storefront={s} canEdit={canEdit}>
         <Field label={t('announcement')} error={announcementError}>
           <TextInput value={announcement} disabled={!canEdit} onChange={e => setAnnouncement(e.target.value)} onBlur={() => { if (announcement.length <= 120 && announcement !== (s.announcement ?? '')) update.mutate({ announcement }); }} />
@@ -65,12 +69,14 @@ function Loaded({ storefront: s, title, canEdit, role }: { storefront: Storefron
         {!approved ? <Alert tone="neutral">{t('notApproved')}</Alert> : null}
         {publish.isSuccess ? <Alert tone="info" role="status">{t('publishedOk')}</Alert> : null}
         {publishError ? <Alert tone="error">{publishError}</Alert> : null}
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {canEdit ? <button type="button" className="btn btn-primary" disabled={!approved || publish.isPending} onClick={() => publish.mutate()}>{publish.isPending ? t('publishing') : t('publish')}</button> : null}
-          <button type="button" className="btn btn-secondary" onClick={() => setDialog('preview')}>{t('previewAsCustomer')}</button>
-          <button type="button" className="btn btn-ghost" onClick={() => setDialog('embed')}>{t('embedCode')}</button>
-        </div>
       </PublicPageForm>
+      {/* S-176: the page saves as it changes; the bar says where it stands and publishes it */}
+      <SaveBar label={t('saveBarLabel')}
+        status={s.publishedAt ? <StatusTag tone="success">{t('pubLive', { date: date(s.publishedAt) })}</StatusTag> : <StatusTag tone="warning">{t('pubDraft')}</StatusTag>}
+        note={!approved ? t('pubNeedsApproval') : t('pubNote')}>
+        <button type="button" className="btn btn-secondary" onClick={() => setDialog('preview')}>{t('previewAsCustomer')}</button>
+        {canEdit ? <button type="button" className="btn btn-primary" disabled={!approved || publish.isPending} onClick={() => publish.mutate()}>{publish.isPending ? t('publishing') : s.publishedAt ? t('republish') : t('publish')}</button> : null}
+      </SaveBar>
       <Dialog open={dialog === 'preview'} onClose={() => setDialog(null)} title={t('previewAsCustomer')} width={760} actions={<button type="button" className="btn btn-secondary" onClick={() => setDialog(null)}>{t('close')}</button>}>
         <StorefrontPreview storefront={s} device="web" />
       </Dialog>
@@ -103,7 +109,7 @@ function RewardField({ merchantId, canEdit }: { merchantId: string; canEdit: boo
   const day = (d: string) => formatDate(`${d}T12:00:00Z`, locale, 'full', 'UTC');
   const q = useQuery(rewardQuery(merchantId));
   const save = useSaveReward(merchantId);
-  const { money, number } = useFormatters();
+  const { price, number } = useFormatters();
   const [draft, setDraft] = useState<{ multiplier: 2 | 3; label: string; endsOn: string; budget: string } | null>(null);
   const current: Reward | null | undefined = q.data;
   useEffect(() => {
@@ -120,10 +126,10 @@ function RewardField({ merchantId, canEdit }: { merchantId: string; canEdit: boo
     : current.active ? t('rewardEnded', { date: day(current.endsOn) }) : t('rewardStopped');
   return (
     <div className="nl-field" role="group" aria-labelledby="reward-label">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+      <div className="nl-pp-reward-head">
         <span className="nl-label" id="reward-label">{t('reward')}</span>
-        <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-          <span className="nl-small nl-muted" role="status">{status}</span>
+        <span className="nl-pp-reward-state">
+          <StatusTag tone={current?.running ? 'success' : current?.exhausted ? 'warning' : 'neutral'}><span role="status">{status}</span></StatusTag>
           <Switch checked={!!current?.active} disabled={!canEdit || save.isPending} label={t('rewardOn')} onChange={on => submit(on)} />
         </span>
       </div>
@@ -143,8 +149,8 @@ function RewardField({ merchantId, canEdit }: { merchantId: string; canEdit: boo
         </Field>
       </FormGrid>
       {current && current.budgetCents != null ? (
-        <div className="nl-small" role="status" aria-label={t('rewardSpentLabel')}>
-          {t('rewardSpent', { spent: money(current.spentCents), budget: money(current.budgetCents), points: number(current.pointsCredited), sales: current.salesCredited })}
+        <div className="nl-pp-small" role="status" aria-label={t('rewardSpentLabel')}>
+          {t('rewardSpent', { spent: price(current.spentCents), budget: price(current.budgetCents), points: number(current.pointsCredited), sales: current.salesCredited })}
         </div>
       ) : null}
       <div className="nl-hint">{t('rewardNote')}{canEdit ? '' : ` ${t('rewardOwnerOnly')}`}</div>

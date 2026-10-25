@@ -1,5 +1,5 @@
-/* Consumer tiles (ShopTiles) in AfroTransact's card language (Shop:313–332, ProductCard.module.css): a product card
-   (border, radius sm, white, the image padded on the sunken surface), a shop card and a department tile. Tokens only. */
+/* Consumer tiles (ShopTiles) in the E-15 Plainsight language: a product tile (product on white in the grey well, flat),
+   a shop card and a department tile (white, a hairline edge, 4 px corners). Tokens only. */
 .nl-tile-grid { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; }
 .nl-tile-grid > li { min-width: 0; display: flex; }
 .nl-tile-grid > li > * { flex: 1; }
@@ -8,42 +8,41 @@
 @media (max-width: 599.98px) { .nl-tile-grid-200 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); } }
 .nl-tile-grid-240 { grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: var(--space-3); }
 
-/* product tile: the photo full-bleed on top (1:1), a soft card with a visible edge (WCAG 1.4.11, border-card) */
-.nl-product-tile { display: flex; flex-direction: column; color: var(--color-text); text-decoration: none; background: var(--color-surface); border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); overflow: hidden; min-width: 0; box-shadow: var(--shadow-sm); transition: box-shadow var(--duration) var(--ease); }
-.nl-product-tile:hover { color: var(--color-text); text-decoration: none; box-shadow: var(--shadow-md); }
+/* product tile: product on white — the photo in a 1:1 grey well with a 12 px inset, the text flat under it */
+.nl-product-tile { display: flex; flex-direction: column; color: var(--color-text); text-decoration: none; background: var(--color-surface); min-width: 0; }
+.nl-product-tile:hover { color: var(--color-text); text-decoration: none; }
 .nl-product-tile:hover .nl-product-tile-name { color: var(--color-link); text-decoration: underline; }
 .nl-product-tile:focus-visible, .nl-shop-tile:focus-visible, .nl-dept-tile:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
-.nl-product-tile-media { display: block; position: relative; aspect-ratio: 1 / 1; margin: 0; background: var(--color-surface-sunken); overflow: hidden; container-type: inline-size; }
-.nl-product-tile-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.nl-product-tile-media { display: block; position: relative; aspect-ratio: 1 / 1; margin: 0; background: var(--color-well); border-radius: var(--radius-panel); overflow: hidden; container-type: inline-size; }
+.nl-product-tile-media img { position: absolute; inset: var(--density-well-inset); width: calc(100% - 2 * var(--density-well-inset)); height: calc(100% - 2 * var(--density-well-inset)); object-fit: cover; display: block; border-radius: var(--radius-image); mix-blend-mode: multiply; }
 .nl-product-tile-media .nl-tile-tag { position: absolute; left: var(--space-2); top: var(--space-2); z-index: 1; }
-.nl-product-tile-row { padding: var(--space-3) var(--space-4) 0; display: flex; flex-direction: column; gap: var(--space-1); }
-.nl-product-tile-name { min-width: 0; overflow-wrap: anywhere; font-size: var(--text-base); font-weight: var(--weight-semibold); line-height: var(--leading-tight); }
-.nl-product-tile-price { white-space: nowrap; font-size: var(--text-lg); font-weight: var(--weight-bold); color: var(--color-price); }
-.nl-product-tile-meta { padding: var(--space-1) var(--space-4) var(--space-4); font-size: var(--text-sm); color: var(--color-text-muted); overflow-wrap: anywhere; }
+.nl-product-tile-row { padding: var(--density-card-pad) 0 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.nl-product-tile-name { min-width: 0; overflow-wrap: anywhere; font-size: var(--type-card-title); font-weight: var(--weight-medium); line-height: 1.3; }
+.nl-product-tile-price { white-space: nowrap; font-size: var(--type-price); font-weight: var(--weight-bold); color: var(--color-price); font-variant-numeric: tabular-nums; }
+.nl-product-tile-meta { padding: var(--space-1) 0 var(--space-2); font-size: var(--type-meta); color: var(--color-text-subtle); overflow-wrap: anywhere; }
 @media (max-width: 599.98px) {
-  .nl-product-tile-row { padding: var(--space-2) var(--space-3) 0; }
-  .nl-product-tile-meta { padding: var(--space-1) var(--space-3) var(--space-3); }
-  .nl-product-tile-name { font-size: var(--text-md); }
+  .nl-product-tile-row { padding: var(--space-2) 0 0; }
+  .nl-product-tile-meta { padding: var(--space-1) 0 var(--space-2); }
 }
 
 /* shop card: the mark | the name (two lines at most), its meta, the tags under them — a white card with a visible edge */
-.nl-shop-tile { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: var(--space-3); align-items: center; padding: var(--space-3) var(--space-4); min-height: 76px; background: var(--color-surface); border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); color: var(--color-text); text-decoration: none; min-width: 0; box-sizing: border-box; box-shadow: var(--shadow-sm); }
-.nl-shop-tile:hover { box-shadow: var(--shadow-md); color: var(--color-text); text-decoration: none; }
-.nl-shop-tile-mark { width: 52px; height: 52px; flex: none; border-radius: var(--radius-md); display: grid; place-items: center; font-family: var(--font-display); font-weight: var(--weight-semibold); font-size: var(--text-2xl); color: var(--color-text-inverse); }
-.nl-shop-tile-round { border-radius: 50%; }
-.nl-shop-tile-photo { overflow: hidden; background: var(--color-surface-sunken); }
+.nl-shop-tile { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: var(--space-3); align-items: center; padding: var(--space-3) var(--space-4); min-height: 76px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-panel); color: var(--color-text); text-decoration: none; min-width: 0; box-sizing: border-box; }
+.nl-shop-tile:hover { border-color: var(--color-border-strong); color: var(--color-text); text-decoration: none; }
+.nl-shop-tile-mark { width: 52px; height: 52px; flex: none; border-radius: var(--radius-panel); display: grid; place-items: center; font-family: var(--font-sans); font-weight: var(--weight-bold); font-size: var(--text-2xl); color: var(--color-text-inverse); }
+.nl-shop-tile-round { border-radius: var(--radius-round); }
+.nl-shop-tile-photo { overflow: hidden; background: var(--color-well); }
 .nl-shop-tile-photo > img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .nl-shop-tile-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .nl-shop-tile-title { font-weight: var(--weight-bold); line-height: var(--leading-tight); overflow-wrap: break-word; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.nl-shop-tile-meta { font-size: var(--text-sm); color: var(--color-text-muted); overflow-wrap: break-word; }
+.nl-shop-tile-meta { font-size: var(--type-meta); color: var(--color-text-muted); overflow-wrap: break-word; }
 .nl-shop-tile-tags { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: var(--space-1); }
 .nl-shop-tile-tags .tag { white-space: normal; }
 
 /* department tile: a white card with a visible edge, the name in the display face */
-.nl-dept-tile { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; padding: var(--space-4); min-height: 96px; background: var(--color-surface); border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); color: var(--color-text); text-decoration: none; box-sizing: border-box; min-width: 0; box-shadow: var(--shadow-sm); background-image: linear-gradient(135deg, var(--color-surface-sunken), var(--color-surface) 60%); }
-.nl-dept-tile:hover { box-shadow: var(--shadow-md); color: var(--color-text); text-decoration: none; }
-.nl-dept-tile-name { font-family: var(--font-heading); font-weight: var(--weight-semibold); font-size: var(--text-lg); overflow-wrap: anywhere; }
-.nl-dept-tile-count { font-size: var(--text-sm); color: var(--color-text-muted); }
+.nl-dept-tile { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; padding: var(--space-4); min-height: 96px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-panel); color: var(--color-text); text-decoration: none; box-sizing: border-box; min-width: 0; }
+.nl-dept-tile:hover { border-color: var(--color-border-strong); color: var(--color-text); text-decoration: none; }
+.nl-dept-tile-name { font-family: var(--font-sans); font-weight: var(--weight-bold); font-size: var(--type-sub); overflow-wrap: anywhere; }
+.nl-dept-tile-count { font-size: var(--type-meta); color: var(--color-text-muted); }
 
 /* Six token swatches for shops without a logo: each is a colour the contrast gate holds to 4.5:1 against white, so the
    white initial on it is readable too. */
@@ -53,3 +52,29 @@
 .nl-swatch-4 { background: var(--color-text-muted); }
 .nl-swatch-5 { background: var(--color-success); }
 .nl-swatch-6 { background: var(--color-text); }
+
+/* home tiles (PanelTile, PictureGrid; E-15 design/revamp/a.html): white panels with a hairline edge, a bold title,
+   two-by-two square pictures with captions, "See all …" at the foot; four a row, two on phones */
+.nl-panel-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3-5); }
+.nl-panel-tile { display: flex; flex-direction: column; gap: var(--space-2-5); min-width: 0; padding: var(--space-3-5); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-panel); box-sizing: border-box; }
+.nl-panel-tile-title { margin: 0; font-family: var(--font-sans); font-size: var(--type-sub); font-weight: var(--weight-bold); line-height: 1.25; letter-spacing: -0.005em; }
+.nl-panel-tile-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.nl-panel-tile-more { align-self: flex-start; display: inline-flex; align-items: center; gap: 2px; min-height: var(--size-touch); margin-block: calc(-1 * var(--space-2-5)) calc(-1 * var(--space-2)); font-size: var(--type-card-title); font-weight: var(--weight-semibold); color: var(--color-link); text-decoration: none; }
+.nl-panel-tile-more:hover { text-decoration: underline; }
+.nl-picture-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2-5) var(--space-3); }
+.nl-picture-grid li { min-width: 0; display: flex; }
+.nl-picture-grid-link { flex: 1; display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; color: var(--color-text-muted); text-decoration: none; }
+.nl-picture-grid-link:hover { color: var(--color-text); text-decoration: none; }
+.nl-picture-grid-link:hover .nl-picture-grid-label { text-decoration: underline; }
+.nl-picture-grid-link:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-image); }
+.nl-picture-grid-pic { position: relative; display: block; aspect-ratio: 1 / 1; border-radius: var(--radius-image); overflow: hidden; background: var(--color-well); }
+.nl-picture-grid-pic > * { position: absolute; inset: 0; }
+/* S-180: two lines before an ellipsis ("Mécanicien mobile", "Fruits et légumes" were cut on phones) */
+.nl-picture-grid-label { font-size: var(--type-meta); line-height: 1.25; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; }
+@media (max-width: 899.98px) { .nl-panel-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2-5); } }
+@media (max-width: 599.98px) {
+  .nl-panel-tile { padding: var(--space-3); gap: var(--space-2); }
+  .nl-panel-tile-title { font-size: var(--type-card-title); }
+  .nl-picture-grid { gap: var(--space-1-5); }
+  .nl-picture-grid-label { font-size: var(--type-caps); }
+}

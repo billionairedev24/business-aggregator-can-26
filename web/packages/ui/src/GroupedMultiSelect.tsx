@@ -142,7 +142,7 @@ export function GroupedMultiSelect({ groups, value, onChange, suggestions = [], 
                         onClick={() => !disabled && toggle(it.id)}
                       >
                         <span className="nl-gms-box" data-on={on} aria-hidden>{on ? <Check size={11} weight="bold" /> : null}</span>
-                        <span style={{ flex: 1 }}>{it.name}</span>
+                        <span className="nl-gms-name">{it.name}</span>
                         {it.badge ? <span className="tag tag-outline nl-gms-badge">{it.badge}</span> : null}
                       </div>
                     );

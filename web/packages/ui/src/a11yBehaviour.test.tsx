@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Bank, House } from '@phosphor-icons/react';
-import { AppShell, Button, ChipTabs, codeValue, DataTable, Dialog, I18nProvider, LineChart, Menu, Meter, OptionCard, RadioGroup, SiteHeader, StackedBarChart, StepBars, UnderlineTabs, type Locale } from './index';
+import { ActionCard, ActionGrid, AppShell, Button, ShellSearch, ChipTabs, codeValue, DataTable, Dialog, I18nProvider, LineChart, Menu, Meter, OptionCard, RadioGroup, SiteHeader, StackedBarChart, StepBars, UnderlineTabs, type Locale } from './index';
 import { CAN, listingColumns, listings } from './DataTable/DataTable.fixtures';
 
 const wrap = (ui: React.ReactNode, locale: Locale = 'en') => render(<I18nProvider initial={locale}>{ui}</I18nProvider>);
@@ -45,6 +45,17 @@ describe('Dialog focus', () => {
     await user.tab();
     expect(screen.getByRole('dialog', { name: 'Notice' })).toHaveFocus();
   });
+
+  it('brings focus that lands behind the open dialog back into it (S-180: the phone filter sheet let Tab reach the header)', async () => {
+    const user = userEvent.setup();
+    wrap(<DialogDemo withActions />);
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+    (document.activeElement as HTMLElement).blur();
+    screen.getByRole('button', { name: 'Open', hidden: true }).focus();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('button', { name: 'Open' })).toHaveFocus();
+  });
 });
 
 describe('Menu keys', () => {
@@ -66,7 +77,7 @@ describe('Menu keys', () => {
 const shell = (
   <AppShell brand={<span>Northline</span>} pinned={[{ key: 'home', label: 'Dashboard', icon: House, href: '/' }]}
     groups={[{ label: 'Finance', icon: Bank, items: [{ key: 'payouts', label: 'Payouts', icon: Bank, href: '/payouts' }] }]} currentKey="home" onNavigate={() => {}}>
-    <h1>Dashboard</h1>
+    <h1>Dashboard</h1><button type="button">Page action</button>
   </AppShell>
 );
 
@@ -88,19 +99,72 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'Passer au contenu' })).toBeInTheDocument();
   });
 
-  it('below 900 px the menu is a modal sheet: focus in, Tab kept inside, Escape returns focus to the menu button', async () => {
+  it('below 768 px the navigation is a disclosure menu: the button says whether it is open, Escape closes it and focus returns', async () => {
     const mm = narrowScreen();
     const user = userEvent.setup();
     wrap(shell);
     const opener = screen.getByRole('button', { name: 'Open menu' });
+    expect(opener).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('navigation', { name: 'Main navigation' })).toBeNull(); // hidden until opened
     await user.click(opener);
-    const sheet = screen.getByRole('dialog', { name: 'Main navigation' });
-    expect(within(sheet).getByRole('button', { name: 'Close menu' })).toHaveFocus();
-    for (let i = 0; i < 6; i++) { await user.tab(); expect(sheet.contains(document.activeElement)).toBe(true); }
+    expect(opener).toHaveAttribute('aria-expanded', 'true');
+    expect(opener).toHaveAccessibleName('Close menu');
+    const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+    expect(document.getElementById(opener.getAttribute('aria-controls')!)).toContainElement(nav);
+    expect(screen.queryByRole('dialog')).toBeNull(); // not modal
+    await user.tab();
+    expect(within(nav).getByRole('link', { name: 'Dashboard' })).toHaveFocus();
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Main navigation' })).toBeNull();
     expect(opener).toHaveFocus();
+    // S-180: Tab past the panel's last link closes it (focus never sits on the page hidden under the panel)
+    await user.click(opener);
+    const links = within(screen.getByRole('navigation', { name: 'Main navigation' })).getAllByRole('link');
+    links[links.length - 1]!.focus();
+    await user.tab();
+    expect(screen.queryByRole('navigation', { name: 'Main navigation' })).toBeNull();
+    expect(opener).toHaveAttribute('aria-expanded', 'false');
     mm.mockRestore();
+  });
+});
+
+describe('ShellSearch', () => {
+  const scopes = [{ key: 'orders', label: (q: string) => `Orders matching “${q}”` }, { key: 'products', label: (q: string) => `Products matching “${q}”` }];
+  it('"/" focuses it from anywhere outside a field; typing offers where to search, ↓ and Enter go there', async () => {
+    const onSearch = vi.fn();
+    const user = userEvent.setup();
+    wrap(<><button type="button">Elsewhere</button><ShellSearch label="Search the Studio" placeholder="Search orders" scopes={scopes} onSearch={onSearch} /></>);
+    const box = screen.getByRole('combobox', { name: 'Search the Studio' });
+    // jsdom has no layout: make the field count as on screen
+    Object.defineProperty(box, 'offsetParent', { get: () => document.body });
+    await user.click(screen.getByRole('button', { name: 'Elsewhere' }));
+    await user.keyboard('/');
+    expect(box).toHaveFocus();
+    await user.keyboard('brake');
+    expect(box).toHaveAttribute('aria-expanded', 'true');
+    const options = within(screen.getByRole('listbox')).getAllByRole('option');
+    expect(options.map(o => o.textContent)).toEqual(['Orders matching “brake”', 'Products matching “brake”']);
+    expect(box).toHaveAttribute('aria-activedescendant', options[0]!.id);
+    await user.keyboard('{ArrowDown}');
+    expect(box).toHaveAttribute('aria-activedescendant', options[1]!.id);
+    await user.keyboard('{Enter}');
+    expect(onSearch).toHaveBeenCalledWith('brake', 'products');
+    expect(screen.queryByRole('listbox')).toBeNull();
+  });
+  it('reads French', () => {
+    wrap(<ShellSearch label="Rechercher" placeholder="…" scopes={scopes} onSearch={() => {}} />, 'fr');
+    expect(screen.getByTitle('Appuyez sur / pour rechercher')).toBeInTheDocument();
+  });
+});
+
+describe('ActionCard', () => {
+  it('names its urgency for screen readers and describes its one button with the job', () => {
+    wrap(<ActionGrid title="Needs you now" count={1}><ActionCard tone="danger" icon={House} title="1 issue to resolve" detail="NL-48188 · wrong item" action={{ label: 'Resolve', href: '/refunds' }} primary /></ActionGrid>);
+    const region = screen.getByRole('region', { name: /Needs you now/ });
+    expect(within(region).getByRole('heading', { level: 3 })).toHaveTextContent('Urgent: 1 issue to resolve');
+    const link = within(region).getByRole('link', { name: 'Resolve' });
+    expect(link).toHaveAccessibleDescription('Urgent: 1 issue to resolve');
+    expect(link).toHaveClass('btn-primary');
   });
 });
 
@@ -113,7 +177,7 @@ describe('Meter and charts', () => {
 
   it('charts carry their numbers as a table for screen readers', () => {
     wrap(<>
-      <StackedBarChart title="Net earnings" format={n => `$${n}`} series={[{ key: 'a', label: 'Services', color: 'var(--color-accent)' }, { key: 'b', label: 'Tips', color: 'var(--color-highlight)' }]}
+      <StackedBarChart title="Net earnings" format={n => `$${n}`} series={[{ key: 'a', label: 'Services', color: 'var(--color-selected)' }, { key: 'b', label: 'Tips', color: 'var(--color-border-control)' }]}
         data={[{ label: 'W1', values: { a: 400, b: 20 } }]} />
       <LineChart title="Weekly gross" current={[3, 5]} previous={[2, 4]} labels={['Mon', 'Tue']} />
     </>);

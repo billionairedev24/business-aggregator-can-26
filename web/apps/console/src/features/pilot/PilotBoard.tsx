@@ -57,7 +57,7 @@ export function PilotBoard() {
     stage: t(`s_${r.stage}` as PilotKey), next: actionText(r.next, t, when) + (r.next?.owner ? ` · ${t(`o_${r.next.owner}` as PilotKey)}` : ''),
     owner: r.ownerName ?? t('nobody'), blocker: r.blocked ? (r.blocker ?? t('blockedTag')) : '', row: r,
   }));
-  const tones = (r: TableRow): Partial<Record<keyof TableRow, DataTableTone>> => ({ stage: r.row.stage === 'live' ? 'tag-accent' : r.row.blocked ? 'tag-accent-2' : 'tag-neutral' });
+  const tones = (r: TableRow): Partial<Record<keyof TableRow, DataTableTone>> => ({ stage: r.row.stage === 'live' ? 'status-success' : r.row.blocked ? 'status-danger' : 'status-neutral' });
   const columns: DataTableColumn<TableRow>[] = [
     { key: 'name', label: t('colBusiness'), sub: 'sub', subLabel: t('colMarket'), primary: true },
     { key: 'type', label: t('colType'), filter: 'facet' },
@@ -81,7 +81,7 @@ export function PilotBoard() {
       <h1 className="nl-q-title">{t('title', { n: b.items.length, live: b.live, blocked: b.blocked })}</h1>
       <p className="nl-q-lede">{t('lede')}</p>
       <ul className="nl-q-chips" aria-label={t('colStage')}>
-        {Object.entries(b.stages).map(([k, n]) => <li key={k}><Tag tone={k === 'live' ? 'accent' : 'neutral'}>{`${t(`s_${k}` as PilotKey)} · ${n}`}</Tag></li>)}
+        {Object.entries(b.stages).map(([k, n]) => <li key={k}><Tag tone={k === 'live' ? 'success' : 'neutral'}>{`${t(`s_${k}` as PilotKey)} · ${n}`}</Tag></li>)}
       </ul>
       <div className="nl-q-actions">
         {can('onboard') ? <Button onClick={() => setInviting(true)}>{t('invite')}</Button> : null}
@@ -89,7 +89,7 @@ export function PilotBoard() {
         <a className="btn btn-secondary" href={exportUrl(search.market)} download>{t('exportCsv')}</a>
       </div>
       {notice ? <p role="status" className="nl-q-note">{notice}</p> : null}
-      <DataTable<TableRow> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
+      <DataTable<TableRow> dense entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} rowTones={tones}
         can={{ create: false, update: false, delete: false }} roleName={roleName} emptyText={t('empty')} openLabel={t('open')} onOpen={r => go({ pilot: r.id })} />
       {search.pilot ? <PilotDrawer id={search.pilot} canAct={can('onboard')} onClose={() => go({ pilot: undefined })} onNotice={setNotice} /> : null}
       {enrolling ? <EnrolDialog markets={b.markets} market={search.market} onClose={() => setEnrolling(false)}
@@ -121,13 +121,13 @@ function PilotDrawer({ id, canAct, onClose, onNotice }: { id: string; canAct: bo
       {detail.isPending ? <PageSkeleton kpis={0} rows={5} />
         : detail.isError || !d ? <ErrorState message={t('loadError')} onRetry={() => void detail.refetch()} />
           : <>
-            <p>{t(`t_${d.row.businessType}` as PilotKey)}{d.row.city ? ` · ${d.row.city}` : ''} · <Tag tone={d.row.stage === 'live' ? 'accent' : 'neutral'}>{t(`s_${d.row.stage}` as PilotKey)}</Tag></p>
+            <p>{t(`t_${d.row.businessType}` as PilotKey)}{d.row.city ? ` · ${d.row.city}` : ''} · <Tag tone={d.row.stage === 'live' ? 'success' : 'neutral'}>{t(`s_${d.row.stage}` as PilotKey)}</Tag></p>
             <h3 className="nl-q-h">{t('checklist')}</h3>
             <ol className="nl-q-list">
               {d.row.checklist.map(s => (
                 <li key={s.key} className="nl-q-row">
                   <span>{t(`s_${s.key}` as PilotKey)}{s.action && s.state !== 'done' ? <><br /><span className="nl-q-note">{actionText(s, t, when)}{s.owner ? ` · ${t(`o_${s.owner}` as PilotKey)}` : ''}</span></> : null}</span>
-                  <Tag tone={s.state === 'done' ? 'accent' : s.state === 'blocked' ? 'accent-2' : 'neutral'}>{t(`state_${s.state}` as PilotKey)}</Tag>
+                  <Tag tone={s.state === 'done' ? 'success' : s.state === 'blocked' ? 'danger' : 'neutral'}>{t(`state_${s.state}` as PilotKey)}</Tag>
                 </li>
               ))}
             </ol>
@@ -136,7 +136,7 @@ function PilotDrawer({ id, canAct, onClose, onNotice }: { id: string; canAct: bo
             <p>{d.row.ownerName ?? t('nobody')}</p>
             {canAct ? <div className="nl-q-actions">
               {me ? <Button variant="secondary" disabled={owner.isPending} onClick={() => owner.mutate({ id, ownerId: me.userId })}>{t('assignMe')}</Button> : null}
-              {d.row.ownerId ? <Button variant="ghost" disabled={owner.isPending} onClick={() => owner.mutate({ id })}>{t('unassign')}</Button> : null}
+              {d.row.ownerId ? <Button variant="tertiary" disabled={owner.isPending} onClick={() => owner.mutate({ id })}>{t('unassign')}</Button> : null}
             </div> : null}
 
             <h3 className="nl-q-h">{t('blockerTitle')}</h3>
@@ -146,7 +146,7 @@ function PilotDrawer({ id, canAct, onClose, onNotice }: { id: string; canAct: bo
               <Field label={t('blockerOwner')}><Select value={who} onChange={e => setWho(e.target.value)} options={BLOCKER_OWNERS.map(o => ({ value: o, label: t(`o_${o}` as PilotKey) }))} /></Field>
               <div className="nl-q-actions">
                 <Button variant="secondary" disabled={blocker.isPending || !text.trim()} onClick={() => blocker.mutate({ id, text: text.trim(), owner: who }, { onSuccess: () => setText('') })}>{t('saveBlocker')}</Button>
-                {d.row.blocker ? <Button variant="ghost" disabled={blocker.isPending} onClick={() => blocker.mutate({ id })}>{t('clearBlocker')}</Button> : null}
+                {d.row.blocker ? <Button variant="tertiary" disabled={blocker.isPending} onClick={() => blocker.mutate({ id })}>{t('clearBlocker')}</Button> : null}
               </div>
             </> : null}
 
@@ -166,7 +166,7 @@ function PilotDrawer({ id, canAct, onClose, onNotice }: { id: string; canAct: bo
                 onClick={() => reinvite.mutate({ id }, { onSuccess: r => onNotice(t('linkSent', { link: r.link })) })}>{t('resend')}</Button></div> : null}
             </> : null}
             {errorText ? <p role="alert" className="nl-q-error">{errorText}</p> : null}
-            <div className="nl-q-actions"><Button variant="ghost" onClick={onClose}>{t('closePanel')}</Button></div>
+            <div className="nl-q-actions"><Button variant="tertiary" onClick={onClose}>{t('closePanel')}</Button></div>
           </>}
     </Drawer>
   );
@@ -200,7 +200,7 @@ function Visits({ d, canAct }: { d: Detail; canAct: boolean }) {
               {canAct && v.status === 'scheduled' ? <div className="nl-q-actions">
                 <FileButton accept="image/jpeg,image/png" pending={photo.isPending} onFile={file => photo.mutate({ id, visitId: v.id, file })}>{t('addPhoto')}</FileButton>
                 <Button variant="secondary" onClick={() => setRecording(v)}>{t('record')}</Button>
-                <Button variant="ghost" disabled={cancel.isPending} onClick={() => cancel.mutate({ id, visitId: v.id })}>{t('cancelVisit')}</Button>
+                <Button variant="tertiary" disabled={cancel.isPending} onClick={() => cancel.mutate({ id, visitId: v.id })}>{t('cancelVisit')}</Button>
               </div> : null}
             </li>
           ))}
@@ -229,7 +229,7 @@ function OutcomeDialog({ pilotId, visit, items, onClose }: { pilotId: string; vi
   const other = save.error && !(save.error instanceof ValidationError) ? save.error.message : undefined;
   return (
     <Dialog open onClose={onClose} title={t('outcomeTitle')}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
         <Button disabled={save.isPending} onClick={() => save.mutate({ id: pilotId, visitId: visit.id, outcome, checklist: marks, note: note.trim() || undefined }, { onSuccess: onClose })}>{t('save')}</Button></>}>
       {items.map(i => (
         <Field key={i} label={t(`i_${i}` as PilotKey)}>
@@ -260,7 +260,7 @@ function InviteDialog({ markets, market, onClose, onSent }: { markets: Market[];
   const other = invite.error && !(invite.error instanceof ValidationError) ? invite.error.message : undefined;
   return (
     <Dialog open onClose={onClose} title={t('inviteTitle')}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      actions={<><Button variant="tertiary" onClick={onClose}>{t('cancel')}</Button>
         <Button disabled={invite.isPending} onClick={() => invite.mutate({ marketId, businessType: type, label, email, language, ownerId: me?.userId },
           { onSuccess: r => onSent(r.link, r.detail.row.id) })}>{t('sendInvite')}</Button></>}>
       <Field label={t('inviteMarket')} error={errors.marketId}><Select value={marketId} onChange={e => setMarketId(e.target.value)} options={markets.map(m => ({ value: m.id, label: `${m.city} · ${m.province}` }))} /></Field>

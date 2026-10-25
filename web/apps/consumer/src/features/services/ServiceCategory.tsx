@@ -32,7 +32,7 @@ export function CategoryView({ category: c }: { category: Category }) {
         <div className="nl-band-copy">
           <h1 id="svc-cat-title" className="nl-band-title" lang={name.lang}>{name.text}</h1>
           <div className="nl-svc-tags">
-            <Tag tone="accent">{dyn(t, keys.kind)}</Tag>
+            <Tag tone="neutral">{dyn(t, keys.kind)}</Tag>
             <Tag tone="neutral">{dyn(t, keys.where)}</Tag>
             <Tag tone="neutral">{t('verifiedProviders', { count: c.providers })}</Tag>
             {c.regulatedRegistry ? <Tag tone="success">{t('licenceChecked', { registry: c.regulatedRegistry })}</Tag> : null}
@@ -90,12 +90,12 @@ export function ServiceCategorySkeleton() {
   return (
     <div className="nl-page nl-svc" aria-busy="true">
       <Skeleton width={220} height={12} />
-      <Skeleton height={260} radius="var(--radius-lg)" style={{ marginTop: 16 }} />
+      <div className="nl-band"><div className="nl-band-copy"><Skeleton width={220} height={28} /><Skeleton width="80%" height={14} /></div><span className="nl-band-pic" /></div>
       <div className="nl-svc-split">
-        <div className="nl-svc-main">
-          {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} height={44} style={{ marginTop: 10, maxWidth: 640 }} />)}
+        <div className="nl-svc-main nl-svc-skel-rows">
+          {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} height={44} />)}
         </div>
-        <Skeleton height={220} radius="var(--radius-md)" />
+        <Skeleton height={220} radius="var(--radius-panel)" />
       </div>
     </div>
   );

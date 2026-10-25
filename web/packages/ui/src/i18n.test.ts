@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { addDays, configurePlatformTimeZone, messagesFor, firstDayOfWeek, formatDate, formatDay, formatZonedHours, platformTimeZone, setTimeZone, timeZone, weekStartOf, zonedInstant } from './i18n';
+import { addDays, formatCompactMoney, configurePlatformTimeZone, messagesFor, firstDayOfWeek, formatDate, formatDay, formatZonedHours, platformTimeZone, setTimeZone, timeZone, unitPriceOf, weekStartOf, zonedInstant } from './i18n';
 
 /** S-134: no zone in code — the platform zone is configured and the market's or merchant's zone is set on top. */
 describe('time zones', () => {
@@ -65,5 +65,32 @@ describe('full stops after values', () => {
     expect(messagesFor(dict, 'en')('held', { time: '23:27' })).toBe('Held for you until 23:27.');
     expect(messagesFor(dict, 'en')('both', { a: '9 a.m.', b: 'noon' })).toBe('From 9 a.m. To noon.');
     expect(messagesFor(dict, 'fr')('held', { time: '23 h 27' })).toBe('Retenue jusqu’à 23 h 27.');
+  });
+});
+
+describe('compact money (S-177: back-office figures)', () => {
+  it('reads three significant figures, the price format under $1,000', () => {
+    expect(formatCompactMoney(184_000_000, 'en')).toBe('$1.84M');
+    expect(formatCompactMoney(21_200_000, 'en')).toBe('$212k');
+    expect(formatCompactMoney(2_410_000, 'en')).toBe('$24.1k');
+    expect(formatCompactMoney(850, 'en')).toBe('$8.50');
+    expect(formatCompactMoney(184_000_000, 'fr')).toBe('1,84 M $');
+    expect(formatCompactMoney(850, 'fr')).toBe('8,50 $');
+  });
+});
+
+describe('unitPriceOf (E-15: the unit price a pack states)', () => {
+  it('reads grams, kilos, pounds, litres and packs from the name', () => {
+    expect(unitPriceOf(850, 'Country sourdough, 900 g')).toEqual({ cents: 94, per: '100g' });
+    expect(unitPriceOf(749, 'Ambrosia apples, 2 lb')).toEqual({ cents: 826, per: 'kg' });
+    expect(unitPriceOf(599, 'Olive oil 1,5 L')).toEqual({ cents: 399, per: 'l' });
+    expect(unitPriceOf(1200, 'Butter croissants, 4-pack')).toEqual({ cents: 300, per: 'each' });
+    expect(unitPriceOf(650, 'Free-run eggs, dozen')).toEqual({ cents: 54, per: 'each' });
+    expect(unitPriceOf(1200, 'Butter croissants ×4')).toEqual({ cents: 300, per: 'each' });
+  });
+  it('says nothing without a size, and tries the next text', () => {
+    expect(unitPriceOf(850, 'Sourdough loaf')).toBeNull();
+    expect(unitPriceOf(850, '4 grain bread', '1 large loaf')).toBeNull();
+    expect(unitPriceOf(850, null, '500 g')).toEqual({ cents: 170, per: '100g' });
   });
 });

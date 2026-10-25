@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { colors, fonts, radius, semantic, space, Scene, slugSlot } from '@northline/mobile-kit';
+import { SIZE, radius, semantic, slugSlot, space, textStyles } from '@northline/mobile-kit';
 
 import { nameIn, type Landing, type ServiceItem } from '../api/services';
 import { useI18n } from '../i18n';
@@ -11,6 +11,7 @@ import { PlaceBar } from '../location/PlaceBar';
 import { Body, Field, Title } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { EmptyState, QueryView, Skeleton } from '../ui/states';
+import { Picture } from '../ui/commerce';
 import { shop, useMarket, useShopFormat } from '../shop/common';
 import { SectionHead, Strip, Tile } from '../shop/parts';
 import { useServicesApi } from './parts';
@@ -31,6 +32,7 @@ export function Browse() {
     <Screen
       testID="services"
       padded={false}
+      chrome
       top={<PlaceBar searchTestID="browse-search" />}
       refreshControl={<RefreshControl refreshing={landing.isRefetching} onRefresh={() => void landing.refetch()} accessibilityLabel={t('common.retry')} />}
     >
@@ -67,13 +69,13 @@ function Groups({ data, text, setText }: { data: Landing; text: string; setText:
   const popular = [...data.groups.flatMap((g) => g.items)].filter((i) => i.providers > 0).sort((a, b) => b.providers - a.providers).slice(0, 6);
   const sub = (i: ServiceItem) => (i.providers > 0 ? t('lt.home.pros', { n: i.providers }) : t('lt.home.soon'));
   const tile = (i: ServiceItem, testID?: string) => (
-    <Tile key={i.slug} label={nameIn(i.names, locale)} sub={sub(i)} slot={slugSlot('service', i.slug)} subject={i.slug} width={148} onPress={() => router.push(`/services/${i.slug}`)} testID={testID} />
+    <Tile key={i.slug} label={nameIn(i.names, locale)} sub={sub(i)} slot={slugSlot('service', i.slug)} icon="wrench" width={SIZE.rail * 2 + space[1]} onPress={() => router.push(`/services/${i.slug}`)} testID={testID} />
   );
   return (
     <>
       <View style={styles.pad}>
         <View style={styles.band}>
-          <Scene slot="banner/services" subject="services" fit="contain" style={styles.bandArt} />
+          <Picture slot="banner/services" crop="wide" icon="wrench" style={styles.bandArt} />
           <View style={styles.bandText}>
             <Text style={styles.kicker}>{t('lt.browse.live', { n: data.liveCategories })}</Text>
             <Text accessibilityRole="header" style={styles.bandTitle}>
@@ -135,7 +137,7 @@ function ShopDepartments() {
               key={d.slug}
               label={d.name}
               sub={d.shops > 0 ? t('lt.home.shops', { n: d.shops }) : undefined}
-              subject={d.slug}
+              slot={slugSlot('shop', d.slug)}
               onPress={() => router.push({ pathname: '/search', params: { department: d.slug, name: d.name } })}
               testID={`department-${d.slug}`}
             />
@@ -175,9 +177,9 @@ const styles = StyleSheet.create({
   shop: { paddingBottom: space[4] },
   grid: { flexDirection: 'row', gap: space[3] },
   section: { gap: space[2], paddingTop: space[2] },
-  band: { borderRadius: radius.lg, overflow: 'hidden', backgroundColor: semantic['surface-sunken'], marginTop: space[3] },
-  bandText: { padding: space[4], gap: 4 },
-  bandArt: { height: 132 },
-  kicker: { fontFamily: fonts.bold, fontSize: 12, lineHeight: 16, letterSpacing: 0.4, textTransform: 'uppercase', color: colors.textMuted },
-  bandTitle: { fontFamily: fonts.display, fontSize: 26, lineHeight: 32, color: colors.text },
+  band: { borderRadius: radius.panel, overflow: 'hidden', backgroundColor: semantic.well, marginTop: space[3] },
+  bandText: { padding: space[4], gap: space[1] },
+  bandArt: { width: '100%', aspectRatio: 16 / 9, borderRadius: 0 },
+  kicker: { ...StyleSheet.flatten(textStyles.caps), color: semantic['text-muted'] },
+  bandTitle: { ...StyleSheet.flatten(textStyles.pageTitle) },
 });

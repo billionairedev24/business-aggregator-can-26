@@ -542,14 +542,14 @@ describe('Notifications', () => {
     const rec = recorder();
     const { server } = await signedIn('/account/notifications', { wrap: rec.wrap });
     const email = await screen.findByTestId('cell-order_updates-email');
-    expect(email.props.value).toBe(true);
-    expect(screen.getByTestId('cell-security-push').props.disabled).toBe(true);
-    fireEvent(email, 'valueChange', false);
-    fireEvent(screen.getByTestId('cell-offers-push'), 'valueChange', false);
+    expect(email.props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.getByTestId('cell-security-push').props.accessibilityState).toMatchObject({ disabled: true });
+    fireEvent.press(email);
+    fireEvent.press(screen.getByTestId('cell-offers-push'));
     fireEvent.press(screen.getByTestId('quiet-from-23:00'));
     fireEvent.press(screen.getByTestId('notif-lang-fr'));
     fireEvent.press(screen.getByTestId('marketing-rewards'));
-    expect(screen.getByTestId('cell-offers-email').props.value).toBe(true); // one consent: the cell follows
+    expect(screen.getByTestId('cell-offers-email').props.accessibilityState).toMatchObject({ checked: true }); // one consent: the cell follows
     fireEvent.press(screen.getByTestId('notif-save'));
     expect(await screen.findByText('Saved · applies to all your devices')).toBeTruthy();
     expect(rec.sent.find((s) => s.method === 'PUT')!.body).toEqual({
@@ -573,7 +573,7 @@ describe('Notifications', () => {
     expect(screen.getByText('Yes, Northline Marketplace Inc. may send me Northline’s offers by email.')).toBeTruthy();
     expect(screen.getByText('Asked by Northline Marketplace Inc. · 1 Test Street, Testville · support@northline.ca.')).toBeTruthy();
     expect(screen.getByTestId('consent-history-consent-1')).toHaveTextContent(/Promotional push · Given · Account settings \(app\)/);
-    fireEvent(screen.getByTestId('cell-offers-push'), 'valueChange', false);
+    fireEvent.press(screen.getByTestId('cell-offers-push'));
     fireEvent.press(screen.getByTestId('notif-save'));
     expect(await screen.findByText(/Promotional push · Withdrawn · Account settings \(app\)/)).toBeTruthy();
     // a save without a consent change sends no consent fields
@@ -585,10 +585,10 @@ describe('Notifications', () => {
 
   it('a failed save keeps the changes on screen', async () => {
     await signedIn('/account/notifications', { wrap: intercept((u, i) => u.endsWith('/me/notifications') && i.method === 'PUT', () => [503, {}]) });
-    fireEvent(await screen.findByTestId('quiet-on'), 'valueChange', false);
+    fireEvent.press(await screen.findByTestId('quiet-on'));
     fireEvent.press(screen.getByTestId('notif-save'));
     expect(await screen.findByText('Northline is having trouble right now. Try again in a moment.')).toBeTruthy();
-    expect(screen.getByTestId('quiet-on').props.value).toBe(false);
+    expect(screen.getByTestId('quiet-on').props.accessibilityState).toMatchObject({ checked: false });
   });
 
   it('turns push on for this phone (S-102), or sends a refusal to the settings', async () => {

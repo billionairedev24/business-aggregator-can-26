@@ -37,7 +37,7 @@ function RefundRow({ item: { request: r, ticket } }: { item: PendingRefund }) {
   return (
     <li className="nl-fi-refund">
       <div>
-        <strong>{t('rr_line', { code: ticket.code, requester: ticket.requesterName, amount: fmt.money(r.amountCents) })}</strong>
+        <strong>{t('rr_line', { code: ticket.code, requester: ticket.requesterName, amount: fmt.price(r.amountCents) })}</strong>
         <div className="nl-fi-sub">{ticket.subject}</div>
         <div className="nl-fi-sub">{t('rr_asked', { who: r.requestedByName ?? t('staff'), age: age(r.requestedAt) })}</div>
         {r.note ? <div className="nl-fi-note">{r.note}</div> : null}

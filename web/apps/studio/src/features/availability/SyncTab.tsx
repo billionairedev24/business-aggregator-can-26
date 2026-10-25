@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Checkbox, Dialog, ErrorState, PageSkeleton, Skeleton } from '@northline/ui';
+import { Alert, Checkbox, Chip, Dialog, ErrorState, PageSkeleton, Skeleton } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useMerchantId, useRole } from '../shell/api';
 import { DAYS, goTo, sourcesQuery, syncQuery, useChooseSources, useSetBookable, useToggleCalendar, type Calendar, type Days } from './api';
@@ -66,7 +66,7 @@ export function SyncTab({ returned, onReturnSeen }: { returned?: CalendarReturn;
             {t(`result_${banner.result}`, { provider: t(`cal_${banner.calendar}`) })}
           </Alert>
         ) : null}
-        <h3 className="nl-av-h3">{t('calendars')}</h3>
+        <h2 className="nl-av-h3">{t('calendars')}</h2>
         <ul className="nl-av-list">
           {q.data.calendars.map(c => {
             const reconnect = c.state === 'reconnect';
@@ -78,30 +78,29 @@ export function SyncTab({ returned, onReturnSeen }: { returned?: CalendarReturn;
                   {c.provider !== 'ical' && c.connected && !reconnect && canEdit ? (
                     <button type="button" className="btn btn-ghost nl-av-smallchip" onClick={() => setChoosing(c.provider as TwoWay)}>{t('chooseCalendars')}</button>
                   ) : null}
-                  <button type="button" className={reconnect ? 'btn btn-primary nl-av-smallchip' : 'nl-chip nl-av-smallchip'} aria-pressed={reconnect ? undefined : c.connected}
-                    disabled={!canEdit || toggle.isPending || unavailable} onClick={() => onClick(c)}>
-                    {reconnect ? t('reconnect') : c.connected ? t('connected') : t('connect')}
-                  </button>
+                  {reconnect
+                    ? <button type="button" className="btn btn-primary btn-sm" disabled={!canEdit || toggle.isPending || unavailable} onClick={() => onClick(c)}>{t('reconnect')}</button>
+                    : <Chip className="nl-av-smallchip" selected={c.connected} disabled={!canEdit || toggle.isPending || unavailable} onClick={() => onClick(c)}>{c.connected ? t('connected') : t('connect')}</Chip>}
                 </span>
               </li>
             );
           })}
         </ul>
         {toggle.isError ? <Alert tone="error">{t('saveError')}</Alert> : null}
-        <h3 className="nl-av-h3 nl-av-how">{t('howSync')}</h3>
+        <h2 className="nl-av-h3 nl-av-how">{t('howSync')}</h2>
         <ul className="nl-av-bullets">
           <li>{t('sync1')}</li><li>{t('sync2')}</li><li>{t('sync3')}</li>
           <li>{ical?.feedUrl ? <>{t('sync4')} <code className="nl-av-code">{ical.feedUrl}</code></> : t('sync4none')}</li>
         </ul>
       </div>
       <div className="nl-av-card">
-        <h3 className="nl-av-h3">{t('team')}</h3>
+        <h2 className="nl-av-h3">{t('team')}</h2>
         <ul className="nl-av-list">
           {q.data.team.map(m => (
             <li key={m.userId} className="nl-av-item">
               <span><strong>{m.name}</strong> · {t(`role_${m.role}` as Parameters<T>[0])}<span className="nl-av-sub">{m.days ? t('daysSummary', { days: daysSummary(m.days, t) || t('noHoursYet') }) : t('noHoursYet')}</span></span>
-              <button type="button" className="nl-chip nl-av-smallchip" aria-pressed={m.bookable} disabled={role !== 'owner'} title={role !== 'owner' ? t('notAMember') : undefined}
-                onClick={() => bookable.mutate({ userId: m.userId, bookable: !m.bookable })}>{m.bookable ? t('bookable') : t('hidden')}</button>
+              <Chip className="nl-av-smallchip" selected={m.bookable} disabled={role !== 'owner'} title={role !== 'owner' ? t('notAMember') : undefined}
+                onClick={() => bookable.mutate({ userId: m.userId, bookable: !m.bookable })}>{m.bookable ? t('bookable') : t('hidden')}</Chip>
             </li>
           ))}
         </ul>

@@ -1,4 +1,4 @@
-import { CaretDown, MapPin } from '@phosphor-icons/react';
+import { MapPin } from '@phosphor-icons/react';
 import { defineMessages } from './i18n';
 import { SiteLink } from './SiteLink';
 
@@ -12,11 +12,11 @@ export type LocationStatus = 'locating' | 'detected' | 'address' | 'fallback' | 
 
 const useT = defineMessages({
   en: {
-    deliverTo: 'Deliver to', near: 'Near', locating: 'Finding your area…', setLocation: 'Set your location',
+    deliverTo: 'Deliver to', near: 'Near', deliverToName: 'Deliver to {name}', nearName: 'Near {name}', locating: 'Finding your area…', setLocation: 'Set your location',
     change: '{kicker} {place}. Change location',
   },
   fr: {
-    deliverTo: 'Livrer à', near: 'Près de', locating: 'Recherche de votre secteur…', setLocation: 'Indiquez votre adresse',
+    deliverTo: 'Livrer à', near: 'Près de', deliverToName: 'Livrer à {name}', nearName: 'Près de {name}', locating: 'Recherche de votre secteur…', setLocation: 'Indiquez votre adresse',
     change: '{kicker} {place}. Changer d’adresse',
   },
 });
@@ -26,6 +26,8 @@ export interface LocationPillProps {
   label?: string;
   /** "Deliver to" (default: shopping) or "Near" (services and providers). */
   kicker?: 'deliverTo' | 'near';
+  /** The signed-in person's first name: "Deliver to Amara" over the place (the mockups' header). */
+  name?: string;
   /** Opens the location dialog. */
   onOpen?: () => void;
   /** Without script (or without `onOpen`): a link to the location page. */
@@ -33,26 +35,26 @@ export interface LocationPillProps {
 }
 
 /**
- * The header's location control: a pin, a small "Deliver to" / "Near" over the place in bold — the place is shown at
- * every width, ellipsed when long, never the pin alone. A button that opens the location dialog (`onOpen`), else a
+ * The header's location control: a pin, a small "Deliver to" / "Near" (with the person's first name when signed in)
+ * over the place in bold; on phones one line under the search. The place is shown at every width, ellipsed when long,
+ * never the pin alone. A button that opens the location dialog (`onOpen`), else a
  * link (`href`).
  */
-export function LocationPill({ status, label, kicker = 'deliverTo', onOpen, href = '/location' }: LocationPillProps) {
+export function LocationPill({ status, label, kicker = 'deliverTo', name, onOpen, href = '/location' }: LocationPillProps) {
   const t = useT();
-  const top = t(kicker);
+  const top = name ? t(kicker === 'near' ? 'nearName' : 'deliverToName', { name }) : t(kicker);
   const place = status === 'locating' ? t('locating') : status === 'denied' || !label ? t('setLocation') : label;
   const body = (
     <>
-      <MapPin size={20} weight="fill" className="nl-location-pin" aria-hidden />
+      <MapPin size={19} className="nl-location-pin" aria-hidden />
       <span className="nl-location-text" aria-hidden>
         <span className="nl-location-kicker">{top}</span>
         <span className="nl-location-place">{place}</span>
       </span>
-      <CaretDown size={14} className="nl-location-caret" aria-hidden />
     </>
   );
-  const name = t('change', { kicker: top, place });
+  const accessible = t('change', { kicker: top, place });
   return onOpen
-    ? <button type="button" className="nl-location" aria-label={name} aria-haspopup="dialog" aria-busy={status === 'locating' || undefined} onClick={onOpen}>{body}</button>
-    : <SiteLink href={href} className="nl-location" aria-label={name} aria-busy={status === 'locating' || undefined}>{body}</SiteLink>;
+    ? <button type="button" className="nl-location" aria-label={accessible} aria-haspopup="dialog" aria-busy={status === 'locating' || undefined} onClick={onOpen}>{body}</button>
+    : <SiteLink href={href} className="nl-location" aria-label={accessible} aria-busy={status === 'locating' || undefined}>{body}</SiteLink>;
 }

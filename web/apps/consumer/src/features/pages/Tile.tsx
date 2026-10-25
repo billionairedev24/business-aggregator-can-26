@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { SiteLink } from '@northline/ui';
 import { Scene } from '../art/Scene';
-import type { Tone } from '../art/Art';
+import type { Tone } from '../art/subjects';
 
 /**
  * An entry tile (a category, department or cuisine): its photo (the slot's, square), the name, an optional muted

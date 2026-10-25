@@ -39,7 +39,9 @@ describe('Stripe & compliance', () => {
   it('shows the due item, Stripe requirements, payment settings, tax and the ledger', async () => {
     mockFetch({ 'GET /api/v1/merchants/m1/compliance': () => data() });
     renderWithProviders(<ComplianceScreen />);
-    expect(await screen.findByRole('heading', { level: 1, name: 'One item due: WCB clearance letter' })).toBeTruthy();
+    // S-176: the page is titled by its name; what is due is the line under it
+    expect(await screen.findByRole('heading', { level: 1, name: 'Stripe & compliance' })).toBeTruthy();
+    expect(await screen.findByText('One item due: WCB clearance letter')).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('acct_1Kx9…Q2 · Express · payouts enabled · charges enabled')).toBeTruthy();
     expect(screen.getByText('Identity · Ravi Sandhu')).toBeTruthy();
@@ -113,7 +115,7 @@ describe('Stripe & compliance', () => {
   it('offers Stripe set-up when no account is connected, and kitchens read the food-safety copy', async () => {
     mockFetch({ 'GET /api/v1/merchants/m1/compliance': () => data({ business: { ...data().business, type: 'kitchen' }, stripe: { ...data().stripe, status: 'not_connected', requirements: [] }, documents: [], dueCount: 0 }) });
     renderWithProviders(<ComplianceScreen />, 'fr');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Tout est à jour' })).toBeTruthy();
+    expect(await screen.findByText('Tout est à jour')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Configurer les versements avec Stripe' })).toBeTruthy();
     expect(screen.getByText(/Salubrité : allergènes/)).toBeTruthy();
   });

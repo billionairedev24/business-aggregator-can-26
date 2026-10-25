@@ -33,7 +33,7 @@ export function InviteAcceptScreen({ token }: { token: string }) {
       <PageHeader kicker={t('kicker')} title={t('title', { business: inv.businessName })} lede={t('lede', { role: roleName })} />
       {inv.state !== 'pending' ? <Alert tone="error" role="alert">{t(`state_${inv.state}`)}</Alert> : (
         <>
-          {!inv.forYou && <Alert tone="highlight">{t('notForYou', { who })}</Alert>}
+          {!inv.forYou && <Alert tone="info">{t('notForYou', { who })}</Alert>}
           {code === 'mfa_required' && <Alert tone="error" role="alert">{t('needsMfa')}</Alert>}
           {accept.isError && code !== 'mfa_required' && <Alert tone="error" role="alert">{code === 'invitation_not_for_you' ? t('notForYou', { who }) : code === 'already_member' ? t('alreadyMember') : t('acceptError')}</Alert>}
           <div className="nl-solo-actions">

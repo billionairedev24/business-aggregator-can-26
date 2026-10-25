@@ -15,9 +15,13 @@ const actionName = (action: OversightAction, seller: Seller): SellersKey =>
  * The confirmation step of an oversight action (S-82): the reason the business will see, and the new tier or the check
  * to verify again. The api checks the role, writes the audit log and emails the owners.
  */
-export function OversightDialog({ seller, action, checks, onClose, onDone }: { seller: Seller; action: OversightAction; checks: readonly Check[]; onClose: () => void; onDone?: () => void }) {
+export function OversightDialog({ seller, more = [], action, checks, onClose, onDone }: {
+  seller: Seller; /** S-177: the bulk bar's other businesses: the same action and reason, one request each. */ more?: readonly Seller[];
+  action: OversightAction; checks: readonly Check[]; onClose: () => void; onDone?: () => void;
+}) {
   const t = useSellersT();
   const run = useOversight();
+  const [done, setDone] = useState(0);
   const [reason, setReason] = useState('');
   const tiers = (['registered', 'trusted', 'master'] as const).filter(x => x !== seller.tier);
   const [tier, setTier] = useState<string>(tiers[0] ?? 'registered');
@@ -26,10 +30,22 @@ export function OversightDialog({ seller, action, checks, onClose, onDone }: { s
   const errors = run.error instanceof ValidationError ? run.error.byField() : {};
   const conflict = run.error && !(run.error instanceof ValidationError) ? (run.error instanceof ApiError ? run.error.message : String(run.error)) : undefined;
   const blocked = action === 'reverification' && !verifiable.length;
-  const submit = () => run.mutate({ sellerId: seller.id, action, reason, tier, verificationId, hidden: !seller.searchHidden }, { onSuccess: () => { onDone?.(); onClose(); } });
+  const all = [seller, ...more];
+  const submit = async () => {
+    try {
+      for (const [i, s] of all.entries()) {
+        if (i < done) continue; // a retry after a failure goes on from the business that failed
+        await run.mutateAsync({ sellerId: s.id, action, reason, tier, verificationId, hidden: !s.searchHidden });
+        setDone(i + 1);
+      }
+      onDone?.(); onClose();
+    } catch { /* the error shows in the dialog */ }
+  };
+  const destructive = action === 'suspend';
   return (
-    <Dialog open onClose={onClose} title={t('dialogTitle', { action: t(actionName(action, seller)), name: seller.name })}
-      actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={run.isPending || blocked} onClick={submit}>{t('confirm')}</Button></>}>
+    <Dialog open onClose={onClose} title={t('dialogTitle', { action: t(actionName(action, seller)), name: more.length ? t('nBusinesses', { n: all.length }) : seller.name })}
+      actions={<><Button variant="secondary" onClick={onClose}>{t('cancel')}</Button><Button variant={destructive ? 'destructive' : 'primary'} disabled={run.isPending || blocked} onClick={() => void submit()}>{destructive ? t('confirmSuspend', { n: all.length }) : t('confirm')}</Button></>}>
+      {more.length ? <p className="nl-sl-note">{all.map(s => s.name).join(' · ')}{done ? ` — ${t('doneOf', { done, n: all.length })}` : ''}</p> : null}
       {action === 'tier' ? (
         <Field label={t('dialogTier')} error={errors.tier}>
           <Select value={tier} onChange={e => setTier(e.target.value)} options={tiers.map(x => ({ value: x, label: t(`tier_${x}` as SellersKey) }))} />

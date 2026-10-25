@@ -1,7 +1,7 @@
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp } from '@phosphor-icons/react';
-import { Alert, Dialog, EmptyState, ErrorState, Field, PageSkeleton, Select, Skeleton, TextInput, UnderlineTabs, useFormatters } from '@northline/ui';
+import { Alert, BoHeader, Button, Dialog, EmptyState, ErrorState, Field, PageSkeleton, Price, Select, Skeleton, StatusTag, Switch, TextInput, UnderlineTabs } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useMerchantId, useRole } from '../shell/api';
 import { groupsQuery, menuQuery, menusQuery, useAddSection, useCreateMenu, useImportCsv, useMenuState, useRenameSection, useReorderSections, useSoldOut, type MenuDetail, type MenuItem } from './api';
@@ -47,26 +47,19 @@ export function MenuBuilderScreen({ returned, onReturnSeen }: { returned?: PosRe
   const summary = menus.data.find(m => m.id === current) ?? menus.data[0]!;
   const d = menu.data;
   return (
-    <div className="nl-kitchen">
-      <div className="nl-k-head nl-k-head-tight">
-        <div>
-          <span className="nl-k-kicker">{t('menuKicker')}</span>
-          <h1 className="nl-k-title">{t('menuTitle', { name: summary.name, status: t(`ms_${summary.status}`) })}</h1>
-        </div>
-        <div className="nl-k-actions">
+    <div className="nl-kitchen bo-page">
+      <BoHeader kicker={t('menuKicker')} title={t('menuTitle', { name: summary.name, status: t(`ms_${summary.status}`) })} sub={t('menuLede')} actions={<>
           <Select aria-label={t('menuPicker')} className="nl-k-picker" value={current} onChange={e => (e.target.value === NEW_MENU ? setNewMenu(true) : setMenuId(e.target.value))}
             options={[...menus.data.map(m => ({ value: m.id, label: menuOptionText(m, t) })), ...(canEdit ? [{ value: NEW_MENU, label: t('newMenuOpt') }] : [])]} />
           {canEdit ? <>
             <button type="button" className="btn btn-secondary" onClick={() => setImporting(true)}>{t('importBtn')}</button>
             <button type="button" className="btn btn-primary" onClick={() => setEditing({ kind: 'section' })}>{t('addSection')}</button>
             {summary.status === 'live'
-              ? <button type="button" className="btn btn-ghost" disabled={state.isPending} onClick={() => state.mutate({ menuId: current, action: 'hide' })}>{t('hideMenu')}</button>
-              : <button type="button" className="btn btn-ghost" disabled={state.isPending || d?.kitchenApproved === false} onClick={() => state.mutate({ menuId: current, action: 'publish' })}>{t('publishMenu')}</button>}
+              ? <Button variant="tertiary" disabled={state.isPending} onClick={() => state.mutate({ menuId: current, action: 'hide' })}>{t('hideMenu')}</Button>
+              : <Button variant="tertiary" disabled={state.isPending || d?.kitchenApproved === false} onClick={() => state.mutate({ menuId: current, action: 'publish' })}>{t('publishMenu')}</Button>}
           </> : null}
-        </div>
-      </div>
-      <p className="nl-k-lede">{t('menuLede')}</p>
-      {d && !d.kitchenApproved ? <Alert tone="highlight">{t('notApproved')}</Alert> : null}
+      </>} />
+      {d && !d.kitchenApproved ? <Alert tone="info">{t('notApproved')}</Alert> : null}
       {state.isError ? <Alert tone="error" role="alert">{state.error.message || t('saveError')}</Alert> : null}
       <div className="nl-k-builder">
         <div>
@@ -99,7 +92,6 @@ export function MenuBuilderScreen({ returned, onReturnSeen }: { returned?: PosRe
 
 function Sections({ merchantId, menu, canEdit, onEdit }: { merchantId: string; menu: MenuDetail; canEdit: boolean; onEdit: (e: Editing) => void }) {
   const t = useKitchenT();
-  const f = useFormatters();
   const soldOut = useSoldOut(merchantId, menu.id);
   const reorder = useReorderSections(merchantId);
   const [order, setOrder] = useState<string[] | null>(null);
@@ -143,13 +135,14 @@ function Sections({ merchantId, menu, canEdit, onEdit }: { merchantId: string; m
             <div key={it.id} className="nl-k-item">
               <ItemPhoto merchantId={merchantId} itemId={it.id} hasPhoto={it.hasPhoto} version={it.updatedAt} />
               <div className="nl-k-item-body">
-                <div className="nl-k-item-title"><strong>{it.name}</strong><span>{f.money(it.priceCents)}</span>{it.visibility !== 'live' ? <span className={`tag ${it.visibility === 'draft' ? 'tag-neutral' : 'tag-accent-2'} nl-k-small-tag`}>{t(`vis_${it.visibility}`)}</span> : null}{it.allergens === null ? <span className="tag tag-highlight nl-k-small-tag">{t('confirmAllergens')}</span> : null}</div>
+                <div className="nl-k-item-title"><strong>{it.name}</strong><Price cents={it.priceCents} size="sm" />{it.visibility !== 'live' ? <StatusTag tone={it.visibility === 'draft' ? 'neutral' : 'danger'}>{t(`vis_${it.visibility}`)}</StatusTag> : null}{it.allergens === null ? <StatusTag tone="warning">{t('confirmAllergens')}</StatusTag> : null}{it.soldOut ? <StatusTag tone="danger">{t('soldOut')}</StatusTag> : null}</div>
                 <div className="nl-k-item-desc">{it.description || t('noDesc')}</div>
-                <div className="nl-k-item-meta">{t('modifiers', { list: it.modifierGroups.map(g => g.name).join(', ') || t('none') })}{tags(it, t).length ? ' · ' : ''}{tags(it, t).map(x => <span key={x} className="tag tag-neutral nl-k-mini-tag">{x}</span>)}</div>
+                <div className="nl-k-item-meta">{t('modifiers', { list: it.modifierGroups.map(g => g.name).join(', ') || t('none') })}{tags(it, t).length ? ' · ' : ''}{tags(it, t).map(x => <span key={x} className="tag tag-neutral">{x}</span>)}</div>
               </div>
               <div className="nl-k-item-actions">
-                <button type="button" className={`nl-k-avail${it.soldOut ? '' : ' is-on'}`} aria-pressed={!it.soldOut} disabled={!canEdit} onClick={() => soldOut.mutate({ id: it.id, soldOut: !it.soldOut })}>{it.soldOut ? t('soldOut') : t('available')}</button>
-                {canEdit ? <button type="button" className="btn btn-ghost nl-k-edit" aria-label={`${t('edit')} ${it.name}`} onClick={() => onEdit({ kind: 'item', item: it })}>{t('edit')}</button> : null}
+                {/* S-175: the shared Switch (the hand-made availability pill is gone); the sold-out state is a status tag */}
+                <Switch checked={!it.soldOut} disabled={!canEdit} label={t('availableNamed', { name: it.name })} onChange={on => soldOut.mutate({ id: it.id, soldOut: !on })} />
+                {canEdit ? <Button variant="secondary" size="sm" aria-label={`${t('edit')} ${it.name}`} onClick={() => onEdit({ kind: 'item', item: it })}>{t('edit')}</Button> : null}
               </div>
             </div>
           ))}

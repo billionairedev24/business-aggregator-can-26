@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { Alert, Button, Checkbox, DataTable, Dialog, Drawer, ErrorState, Field, PageSkeleton, Select, Tag, TextInput, useFormatters, type DataTableColumn } from '@northline/ui';
+import { Alert, Button, Checkbox, DataTable, Dialog, Drawer, ErrorState, Field, PageSkeleton, Select, StatusTag, TextInput, useFormatters, type DataTableColumn } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { syncQuery } from '../availability/api';
 import { integrationsQuery } from '../catalogue/api';
@@ -86,7 +86,7 @@ function Webhooks({ owner, onSecret }: { owner: boolean; onSecret: (s: Secret) =
             <li key={w.id}>
               <span className="nl-set-hookurl">{w.url}</span>
               <span className="nl-set-sub">{t('webhookMeta', { events: w.events.join(' · '), signature: w.signature, delivery: delivery(w) })}</span>
-              {!w.active && w.disabledAt ? <span className="nl-set-hookstate"><Tag tone="accent-2">{t('hookOff', { date: f.date(w.disabledAt, 'full') })}</Tag></span>
+              {!w.active && w.disabledAt ? <span className="nl-set-hookstate"><StatusTag tone="danger">{t('hookOff', { date: f.date(w.disabledAt, 'full') })}</StatusTag></span>
                 : w.failingSince ? <span className="nl-set-sub nl-error">{t('hookFailing', { date: f.date(w.failingSince, 'dateTime') })}</span> : null}
               {w.previousSecretUntil ? <span className="nl-set-sub">{t('prevSecret', { time: f.date(w.previousSecretUntil, 'dateTime') })}</span> : null}
               <span className="nl-set-hookactions">
@@ -167,13 +167,13 @@ function DeliveryRow({ d, canResend, onResend, busy }: { d: WebhookDelivery; can
   const t = useSettingsT();
   const f = useFormatters();
   const state = d.state === 'pending' && d.attempts > 0 ? 'retrying' : d.state;
-  const tone = { succeeded: 'accent', retrying: 'highlight', pending: 'neutral', failed: 'accent-2' } as const;
+  const tone = { succeeded: 'success', retrying: 'warning', pending: 'neutral', failed: 'danger' } as const;
   const when = f.date(d.lastAttemptAt ?? d.createdAt, 'dateTime');
   return (
     <li>
       <div className="nl-set-row">
         <span><code>{d.eventType ?? '—'}</code>{d.test ? <span className="nl-muted"> · {t('testEvent')}</span> : null}</span>
-        <Tag tone={tone[state]}>{t(`st_${state}`)}</Tag>
+        <StatusTag tone={tone[state]}>{t(`st_${state}`)}</StatusTag>
       </div>
       <span className="nl-set-sub">
         {[when, d.attempts > 0 ? outcome(d) : null, d.attempts > 0 ? t('attemptsN', { n: d.attempts }) : null,
@@ -228,7 +228,7 @@ function Integrations({ keys, owner, onQuickBooks }: { keys: ApiKey[]; owner: bo
   const shop = commerce.data?.some(c => c.connected);
   const quickbooks = keys.some(k => /quickbooks/i.test(k.name));
   const row = (label: string, connected: boolean | undefined, onConnect: () => void) => (
-    <li className="nl-set-row"><span>{label}</span>{connected ? <Tag tone="accent">{t('connected')}</Tag> : owner ? <Button variant="ghost" onClick={onConnect}>{t('connect')}</Button> : <Tag tone="neutral">{t('notConnected')}</Tag>}</li>
+    <li className="nl-set-row"><span>{label}</span>{connected ? <StatusTag tone="success">{t('connected')}</StatusTag> : owner ? <Button variant="ghost" onClick={onConnect}>{t('connect')}</Button> : <StatusTag tone="neutral">{t('notConnected')}</StatusTag>}</li>
   );
   return (
     <section aria-labelledby="set-int">

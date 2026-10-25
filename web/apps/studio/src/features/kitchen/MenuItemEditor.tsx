@@ -93,7 +93,7 @@ export function MenuItemEditor({ merchantId, menu, groups, item, sectionId, canD
       <div className="nl-field" role="group" aria-label={t('f_photo')}>
         <span className="nl-label">{t('f_photo')}</span>
         <div className="nl-k-photos">
-          <ItemPhoto merchantId={merchantId} itemId={item?.id} hasPhoto={hasPhoto} version={photoVersion} size={72} />
+          <ItemPhoto merchantId={merchantId} itemId={item?.id} hasPhoto={hasPhoto} version={photoVersion} size="lg" />
           {item ? (
             <>
               <button type="button" className="nl-k-photo-add" disabled={upload.isPending} onClick={() => fileRef.current?.click()}>{hasPhoto ? t('f_photoReplace') : t('f_photoAdd')}</button>
@@ -107,7 +107,7 @@ export function MenuItemEditor({ merchantId, menu, groups, item, sectionId, canD
         <span className="nl-label">{t('f_groups')}</span>
         <div className="nl-chips">
           {groups.map(g => <Chip key={g.id} selected={groupIds.includes(g.id)} onClick={() => setGroupIds(ids => toggleIn(ids, g.id))}>{groupIds.includes(g.id) ? g.name : `+ ${g.name}`}</Chip>)}
-          <Link className="nl-chip nl-k-chip-link" to="/b/$merchantId/kitchen/combos" params={{ merchantId }}>{t('f_newGroup')}</Link>
+          <Link className="btn btn-tertiary btn-sm" to="/b/$merchantId/kitchen/combos" params={{ merchantId }}>{t('f_newGroup')}</Link>
         </div>
         {groups.length === 0 ? <div className="nl-hint">{t('f_noGroups')}</div> : null}
       </div>
@@ -119,7 +119,7 @@ export function MenuItemEditor({ merchantId, menu, groups, item, sectionId, canD
         <div className="nl-chips">
           {ALLERGENS.map(a => {
             const on = Array.isArray(allergens) && allergens.includes(a);
-            return <Chip key={a} className={on ? 'nl-k-allergen-on' : undefined} selected={on} onClick={() => { setAllergens(x => toggleIn(Array.isArray(x) ? x : [], a)); setTouched(x => ({ ...x, allergens: true })); }}>{t(`al_${a}`)}</Chip>;
+            return <Chip key={a} selected={on} onClick={() => { setAllergens(x => toggleIn(Array.isArray(x) ? x : [], a)); setTouched(x => ({ ...x, allergens: true })); }}>{t(`al_${a}`)}</Chip>;
           })}
           <Chip selected={allergens === 'none'} onClick={() => { setAllergens(x => (x === 'none' ? null : 'none')); setTouched(x => ({ ...x, allergens: true })); }}>{t('f_noneAllergen')}</Chip>
         </div>
@@ -151,10 +151,10 @@ function PriceCheckNote({ merchantId, item }: { merchantId: string; item: MenuIt
   const f = useFormatters();
   const confirm = useConfirmPrice(merchantId);
   const check = item.priceCheck!;
-  const values = { price: f.money(item.priceCents), median: f.money(check.medianCents), pct: Math.abs(check.deviationPct) };
+  const values = { price: f.price(item.priceCents), median: f.price(check.medianCents), pct: Math.abs(check.deviationPct) };
   if (check.confirmed) return <p className="nl-hint">{t('priceCheckConfirmed', values)}</p>;
   return (
-    <Alert tone="highlight" role="status" actions={<button type="button" className="btn btn-secondary" disabled={confirm.isPending} onClick={() => confirm.mutate(item.id)}>{t('confirmPrice')}</button>}>
+    <Alert tone="info" role="status" actions={<button type="button" className="btn btn-secondary" disabled={confirm.isPending} onClick={() => confirm.mutate(item.id)}>{t('confirmPrice')}</button>}>
       {t(check.deviationPct > 0 ? 'priceCheckAbove' : 'priceCheckBelow', values)}
       {confirm.isError ? <span role="alert" className="nl-error"> {t('confirmPriceError')}</span> : null}
     </Alert>

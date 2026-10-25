@@ -1,26 +1,25 @@
-/* Order detail and tracking (redesign § 2.1, AT Shop:688, orders/Orders.module.css): the head row, the status card with
-   the timeline, the shops, beside a 320px column (delivery, payment, help). Semantic tokens only. */
+/* Order detail and tracking (E-15 S-173, in the checkout's system): the head row in the well grey, the status panel with
+   the timeline (done steps in the success colour), the shops with their status tags, beside a 320 px column (delivery,
+   payment, help). Bordered 4 px panels, no shadows; semantic tokens and the scale only (pnpm lint:tokens). */
 .order-page { min-width: 0; }
-.order-crumbs { font-size: var(--text-xs); color: var(--color-text-muted); }
-.order-crumbs a { color: var(--color-link); display: inline-flex; align-items: center; justify-content: center; min-height: var(--size-touch); min-width: var(--size-touch); }
-.order-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--space-6) var(--space-8); align-items: start; margin-top: var(--space-4); }
+.order-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--space-4) var(--space-6); align-items: start; margin-top: var(--space-4); }
 .order-main, .order-side { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
-.order-head { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-8); margin: 0; padding: var(--space-3) var(--space-4); background: var(--color-surface-sunken); border: 0; border-radius: var(--radius-lg); font-size: var(--text-sm); }
-.order-head dt { font-size: var(--text-2xs); font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); }
+.order-head { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-8); margin: 0; padding: var(--space-2-5) var(--space-4); background: var(--color-well); border: 1px solid var(--color-border); border-radius: var(--radius-panel); font-size: var(--type-label); }
+.order-head dt { font-size: var(--type-caps); font-weight: var(--weight-bold); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--color-text-muted); }
 .order-head dd { margin: 0; font-weight: var(--weight-semibold); }
 .order-head-ref { margin-left: auto; }
-.order-card { padding: var(--space-6); border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); min-width: 0; }
-.order-side .order-card { padding: var(--space-5); }
-.order-title { margin: 0; font-size: var(--text-3xl); letter-spacing: var(--tracking-tight); color: var(--color-text); overflow-wrap: anywhere; }
-.order-sub { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--text-md); }
-.order-h2 { margin: 0 0 var(--space-3); font-size: var(--text-xl); }
+.order-card { padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-panel); background: var(--color-surface); min-width: 0; }
+.order-side .order-card { padding: var(--space-4); }
+.order-title { margin: 0; font-size: var(--type-page-title); line-height: var(--leading-tight); color: var(--color-text); overflow-wrap: anywhere; }
+.order-sub { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--type-body); }
+.order-h2 { margin: 0 0 var(--space-3); font-size: var(--type-section); }
 
 /* the timeline: four steps in a row, a line between the dots; a column on phones */
-.order-steps { list-style: none; margin: var(--space-5) 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); font-size: var(--text-sm); }
+.order-steps { list-style: none; margin: var(--space-5) 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); font-size: var(--type-label); }
 .order-step { position: relative; display: flex; flex-direction: column; gap: var(--space-2); }
 .order-step:not(:last-child)::after { content: ''; position: absolute; top: 9px; left: 24px; right: calc(-1 * var(--space-3)); height: 2px; background: var(--color-border); }
 .order-step-done:not(:last-child)::after { background: var(--color-success); }
-.order-dot { position: relative; z-index: 1; width: 20px; height: 20px; border-radius: 50%; box-sizing: border-box; background: var(--color-surface); border: 2px solid var(--color-border-control); }
+.order-dot { position: relative; z-index: 1; width: 20px; height: 20px; border-radius: var(--radius-round); box-sizing: border-box; background: var(--color-surface); border: 2px solid var(--color-border-control); }
 .order-step-done .order-dot { background: var(--color-success); border-color: var(--color-success); }
 .order-step-current .order-dot { border-color: var(--color-success); box-shadow: 0 0 0 4px var(--color-success-bg); }
 .order-step-current .order-step-label { font-weight: var(--weight-bold); }
@@ -32,31 +31,31 @@
 }
 .order-actions { display: flex; gap: var(--space-3); margin-top: var(--space-4); flex-wrap: wrap; }
 .order-actions:empty { display: none; }
-.order-note { margin: var(--space-4) 0 0; color: var(--color-text-muted); font-size: var(--text-sm); }
-.order-error { margin: var(--space-3) 0 0; color: var(--color-danger); font-size: var(--text-sm); }
+.order-note { margin: var(--space-4) 0 0; color: var(--color-text-muted); font-size: var(--type-label); }
+.order-error { margin: var(--space-3) 0 0; color: var(--color-danger); font-size: var(--type-label); }
 .order-proof { margin: var(--space-3) 0 0; }
-.order-proof img { display: block; width: 100%; max-width: 420px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius-md); background: var(--color-surface-sunken); }
+.order-proof img { display: block; width: 100%; max-width: 420px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius-image); background: var(--color-well); }
 
 .order-shops { list-style: none; margin: 0; padding: 0; }
-.order-shop { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto auto; gap: var(--space-3); align-items: center; padding: var(--space-3) 0; border-top: 1px solid var(--color-border); font-size: var(--text-md); }
+.order-shop { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto auto; gap: var(--space-3); align-items: center; padding: var(--space-3) 0; border-top: 1px solid var(--color-border); font-size: var(--type-body); }
 .order-shop:first-child { border-top: 0; padding-top: 0; }
 .order-shop-name { font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
-.order-shop-meta { color: var(--color-text-muted); font-size: var(--text-sm); }
+.order-shop-meta { color: var(--color-text-muted); font-size: var(--type-label); }
 
-.order-run { margin: 0; font-size: var(--text-sm); }
-.order-totals { margin: 0; display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--text-md); }
+.order-run { margin: 0; font-size: var(--type-label); }
+.order-totals { margin: 0; display: flex; flex-direction: column; gap: var(--space-1-5); font-size: var(--type-body); }
 .order-totals > div { display: flex; justify-content: space-between; gap: var(--space-3); }
 .order-totals dd { margin: 0; font-variant-numeric: tabular-nums; }
-.order-total { padding-top: var(--space-2); border-top: 1px solid var(--color-border); font-weight: var(--weight-bold); font-size: var(--text-base); }
-.order-link { display: flex; align-items: center; min-height: var(--size-touch); color: var(--color-link); font-size: var(--text-sm); }
+.order-total { padding-top: var(--space-2); border-top: 1px solid var(--color-border); font-weight: var(--weight-bold); font-size: var(--type-sub); }
+.order-link { display: flex; align-items: center; min-height: var(--size-touch); color: var(--color-link); font-size: var(--type-label); }
 @media (max-width: 899.98px) { .order-grid { grid-template-columns: minmax(0, 1fr); } }
-.order-shop-pic { position: relative; display: block; width: 48px; height: 48px; border-radius: var(--radius-md); overflow: hidden; }
+.order-shop-pic { position: relative; display: block; width: 48px; height: 48px; border-radius: var(--radius-image); overflow: hidden; background: var(--color-well); }
+.order-shop-pic .nl-art { position: absolute; inset: 0; }
 @media (max-width: 479.98px) {
   .order-shop { grid-template-columns: 40px minmax(0, 1fr) auto; }
   .order-shop-pic { width: 40px; height: 40px; }
   .order-shop .tag { grid-column: 2; justify-self: start; }
-  .order-card { padding: var(--space-5); }
-  .order-title { font-size: var(--text-2xl); }
+  .order-card { padding: var(--space-4); }
 }
 
 /* S-151: cancelling, a missed delivery's choice, returns */

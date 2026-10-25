@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { ApiError, colors, radius, randomId, space } from '@northline/mobile-kit';
+import { ApiError, radius, randomId, semantic, space } from '@northline/mobile-kit';
 
 import type { Plus, PlusPlan } from '../api/account';
 import { useShopFormat } from '../shop/common';
@@ -225,13 +225,7 @@ export function PlusCard() {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    marginTop: space[4],
-    padding: space[4],
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    gap: space[2],
-  },
+  card: { marginTop: space[4], padding: space[4], borderRadius: radius.panel, backgroundColor: semantic.surface, gap: space[2] },
   perks: { gap: space[1] },
   confirm: { gap: space[2] },
 });

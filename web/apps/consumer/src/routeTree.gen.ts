@@ -46,6 +46,7 @@ import { Route as QuotesRequestsRequestIdRouteImport } from './routes/quotes/req
 import { Route as ServicesCategoryIndexRouteImport } from './routes/services/$category/index'
 import { Route as ServicesCategoryProvidersRouteImport } from './routes/services/$category/providers'
 import { Route as ServicesCategoryQuoteRouteImport } from './routes/services/$category/quote'
+import { Route as ShopStoresMerchantIdRouteImport } from './routes/shop/stores.$merchantId'
 import { Route as AccountProblemKindIdRouteImport } from './routes/account/problem.$kind.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -234,6 +235,11 @@ const ServicesCategoryQuoteRoute = ServicesCategoryQuoteRouteImport.update({
   path: '/services/$category/quote',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShopStoresMerchantIdRoute = ShopStoresMerchantIdRouteImport.update({
+  id: '/shop/stores/$merchantId',
+  path: '/shop/stores/$merchantId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountProblemKindIdRoute = AccountProblemKindIdRouteImport.update({
   id: '/account/problem/$kind/$id',
   path: '/account/problem/$kind/$id',
@@ -276,6 +282,7 @@ export interface FileRoutesByFullPath {
   '/quotes/requests/$requestId': typeof QuotesRequestsRequestIdRoute
   '/services/$category/providers': typeof ServicesCategoryProvidersRoute
   '/services/$category/quote': typeof ServicesCategoryQuoteRoute
+  '/shop/stores/$merchantId': typeof ShopStoresMerchantIdRoute
   '/providers/$slug/': typeof ProvidersSlugIndexRoute
   '/services/$category/': typeof ServicesCategoryIndexRoute
   '/account/problem/$kind/$id': typeof AccountProblemKindIdRoute
@@ -316,6 +323,7 @@ export interface FileRoutesByTo {
   '/quotes/requests/$requestId': typeof QuotesRequestsRequestIdRoute
   '/services/$category/providers': typeof ServicesCategoryProvidersRoute
   '/services/$category/quote': typeof ServicesCategoryQuoteRoute
+  '/shop/stores/$merchantId': typeof ShopStoresMerchantIdRoute
   '/providers/$slug': typeof ProvidersSlugIndexRoute
   '/services/$category': typeof ServicesCategoryIndexRoute
   '/account/problem/$kind/$id': typeof AccountProblemKindIdRoute
@@ -357,6 +365,7 @@ export interface FileRoutesById {
   '/quotes/requests/$requestId': typeof QuotesRequestsRequestIdRoute
   '/services/$category/providers': typeof ServicesCategoryProvidersRoute
   '/services/$category/quote': typeof ServicesCategoryQuoteRoute
+  '/shop/stores/$merchantId': typeof ShopStoresMerchantIdRoute
   '/providers/$slug/': typeof ProvidersSlugIndexRoute
   '/services/$category/': typeof ServicesCategoryIndexRoute
   '/account/problem/$kind/$id': typeof AccountProblemKindIdRoute
@@ -399,6 +408,7 @@ export interface FileRouteTypes {
     | '/quotes/requests/$requestId'
     | '/services/$category/providers'
     | '/services/$category/quote'
+    | '/shop/stores/$merchantId'
     | '/providers/$slug/'
     | '/services/$category/'
     | '/account/problem/$kind/$id'
@@ -439,6 +449,7 @@ export interface FileRouteTypes {
     | '/quotes/requests/$requestId'
     | '/services/$category/providers'
     | '/services/$category/quote'
+    | '/shop/stores/$merchantId'
     | '/providers/$slug'
     | '/services/$category'
     | '/account/problem/$kind/$id'
@@ -479,6 +490,7 @@ export interface FileRouteTypes {
     | '/quotes/requests/$requestId'
     | '/services/$category/providers'
     | '/services/$category/quote'
+    | '/shop/stores/$merchantId'
     | '/providers/$slug/'
     | '/services/$category/'
     | '/account/problem/$kind/$id'
@@ -520,6 +532,7 @@ export interface RootRouteChildren {
   QuotesRequestsRequestIdRoute: typeof QuotesRequestsRequestIdRoute
   ServicesCategoryProvidersRoute: typeof ServicesCategoryProvidersRoute
   ServicesCategoryQuoteRoute: typeof ServicesCategoryQuoteRoute
+  ShopStoresMerchantIdRoute: typeof ShopStoresMerchantIdRoute
   ProvidersSlugIndexRoute: typeof ProvidersSlugIndexRoute
   ServicesCategoryIndexRoute: typeof ServicesCategoryIndexRoute
   AccountProblemKindIdRoute: typeof AccountProblemKindIdRoute
@@ -786,6 +799,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServicesCategoryQuoteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shop/stores/$merchantId': {
+      id: '/shop/stores/$merchantId'
+      path: '/shop/stores/$merchantId'
+      fullPath: '/shop/stores/$merchantId'
+      preLoaderRoute: typeof ShopStoresMerchantIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/account/problem/$kind/$id': {
       id: '/account/problem/$kind/$id'
       path: '/account/problem/$kind/$id'
@@ -832,6 +852,7 @@ const rootRouteChildren: RootRouteChildren = {
   QuotesRequestsRequestIdRoute: QuotesRequestsRequestIdRoute,
   ServicesCategoryProvidersRoute: ServicesCategoryProvidersRoute,
   ServicesCategoryQuoteRoute: ServicesCategoryQuoteRoute,
+  ShopStoresMerchantIdRoute: ShopStoresMerchantIdRoute,
   ProvidersSlugIndexRoute: ProvidersSlugIndexRoute,
   ServicesCategoryIndexRoute: ServicesCategoryIndexRoute,
   AccountProblemKindIdRoute: AccountProblemKindIdRoute,

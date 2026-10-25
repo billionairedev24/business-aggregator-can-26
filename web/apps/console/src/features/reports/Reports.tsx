@@ -64,7 +64,7 @@ function ReportView({ data, province }: { data: Report; province?: string }) {
           {data.funnel.map(f => (
             <div key={f.step} className="nl-meter nl-rp-step">
               <span className="nl-meter-label">{t(`step_${f.step}` as ReportsKey)}</span>
-              <div className="nl-meter-track"><div className="nl-meter-fill" style={{ width: `${firstCount && f.count != null ? Math.min(100, (f.count / firstCount) * 100) : 0}%` }} /></div>
+              <div className="nl-meter-track"><div className="nl-meter-fill" style={{ ['--pct' as string]: `${firstCount && f.count != null ? Math.min(100, (f.count / firstCount) * 100) : 0}%` }} /></div>
               <span className="nl-meter-value">{count(f.count, locale, t, f.recorded)}</span>
             </div>
           ))}
@@ -72,7 +72,7 @@ function ReportView({ data, province }: { data: Report; province?: string }) {
           <p className="bo-muted">{t('funnelNote')}</p>
         </ChartCard>
         <ChartCard id="rp-cohorts" title={t('cohortsTitle')}>
-          <div className="nl-scroll"><table className="table nl-rp-cohorts">
+          <div className="nl-scroll" role="group" tabIndex={0} aria-label={t('cohortsTitle')}><table className="table nl-rp-cohorts">
             <thead><tr><th>{t('c_month')}</th><th>{t('c_customers')}</th><th>{t('c_m1')}</th><th>{t('c_m2')}</th><th>{t('c_m3')}</th></tr></thead>
             <tbody>
               {data.cohorts.map(c => (
@@ -92,7 +92,7 @@ function ReportView({ data, province }: { data: Report; province?: string }) {
         <ChartCard id="rp-top" title={t('topTitle')}>
           {data.topCategories.length ? (
             <BarList items={data.topCategories.map(c => ({ label: c.names[locale] ?? c.names.en ?? c.categoryId, value: c.salesCents }))}
-              format={v => fmt.money(v, { whole: true })} />
+              format={v => fmt.compactMoney(v)} />
           ) : <p className="bo-muted">{t('noTop')}</p>}
         </ChartCard>
         <ChartCard id="rp-gaps" title={t('gapsTitle')}>

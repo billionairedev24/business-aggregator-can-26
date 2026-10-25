@@ -6,7 +6,14 @@ import type { ScreenKey } from './screens';
 export const useShellT = defineMessages({
   en: {
     services: 'Services', shop: 'Shop', food: 'Food',
-    search: 'Search “sourdough”, “mobile mechanic”, “DJ”…',
+    search: 'Search {brand}',
+    hello: 'Hello, {name}', helloSignedIn: 'Hello', helloGuest: 'Hello, sign in', accountOrders: 'Account & orders',
+    deals: 'Today’s deals', returns: 'Returns & refunds', copyright: '© {entity}',
+    // the delivery cut-off strip (shop's next pooled run)
+    cutoffLabel: 'Delivery cut-off',
+    cutoffLead: '{when, select, tonight {Tonight’s} today {Today’s} tomorrow {Tomorrow’s} other {{weekday}’s}} pooled run to {area} closes at {time}.',
+    cutoffRest: 'Mix shops for one {fee} delivery.',
+    cutoffLeft: '{hours, plural, =0 {} other {# h }}{minutes} min left',
     signIn: 'Sign in', createAccount: 'Create account',
     skip: 'Skip to content',
     privacy: 'Privacy', terms: 'Terms', helpLink: 'Help', langSwitch: 'Français', photoCredits: 'Photo credits',
@@ -32,7 +39,13 @@ export const useShellT = defineMessages({
   },
   fr: {
     services: 'Services', shop: 'Boutique', food: 'Restaurants',
-    search: 'Rechercher « pain au levain », « mécanicien mobile », « DJ »…',
+    search: 'Rechercher sur {brand}',
+    hello: 'Bonjour, {name}', helloSignedIn: 'Bonjour', helloGuest: 'Bonjour, connectez-vous', accountOrders: 'Compte et commandes',
+    deals: 'Aubaines du jour', returns: 'Retours et remboursements', copyright: '© {entity}',
+    cutoffLabel: 'Heure limite de livraison',
+    cutoffLead: 'La tournée partagée {when, select, tonight {de ce soir} today {d’aujourd’hui} tomorrow {de demain} other {de {weekday}}} vers {area} ferme à {time}.',
+    cutoffRest: 'Combinez les boutiques pour une seule livraison à {fee}.',
+    cutoffLeft: 'Encore {hours, plural, =0 {} other {# h }}{minutes} min',
     signIn: 'Se connecter', createAccount: 'Créer un compte',
     skip: 'Aller au contenu',
     privacy: 'Confidentialité', terms: 'Conditions', helpLink: 'Aide', langSwitch: 'English', photoCredits: 'Crédits photo',
@@ -59,18 +72,18 @@ export const useShellT = defineMessages({
 /** Screen names (page titles, ScreenPending). */
 export const SCREEN_NAMES: { en: Record<ScreenKey, string>; fr: Record<ScreenKey, string> } = {
   en: {
-    home: 'Home', location: 'Where should we bring things?', search: 'Search', shop: 'Shop', category: 'Department',
+    home: 'Home', location: 'Where should we bring things?', search: 'Search', shop: 'Shop', category: 'Department', store: 'Store',
     product: 'Product', cart: 'Cart', checkout: 'Secure checkout', checkoutComplete: 'Order placed', confirmed: 'Your order', food: 'Food', restaurant: 'Restaurant',
     foodCheckout: 'Checkout', foodTrack: 'Track order', foodGroup: 'Group order', services: 'Services', svcCategory: 'Service category',
     providers: 'Providers', provider: 'Provider', book: 'Book a service', booking: 'Your booking', quote: 'Quote', quoteRequest: 'Request quotes', quoteCompare: 'Compare quotes', orders: 'Orders & bookings', messages: 'Messages',
-    account: 'Account', accountDelete: 'Delete account', accountDeletion: 'Deleting your account', problem: 'Report a problem', signIn: 'Sign in', register: 'Create account', sell: 'Sell or offer a service', help: 'Help', credits: 'Photo credits',
+    account: 'Account', accountDelete: 'Delete account', accountDeletion: 'Deleting your account', problem: 'Report a problem', signIn: 'Sign in', register: 'Create account', forgotPassword: 'Forgot password', resetPassword: 'Reset password', verifyEmail: 'Verify email', sell: 'Sell or offer a service', help: 'Help', credits: 'Photo credits',
   },
   fr: {
-    home: 'Accueil', location: 'Où devons-nous livrer ?', search: 'Rechercher', shop: 'Boutique', category: 'Rayon',
+    home: 'Accueil', location: 'Où devons-nous livrer ?', search: 'Rechercher', shop: 'Boutique', category: 'Rayon', store: 'Commerce',
     product: 'Produit', cart: 'Panier', checkout: 'Paiement sécurisé', checkoutComplete: 'Commande passée', confirmed: 'Votre commande', food: 'Restaurants', restaurant: 'Restaurant',
     foodCheckout: 'Paiement', foodTrack: 'Suivre la commande', foodGroup: 'Commande de groupe', services: 'Services', svcCategory: 'Catégorie de service',
     providers: 'Prestataires', provider: 'Prestataire', book: 'Réserver un service', booking: 'Votre réservation', quote: 'Devis', quoteRequest: 'Demander des devis', quoteCompare: 'Comparer les devis', orders: 'Commandes et réservations', messages: 'Messages',
-    account: 'Compte', accountDelete: 'Supprimer le compte', accountDeletion: 'Supprimer votre compte', problem: 'Signaler un problème', signIn: 'Se connecter', register: 'Créer un compte', sell: 'Vendre ou offrir un service', help: 'Aide', credits: 'Crédits photo',
+    account: 'Compte', accountDelete: 'Supprimer le compte', accountDeletion: 'Supprimer votre compte', problem: 'Signaler un problème', signIn: 'Se connecter', register: 'Créer un compte', forgotPassword: 'Mot de passe oublié', resetPassword: 'Réinitialiser le mot de passe', verifyEmail: 'Vérifier le courriel', sell: 'Vendre ou offrir un service', help: 'Aide', credits: 'Crédits photo',
   },
 };
 export const useScreenT = defineMessages(SCREEN_NAMES);

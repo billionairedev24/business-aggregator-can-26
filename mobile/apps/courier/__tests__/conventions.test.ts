@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { screenRuleHits } from '@northline/mobile-kit';
+
 import { createConfig, PERMISSION_TEXT, REDIRECT_URI } from '../app.config';
 import { en } from '../src/i18n/en';
 import { frCA } from '../src/i18n/fr-CA';
@@ -47,6 +49,32 @@ describe('code rules', () => {
   it('defines no colour: everything comes from @northline/tokens through the kit', () => {
     const offenders = source.filter((f) => /['"`]#[0-9a-fA-F]{3,8}['"`]|rgba?\(/.test(readFileSync(f, 'utf8')));
     expect(offenders).toEqual([]);
+  });
+
+  // S-169: `radius.pill` is 3 pt in Plainsight (never pills); what is a circle says `radius.round`, a control `radius.control`
+  it('never asks for a pill radius', () => {
+    expect(source.filter((f) => /radius\.pill/.test(readFileSync(f, 'utf8')))).toEqual([]);
+  });
+
+  // S-178/S-179: every screen on the kit's roles, scale and components (the native lint:tokens, mobile-kit's rules.ts):
+  // no raw colours, font sizes, line heights, spacing or radii, no retired display face, linen, drawings, hand-made
+  // prices or the native switch
+  it('uses the kit’s tokens and components only, on every screen', () => {
+    const hits = source.filter((f) => /\.tsx$/.test(f)).flatMap((f) => screenRuleHits(f.slice(ROOT.length + 1), readFileSync(f, 'utf8')));
+    expect(hits).toEqual([]);
+  });
+
+  // S-188: the courier keeps its sunlight rules — ink on white, large numbers — and its only violet is the primary
+  // action (the kit's Button): no link or action colour, no violet tertiary, no display face, the tab bar in ink
+  it('draws in ink, with violet only for the primary action (S-188)', () => {
+    const violet = /semantic\.link\b|semantic\[['"](?:link|action-primary|action-accent|nav-active-marker)['"]\]|textStyles\.link\b|variant=["']tertiary["']|textStyles\.display|tone=["']brand["']/;
+    expect(source.filter((f) => violet.test(readFileSync(f, 'utf8'))).map((f) => f.slice(ROOT.length + 1))).toEqual([]);
+  });
+
+  // S-169: the shared chrome draws with the kit's type roles (textStyles / TYPE), never a raw font size or the retired display face
+  it('sets no raw font size in the shared chrome', () => {
+    const chrome = ['src/components/ui.tsx', 'app/(app)/(tabs)/_layout.tsx'].map((f) => join(ROOT, f));
+    expect(chrome.filter((f) => /fontSize:\s*\d|fonts\.display/.test(readFileSync(f, 'utf8')))).toEqual([]);
   });
 });
 

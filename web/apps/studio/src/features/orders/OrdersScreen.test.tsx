@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi, onTestFinished } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { mockFetch, renderWithProviders } from '../../test/ops';
@@ -41,7 +41,31 @@ describe('Orders · products', () => {
     await user.click(screen.getByRole('button', { name: /^Mark packed/ }));
     await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url.endsWith('/o1/pack'))).toBe(true));
     await waitFor(() => expect(screen.queryByRole('button', { name: /^Mark packed/ })).toBeNull());
-    expect(screen.getAllByText('Awaiting pickup')).toHaveLength(3); // two rows + the KPI card's label
+    expect(screen.getAllByText('Awaiting pickup')).toHaveLength(4); // two rows + the KPI card's label + the status tab
+  });
+
+  it('S-175: status tabs with counts narrow the table, quick filters combine, statuses wear their colour', async () => {
+    // S-180: a fixed midday — the fixtures' run is 3 h from now, which is "tomorrow" when the suite runs late in the evening
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-01T18:00:00Z') });
+    onTestFinished(() => { vi.useRealTimers(); });
+    mockFetch({ 'GET /api/v1/merchants/m1/returns': () => ({ items: [] }), 'GET /api/v1/merchants/m1/orders': () => board() });
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<OrdersScreen />);
+    const tabs = within(await screen.findByRole('tablist', { name: 'Orders' }));
+    expect(tabs.getByRole('tab', { name: /^All/ }).getAttribute('aria-selected')).toBe('true');
+    expect(tabs.getByRole('tab', { name: /^Issues/ }).textContent).toBe('Issues1');
+    expect(tabs.queryByRole('tab', { name: /^Cancelled/ })).toBeNull(); // nothing cancelled: no tab
+    await user.click(tabs.getByRole('tab', { name: /^To pack/ }));
+    expect(screen.queryByText('NL-48201')).toBeNull();
+    expect(screen.getByText('NL-48213')).toBeTruthy();
+    await user.click(tabs.getByRole('tab', { name: /^All/ }));
+    await user.click(screen.getByRole('button', { name: "Tomorrow's runs" }));
+    expect(await screen.findByText('No orders match your search or filters.')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: "Remove filter: Tomorrow's runs" }));
+    expect(screen.getAllByText('Issue · wrong size')[0]!.className).toContain('nl-status-danger');
+    // the issue KPI is the only red delta; work to do is not "bad"
+    expect(screen.getByText('needs a reply').getAttribute('data-trend')).toBe('down');
+    expect(screen.getByText('next run R-611').getAttribute('data-trend')).toBe('flat');
   });
 
   it('bookkeepers see the list without the action', async () => {

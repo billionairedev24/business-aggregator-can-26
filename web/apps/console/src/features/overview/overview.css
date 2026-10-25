@@ -3,22 +3,19 @@
 .nl-ov-tile { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); min-width: 0; }
 .nl-ov-tile-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); color: var(--color-text-muted); }
 .nl-ov-tile-value { font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
-.nl-ov-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--color-border-control); }
+.nl-ov-dot { width: 10px; height: 10px; border-radius: var(--radius-round); flex: none; background: var(--color-border-control); }
 .nl-ov-dot[data-status="ok"] { background: var(--color-success); }
 .nl-ov-dot[data-status="degraded"] { background: var(--color-danger); }
 .nl-ov-note { margin: 0; color: var(--color-danger); font-size: var(--text-md); }
-/* The board (light direction): the 12-week chart beside the to-do list, then what is live now beside system health —
-   one grid, so no card is left alone beside an empty column. Container queries: the sidebar's rail changes the width. */
+/* The board (S-177): the KPI strip and "Needs attention" run full width above; then the 12-week chart beside what is
+   live now and system health. Container queries: the sidebar's rail changes the width. */
 .nl-ov-wrap { container-type: inline-size; min-width: 0; }
 .nl-ov-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); align-items: stretch; }
 .nl-ov-grid > * { min-width: 0; }
-.nl-ov-todo { display: flex; }
-.nl-ov-todo > .bo-card { flex: 1; }
 @container (min-width: 720px) {
-  .nl-ov-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: 'gmv gmv' 'todo live' 'todo health'; }
-  .nl-ov-gmv { grid-area: gmv; } .nl-ov-todo { grid-area: todo; } .nl-ov-live { grid-area: live; } .nl-ov-hc { grid-area: health; }
+  .nl-ov-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: 'gmv gmv' 'live health'; }
+  .nl-ov-gmv { grid-area: gmv; } .nl-ov-live { grid-area: live; } .nl-ov-hc { grid-area: health; }
 }
 @container (min-width: 1040px) {
-  .nl-ov-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: 'gmv gmv todo' 'live health health'; }
-  .nl-ov-hc .nl-ov-health { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .nl-ov-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: 'gmv gmv live' 'gmv gmv health'; }
 }

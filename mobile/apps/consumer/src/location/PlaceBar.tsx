@@ -9,11 +9,11 @@ import { useDeliveryLocation } from './DeliveryLocation';
 export const openLocation = () => router.push('/location');
 
 /**
- * The tabs' top (light direction; the web header's phone row): where things come from — "Deliver to" an address the
- * person chose (or their default address), "Near" the fallback market — on one line with an ellipsis, opening the
- * location sheet; `actions` on the right; the one search pill under it.
+ * The tabs' top (E-15 Plainsight, the web header's phone rows): the brand and `actions`, the one search bar, then
+ * where things come from — "Deliver to" an address the person chose (or their default address), "Near" the fallback
+ * market — on one line with an ellipsis, opening the location sheet; `below` under it (Home's department strip).
  */
-export function PlaceBar({ lead, actions, search = true, searchTestID = 'home-search' }: { lead?: ReactNode; actions?: ReactNode; search?: boolean; searchTestID?: string }) {
+export function PlaceBar({ lead, actions, below, search = true, searchTestID = 'home-search' }: { lead?: ReactNode; actions?: ReactNode; below?: ReactNode; search?: boolean; searchTestID?: string }) {
   const { t } = useI18n();
   const { location } = useDeliveryLocation();
   const place = location.label ?? location.city;
@@ -27,6 +27,7 @@ export function PlaceBar({ lead, actions, search = true, searchTestID = 'home-se
       placeHint={t('shop.home.placeHint')}
       onPlace={openLocation}
       actions={actions}
+      below={below}
       search={search ? <SearchPill label={t('rd.search.placeholder')} onPress={() => router.push('/search')} testID={searchTestID} /> : undefined}
     />
   );

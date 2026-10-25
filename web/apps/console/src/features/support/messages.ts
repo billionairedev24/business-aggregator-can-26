@@ -7,6 +7,10 @@ import { defineMessages } from '@northline/ui';
 export const useSupportT = defineMessages({
   en: {
     heading: 'Support desk',
+    caseViews: 'Cases', tv_all: 'All', tv_urgent: 'Urgent', tv_unassigned: 'Unassigned', tv_mine: 'Mine', tv_sla_risk: 'SLA at risk', requester: 'Requester', rq_all: 'Everyone',
+    back: '← All cases', f_requester: 'Requester', f_portal: 'Portal', f_agent: 'Agent', f_priority: 'Priority', f_age: 'Opened', f_ref: 'About',
+    caseTabs: 'Case record', escalateDesc: 'Trust & safety takes the case over', refundDesc: 'Finance approves; never the agent who asked', takeDesc: 'You become the case’s agent',
+    notFoundTicket: 'This case doesn’t exist.', actionsPanel: 'Actions',
     kpis: 'The queue today',
     summary: '{open} open · {urgent} urgent · median first reply {median}',
     summaryNoMedian: '{open} open · {urgent} urgent',
@@ -67,6 +71,10 @@ export const useSupportT = defineMessages({
   },
   fr: {
     heading: 'Centre de soutien',
+    caseViews: 'Dossiers', tv_all: 'Tous', tv_urgent: 'Urgents', tv_unassigned: 'Non assignés', tv_mine: 'Les miens', tv_sla_risk: 'Délai à risque', requester: 'Demandeur', rq_all: 'Tout le monde',
+    back: '← Tous les dossiers', f_requester: 'Demandeur', f_portal: 'Portail', f_agent: 'Agent', f_priority: 'Priorité', f_age: 'Ouvert', f_ref: 'Objet',
+    caseTabs: 'Dossier', escalateDesc: 'Confiance et sécurité prend le dossier en charge', refundDesc: 'Les finances approuvent; jamais l’agent qui a demandé', takeDesc: 'Vous devenez l’agent du dossier',
+    notFoundTicket: 'Ce dossier n’existe pas.', actionsPanel: 'Actions',
     kpis: 'La file aujourd’hui',
     summary: '{open} ouverts · {urgent} urgents · première réponse médiane {median}',
     summaryNoMedian: '{open} ouverts · {urgent} urgents',

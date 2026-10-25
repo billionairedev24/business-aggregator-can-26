@@ -1,6 +1,6 @@
 /* Courier progress on the tracking pages (S-88). Tokens only. */
-.nl-courier { margin-top: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--text-md); }
+.nl-courier { margin-top: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--type-body); }
 .nl-courier p { margin: 0; }
-.nl-courier-live { color: var(--color-text-muted); display: flex; align-items: center; gap: 8px; }
-.nl-courier-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-action-primary); flex: none; }
-.nl-courier-pin { padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); border: 1px solid var(--color-border-card); background: var(--color-surface-sunken); width: fit-content; max-width: 100%; }
+.nl-courier-live { color: var(--color-text-muted); display: flex; align-items: center; gap: var(--space-2); }
+.nl-courier-dot { width: 8px; height: 8px; border-radius: var(--radius-round); background: var(--color-action-primary); flex: none; }
+.nl-courier-pin { padding: var(--space-3) var(--space-4); border-radius: var(--radius-panel); border: 1px solid var(--color-border); background: var(--color-well); width: fit-content; max-width: 100%; }

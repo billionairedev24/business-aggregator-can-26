@@ -80,3 +80,38 @@ web:a11y:
     when: always
     expire_in: 7 days
     paths: [web/packages/a11y/a11y-results/]
+
+# S-180: the visual regression gate — the component gallery's screenshot baselines (make ui-visual) and no React
+# hydration error on any consumer route (make ui-hydration). In Playwright's image: the browser (Chromium 1194) and the
+# fallback fonts the baselines were made with; IBM Plex Sans is self-hosted, the clock pinned, the zone UTC.
+web:visual:
+  extends: .web
+  stage: smoke
+  image: mcr.microsoft.com/playwright:v1.56.1-noble
+  needs: []
+  timeout: 30m
+  script:
+    - command -v make >/dev/null || (apt-get update -qq && apt-get install -y -qq --no-install-recommends make >/dev/null)
+    - make -C .. ui-visual
+    - make -C .. ui-hydration
+  artifacts:
+    when: on_failure
+    expire_in: 7 days
+    paths: [web/apps/gallery/node_modules/.visual-results/, web/packages/a11y/a11y-results/shots-artifacts/]
+
+# Optional: Run pipeline with RUN_A11Y=true (S-180): the accessibility check of every ui-shots route (about an hour).
+web:a11y-routes:
+  extends: .web
+  stage: smoke
+  image: mcr.microsoft.com/playwright:v1.56.1-noble
+  needs: []
+  timeout: 90m
+  rules:
+    - if: ($PIPELINE_PART == "all" || $PIPELINE_PART == "web") && $RUN_A11Y == "true"
+  script:
+    - command -v make >/dev/null || (apt-get update -qq && apt-get install -y -qq --no-install-recommends make >/dev/null)
+    - make -C .. ui-a11y
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths: [ui-shots/consumer/, ui-shots/studio/, ui-shots/console/, web/packages/a11y/a11y-results/pages/]

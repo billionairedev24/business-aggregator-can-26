@@ -1,4 +1,4 @@
-import { type Locale, timeZone } from '@northline/ui';
+import { formatTimeRange, type Locale, timeZone } from '@northline/ui';
 import type { Run } from './api';
 
 const INTL: Record<Locale, string> = { en: 'en-CA', fr: 'fr-CA' };
@@ -16,11 +16,9 @@ export const clock = (iso: string, locale: Locale, zone: string = timeZone()) =>
   plainSpaces(new Intl.DateTimeFormat(INTL[locale], { timeZone: zone, hour: 'numeric', minute: '2-digit' }).format(new Date(iso)));
 
 /** "6–9 p.m." / "18 h – 21 h" (design 06: "Tonight 6–9 pm"); minutes only when a time isn't on the hour. */
+// a window across midnight names both days ("Oct 19, 9:36 p.m. – Oct 20, 12:36 a.m."), never ISO dates (audit #8)
 export function windowRange(startIso: string, endIso: string, locale: Locale, zone: string = timeZone()) {
-  const start = new Date(startIso), end = new Date(endIso);
-  const onHour = start.getUTCMinutes() === 0 && end.getUTCMinutes() === 0;
-  const f = new Intl.DateTimeFormat(INTL[locale], { timeZone: zone, hour: 'numeric', ...(onHour ? {} : { minute: '2-digit' }) });
-  return plainSpaces(f.formatRange(start, end));
+  return plainSpaces(formatTimeRange(startIso, endIso, locale, zone));
 }
 
 /** "Tuesday" / "mardi". */

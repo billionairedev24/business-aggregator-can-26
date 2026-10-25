@@ -1,5 +1,7 @@
 // S-69 bundle budget, run after `vite build`: the initial JS — the entry script in dist/index.html, the chunks it
-// preloads (<link rel="modulepreload">), and every chunk those import statically — must stay under 250 kB gzip. Fails the build otherwise and names the biggest files.
+// preloads (<link rel="modulepreload">), and every chunk those import statically — must stay under 250 kB gzip (S-175
+// raised it to 260 while ProductCard / ServiceCard sat in the Commerce chunk the dashboard loads; S-176 moved them to
+// their own module, @northline/ui Cards.tsx, and brought it back). Fails the build otherwise and names the biggest files.
 // Usage: node scripts/bundle-budget.mjs [dist] [budget kB]
 import { readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
