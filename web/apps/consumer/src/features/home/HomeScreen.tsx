@@ -12,6 +12,7 @@ import { activityQuery } from '../account/api';
 import { useKitchens, type Card as Kitchen } from '../food/api';
 import { CUISINE_NAMES } from '../food/messages';
 import { shortPlace, useDeliveryLocation } from '../location/useDeliveryLocation';
+import { knowsPlace } from '../location/sources';
 import { useZone } from '../location/regions';
 import { rememberInvite } from '../loyalty/api';
 import { RewardsNearYou } from '../loyalty/RewardsNearYou';
@@ -38,7 +39,8 @@ const FOOD_TILES = ['vietnamese', 'indian', 'pizza', 'ramen'];
  * Home (E-15 A · Plainsight, design/revamp/a.html "Consumer home", with Main Street's maker-of-the-week hero from
  * b.html, under the S-188 "tonight" hero band, design/revamp/hybrid): the band (the headline with the place, the trust
  * line, the run card that replaces the shell's cut-off strip here, three department photo tiles straddling its edge),
- * then the maker hero — one featured local shop and two side tiles — then four home tiles (departments, services, kitchens, the deal of the day) and rails: order again
+ * then (S-191, Amazon's order) four home tiles (the deal of the day, departments, services, kitchens), the first rails, the
+ * maker hero — one featured local shop and two side tiles — and the other rails: order again
  * (signed in, from the shops of the person's own orders), popular products, the top-rated pros and the popular
  * kitchens where the visitor is. The tiles are the catalogue's and render on the server; the hero and the rails load in
  * the browser once the place is known (the server doesn't know where the visitor is), in boxes drawn at their size.
@@ -53,7 +55,7 @@ export function HomeScreen() {
   const { landing } = useNextRun();
   const products = useQuery({ ...railQuery('product', place ?? {}, locale), enabled: place !== null });
   const services = useQuery({ ...railQuery('service', place ?? {}, locale, 'rating'), enabled: place !== null });
-  const kitchens = useKitchens(place ? location.city : undefined, location.lat, location.lng);
+  const kitchens = useKitchens(knowsPlace(location) ? location.city : undefined, location.lat, location.lng, place !== null);
   const activity = useQuery({ ...activityQuery, enabled: !!user });
   const city = shortPlace(location);
   const empty = products.data?.items.length === 0 && services.data?.items.length === 0;
@@ -68,13 +70,16 @@ export function HomeScreen() {
   return (
     <div className="nl-home">
       <HomeBand place={city} landing={landing} services={services.data?.total} kitchens={kitchens.data?.items.length} />
-      <MakerHero landing={landing} services={services.data?.items} kitchens={kitchens.data?.items} />
+      {/* S-191 (Amazon's home): the card grid straight under the band, then the first rail, then the maker of the week */}
       <HomeTiles t={t} landing={landing} kitchens={kitchens.data?.items} />
 
       {empty ? (
+        <>
+        <MakerHero landing={landing} services={services.data?.items} kitchens={kitchens.data?.items} />
         <section className="nl-section" aria-label={t('loadError')}>
           <EmptyState title={city ? t('emptyCity', { city }) : t('emptyAnywhere')} action={<button type="button" className="btn btn-primary" onClick={chooser.show}>{t('changeLocation')}</button>}>{t('emptyHint')}</EmptyState>
         </section>
+        </>
       ) : (
         <>
           {user && again.length > 0 ? (
@@ -82,6 +87,7 @@ export function HomeScreen() {
           ) : null}
           <ProductRail t={t} id="home-products" title={city ? t('popularNear', { city }) : t('popularAnywhere')} more={{ href: '/shop', label: t('tileShopMore') }}
             query={products} items={products.data?.items.filter(i => !again.includes(i))} loading={place === null} />
+          <MakerHero landing={landing} services={services.data?.items} kitchens={kitchens.data?.items} />
           <ServiceRail t={t} title={city ? t('prosNear', { city }) : t('prosAnywhere')} query={services} loading={place === null} />
           <KitchenRail t={t} kitchens={kitchens} loading={place === null} />
           {place !== null ? <RewardsNearYou city={location.city ?? city} lat={location.lat} lng={location.lng} /> : null}
@@ -105,10 +111,11 @@ function HomeTiles({ t, landing, kitchens }: { t: T; landing: Landing | undefine
   const open = kitchens?.filter(k => k.open).length;
   return (
     <PanelTiles className="nl-home-tiles">
+      {/* the deal first: a product on a phone's first screen (S-191) */}
+      <DealTile t={t} landing={landing} />
       <PanelTile title={t('tileShop')} more={{ href: '/shop', label: t('tileShopMore') }}><PictureGrid items={shop} /></PanelTile>
       <PanelTile title={t('tileServices')} more={{ href: '/services', label: t('tileServicesMore') }}><PictureGrid items={services} /></PanelTile>
       <PanelTile title={t('tileFood')} more={{ href: '/food', label: open ? t('tileFoodMore', { count: open }) : t('tileFoodMoreAll') }}><PictureGrid items={food} /></PanelTile>
-      <DealTile t={t} landing={landing} />
     </PanelTiles>
   );
 }
@@ -121,7 +128,7 @@ function DealTile({ t, landing }: { t: T; landing: Landing | undefined }) {
   const { locale } = useLocale();
   const zone = useZone(landing?.market);
   const candidates = (landing?.popular ?? []).slice(0, 3);
-  const pages = useQueries({ queries: candidates.map(p => ({ ...productQuery(p.productId, landing?.market, locale), enabled: !!landing })) });
+  const pages = useQueries({ queries: candidates.map(p => ({ ...productQuery(p.productId, landing?.market ?? undefined, locale), enabled: !!landing })) });
   const settled = pages.every(q => !q.isPending);
   const dealIndex = pages.findIndex(q => q.data?.offers.some(o => o.compareAtCents != null && o.compareAtCents > o.priceCents));
   const deal = dealIndex >= 0 ? candidates[dealIndex] : undefined;

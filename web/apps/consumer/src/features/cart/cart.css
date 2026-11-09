@@ -56,9 +56,17 @@ a.cart-line-name:focus-visible { outline: 2px solid var(--color-focus); outline-
 }
 @media (max-width: 479.98px) {
   .cart-group { padding: var(--space-3) var(--space-3-5) 0; }
-  .cart-line { grid-template-columns: 72px minmax(0, 1fr); gap: var(--space-3); }
   .cart-line-media { width: 72px; }
   .cart-line-name { font-size: var(--type-body); }
+  /* S-191 (Amazon's phone cart): the photo beside the name, the price and the stock; the stepper, Delete and Save for
+     later in one row under both (the body's parts join the line's grid) */
+  .cart-line { grid-template-columns: 72px minmax(0, 1fr); gap: 2px var(--space-3); }
+  .cart-line-media { grid-column: 1; grid-row: 1 / span 4; align-self: start; }
+  .cart-line-body { display: contents; }
+  .cart-line-body > * { grid-column: 2; justify-self: start; }
+  .cart-line-total { grid-column: 2; order: 1; text-align: left; }
+  .cart-line-body > .cart-line-actions { grid-column: 1 / -1; order: 2; margin-top: var(--space-2); gap: var(--space-1) var(--space-4); }
+  .cart-line-pipe { display: none; }
 }
 
 /* payment pieces (Payment.tsx; the checkout and the food checkout) */

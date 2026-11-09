@@ -75,6 +75,22 @@ const beforeCutoff = () => jest.spyOn(Date, 'now').mockReturnValue(Date.parse(`$
 describe('B1 Home', () => {
   afterEach(() => jest.restoreAllMocks());
 
+  it('S-190: browses with no location — no forced step, no 422 — every market together, popular first', async () => {
+    const { server, services } = await start({ welcomed: true });
+    expect(await screen.findByRole('button', { name: 'Set your delivery address' })).toBeTruthy();
+    expect(screen.getByText('Choose your location')).toBeTruthy();
+    expect(await screen.findByRole('header', { name: 'Popular on Northline' })).toBeTruthy();
+    const landing = server.calls.find((c) => c.path === '/public/shop')!;
+    expect(landing).toBeTruthy();
+    // no city in the request, and the fixture answers like the api: market null, no run claimed, where it ships from
+    const res = await services.api.get<{ market: string | null; run: unknown; popular: Array<{ shipsFrom: string; deliverable: boolean | null }> }>('/public/shop?lang=en', { auth: 'optional' });
+    expect(res).toMatchObject({ market: null, run: null });
+    expect(res?.popular[0]).toMatchObject({ shipsFrom: 'Sampleville', deliverable: null });
+    expect(await services.api.get<{ city: string | null }>('/public/home', { auth: 'optional' })).toMatchObject({ city: null });
+    // a malformed city is still refused, with the api's message
+    await expect(services.api.get('/public/home?city=%3Cb%3E', { auth: 'optional' })).rejects.toMatchObject({ status: 422 });
+  });
+
   it('shows where you deliver, the search bar, the department strip, the hero band, the maker of the week, the tiles and the rails — to a guest', async () => {
     beforeCutoff();
     const { server, view } = await start({ welcomed: true, store: saved() });
@@ -155,7 +171,7 @@ describe('B1 Home', () => {
   it('says when Northline doesn’t deliver there yet (empty)', async () => {
     await start({ welcomed: true, store: saved({ label: '77 Harbour Road, Faraway', city: 'Faraway', province: 'XC' }) });
     expect(await screen.findByText("Northline doesn't deliver to Faraway yet. Look around, or choose another address.")).toBeTruthy();
-    expect(screen.getByText('No shops deliver here yet.')).toBeTruthy();
+    expect(screen.getByText('We’re not live near you yet. Local shops are joining every week.')).toBeTruthy();
   });
 
   it('is in French on a French phone', async () => {
@@ -241,7 +257,7 @@ describe('B2 Search', () => {
 });
 
 describe('B3 Product and B4 Cart', () => {
-  it('shows the cut-off as the ink-on-yellow pill in the buy box (S-188)', async () => {
+  it('shows the cut-off as the ink-on-gold pill in the buy box (S-188)', async () => {
     const now = jest.spyOn(Date, 'now').mockReturnValue(Date.parse(`${new Date().toISOString().slice(0, 10)}T14:31:00Z`));
     await start({ welcomed: true, store: saved(), url: '/product/p-sourdough' });
     const pill = await screen.findByTestId('product-cutoff');

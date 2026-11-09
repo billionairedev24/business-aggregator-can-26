@@ -149,6 +149,20 @@ export function newShopState(): ShopFixtureState {
 }
 
 const served = (city: string | null) => MARKETS.some((m) => m.stage === 'live' && m.city.toLowerCase() === (city ?? '').toLowerCase());
+/** The fixture shops' market: the first live one (every made-up shop trades there). */
+const SHOP_MARKET = MARKETS.find((m) => m.stage === 'live')!.city;
+/**
+ * The visitor's place as the api reads it (S-190, a location is never required): blank or absent = none (every live
+ * market together); a value that isn't a place name is the api's 422.
+ */
+const CITY = /^[\p{L}\p{M}\p{Nd}][\p{L}\p{M}\p{Nd} .'’-]*$/u;
+const placeOf = (raw: string | null, field: 'city' | 'market'): { city: string | null } | { errors: Array<{ field: string; rule: string; message: string }> } => {
+  const city = (raw ?? '').trim();
+  if (!city) return { city: null };
+  if (city.length > 60) return { errors: [{ field, rule: 'length', message: 'At most 60 characters.' }] };
+  if (!CITY.test(city)) return { errors: [{ field, rule: 'format', message: 'Enter a city name.' }] };
+  return { city };
+};
 
 export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): FixtureArea {
   const midnight = () => Math.floor(ctx.now() / DAY) * DAY;
@@ -168,11 +182,13 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
     };
   };
   const shopOf = (merchantId: string) => SHOPS.find((s) => s.merchantId === merchantId)!;
-  const card = (p: FixtureProduct) => ({
+  // `known` = the request named a market (S-190: without one, no run is claimed and the card says where it ships from)
+  const card = (p: FixtureProduct, known = true) => ({
     productId: p.productId, offerId: p.offerId, name: p.name, merchantId: p.merchantId, shopName: shopOf(p.merchantId).name, unit: p.unit,
-    priceCents: p.priceCents, imageUrl: listingPhoto(p.productId), sellers: 1, run: p.tonight ? run('today') : run('tomorrow'),
+    priceCents: p.priceCents, imageUrl: listingPhoto(p.productId), sellers: 1, run: known ? (p.tonight ? run('today') : run('tomorrow')) : null,
+    shipsFrom: SHOP_MARKET, deliverable: known ? true : null,
   });
-  const shopCard = (s: (typeof SHOPS)[number]) => ({ ...s, products: PRODUCTS.filter((p) => p.merchantId === s.merchantId).length, run: run('today'), imageUrl: listingPhoto(s.merchantId) });
+  const shopCard = (s: (typeof SHOPS)[number], known = true) => ({ ...s, products: PRODUCTS.filter((p) => p.merchantId === s.merchantId).length, run: known ? run('today') : null, imageUrl: listingPhoto(s.merchantId), city: SHOP_MARKET });
   const departments = SHOPS.map((s) => ({ slug: s.departmentSlug, name: s.departmentName, shops: 1 }));
   const signedIn = (req: FixtureRequest) => (req.headers.authorization ?? '').startsWith('DPoP ');
   const unauthorized = () => ctx.answer(401, { error: 'invalid_token' });
@@ -302,9 +318,11 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
     const q = req.url.searchParams;
 
     if (method === 'GET' && path === '/public/home') {
-      const city = q.get('city') ?? '';
-      if (!city) return ctx.answer(422, { errors: [{ field: 'city', rule: 'required', message: 'Choose a city.' }] });
-      const ok = served(city);
+      // S-190: no city = every live market together (`city: null`), never a 422
+      const place = placeOf(q.get('city'), 'city');
+      if ('errors' in place) return ctx.answer(422, { errors: place.errors });
+      const city = place.city;
+      const ok = city === null || served(city);
       return ctx.answer(200, {
         city, providers: ok ? 2 : 0, shops: ok ? SHOPS.length : 0, kitchensOpen: 0, categories: {}, cuisines: {},
         trusted: ok
@@ -316,30 +334,43 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
       });
     }
     if (method === 'GET' && path === '/public/shop') {
-      const market = q.get('market') ?? MARKETS[0].city;
-      const ok = served(market);
+      const place = placeOf(q.get('market'), 'market');
+      if ('errors' in place) return ctx.answer(422, { errors: place.errors });
+      const market = place.city;
+      const known = market !== null;
+      const ok = !known || served(market);
       return ctx.answer(200, {
-        market, served: ok, run: ok ? run('today') : null, shopCount: ok ? SHOPS.length : 0,
-        departments: ok ? departments : [], shops: ok ? SHOPS.map(shopCard) : [], popular: ok ? PRODUCTS.slice(0, 4).map(card) : [],
+        market, served: ok, run: known && ok ? run('today') : null, shopCount: ok ? SHOPS.length : 0,
+        departments: ok ? departments : [], shops: ok ? SHOPS.map((x) => shopCard(x, known)) : [],
+        popular: ok ? PRODUCTS.slice(0, 4).map((p) => card(p, known)) : [],
+        // a city without delivery: the fixture market's products, labelled not deliverable (never hidden)
+        nearby: known && !ok ? PRODUCTS.slice(0, 4).map((p) => ({ ...card(p, false), deliverable: false })) : [],
       });
     }
     let m = /^\/public\/shop\/departments\/([^/]+)$/.exec(path);
     if (method === 'GET' && m) {
       const shop = SHOPS.find((s) => s.departmentSlug === m![1]);
       if (!shop) return ctx.answer(404, { code: 'not_found', detail: 'No such department.' });
-      const market = q.get('market') ?? MARKETS[0].city;
+      const place = placeOf(q.get('market'), 'market');
+      if ('errors' in place) return ctx.answer(422, { errors: place.errors });
+      const market = place.city;
+      const known = market !== null;
       const products = PRODUCTS.filter((p) => p.merchantId === shop.merchantId);
       return ctx.answer(200, {
-        slug: shop.departmentSlug, name: shop.departmentName, groupName: 'Food & grocery', market, served: served(market), run: run('today'), siblings: departments,
-        shopCount: 1, onRunCount: products.filter((p) => p.tonight).length, productCount: products.length, shops: [shopCard(shop)], products: products.map(card),
+        slug: shop.departmentSlug, name: shop.departmentName, groupName: 'Food & grocery', market, served: !known || served(market), run: known ? run('today') : null, siblings: departments,
+        shopCount: 1, onRunCount: known ? products.filter((p) => p.tonight).length : 0, productCount: products.length, shops: [shopCard(shop, known)],
+        products: products.map((p) => card(p, known)), nearby: [],
       });
     }
     m = /^\/public\/shop\/products\/([^/]+)$/.exec(path);
     if (method === 'GET' && m) {
       const p = PRODUCTS.find((x) => x.productId === m![1] || x.offerId === m![1]);
       if (!p) return ctx.answer(404, { code: 'not_found', detail: 'No such product.' });
-      const market = q.get('market') ?? MARKETS[0].city;
-      const ok = served(market);
+      const place = placeOf(q.get('market'), 'market');
+      if ('errors' in place) return ctx.answer(422, { errors: place.errors });
+      const market = place.city;
+      const known = market !== null;
+      const ok = !known || served(market);
       const s = shopOf(p.merchantId);
       return ctx.answer(200, {
         productId: p.productId, name: p.name, brand: null, description: p.description ?? null, bullets: [], unit: p.unit,
@@ -349,11 +380,13 @@ export function shopFixtures(ctx: FixtureContext, state: ShopFixtureState): Fixt
               offerId: p.offerId, merchantId: p.merchantId, shopName: s.name, tier: s.tier, rating: 4.8, ratingCount: 211, priceCents: p.priceCents, compareAtCents: null,
               condition: null, stock: p.stock, lowStock: p.stock <= 3, returnsPolicy: null, variantTheme: 'option',
               variants: (p.variants ?? []).map((v) => ({ ...v, priceCents: p.priceCents, stock: p.stock, images: [] })),
-              runs: p.tonight ? [run('today')] : [run('tomorrow')], images: [listingPhoto(p.productId)].filter((u): u is string => !!u),
+              runs: !known ? [] : p.tonight ? [run('today')] : [run('tomorrow')], images: [listingPhoto(p.productId)].filter((u): u is string => !!u),
               more: PRODUCTS.filter((x) => x.merchantId === p.merchantId && x.productId !== p.productId).map((x) => ({ productId: x.productId, name: x.name, priceCents: x.priceCents })),
+              shipsFrom: SHOP_MARKET, deliverable: known ? true : null,
             }]
           : [],
-        direct: ok ? { etaMinutes: 45, feeCents: 999 } : null,
+        direct: ok && known ? { etaMinutes: 45, feeCents: 999 } : null,
+        elsewhere: [],
       });
     }
     // S-158: the AI's reading of a typed sentence (the fake model: a few words it knows; never applied by the app)

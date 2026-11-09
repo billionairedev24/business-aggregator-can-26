@@ -169,6 +169,6 @@ const styles = StyleSheet.create({
   figures: { flexDirection: 'row', flexWrap: 'wrap', gap: space[4], paddingTop: space[1] },
   next: { flexDirection: 'row', alignItems: 'center', gap: space[3], padding: space[3], borderRadius: radius.panel, backgroundColor: semantic.well },
   open: { flexDirection: 'row', alignItems: 'center', gap: space[1], paddingTop: space[1], borderTopWidth: LINE.hair, borderTopColor: semantic.border, minHeight: space[10] },
-  // S-188: ink, not the violet link (the courier's only violet is the primary action)
+  // S-188: ink, not the spruce link (the courier's only spruce is the primary action)
   link: { color: semantic.text },
 });

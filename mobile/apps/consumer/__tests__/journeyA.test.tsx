@@ -159,8 +159,8 @@ describe('creating an account (A2 → email code → A4 → A5) on the app’s o
     expect(screen.getByTestId('mfa-passkey').props.accessibilityState).toMatchObject({ disabled: true });
     fireEvent.press(screen.getByRole('button', { name: 'Not now' }));
 
-    expect(await screen.findByText('Where should we bring things?')).toBeTruthy();
-    expect(view.getPathname()).toBe('/location');
+    // S-190: no forced location step — a new account lands on Home, the place bar offers the location sheet
+    await waitFor(() => expect(view.getPathname()).toBe('/home'));
     expect(await services.session.restore()).toBe(true);
     expect(server.calls.filter((c) => c.path === '/oauth2/authorize')).toHaveLength(2); // kept, then followed through continueTo
     expect(server.calls.filter((c) => c.path === '/oauth2/token')).toHaveLength(2); // use_dpop_nonce, then tokens
@@ -185,7 +185,8 @@ describe('creating an account (A2 → email code → A4 → A5) on the app’s o
     expect(await screen.findByText('Tick the box once you’ve saved them.')).toBeTruthy();
     fireEvent.press(screen.getByRole('checkbox'));
     fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
-    expect(await screen.findByText('Where should we bring things?')).toBeTruthy();
+    // S-190: Home, no forced location step
+    expect(await screen.findByTestId('home')).toBeTruthy();
     expect(server.auth.api.map((c) => c.path).slice(-2)).toEqual(['/api/auth/enroll/totp', '/api/auth/enroll/totp/verify']);
   });
 
@@ -208,7 +209,7 @@ describe('creating an account (A2 → email code → A4 → A5) on the app’s o
     fireEvent.press(await screen.findByRole('button', { name: 'Not now' }));
     expect(await screen.findByText("We couldn't reach Northline. Check your connection and try again.")).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Finish signing in' }));
-    expect(await screen.findByText('Where should we bring things?')).toBeTruthy();
+    expect(await screen.findByTestId('home')).toBeTruthy();
     expect(await services.session.restore()).toBe(true);
   });
 
@@ -306,7 +307,7 @@ describe('A5 the location sheet (the web\'s location dialog)', () => {
   it('says what is shown, lists the live markets, picks an address and saves it with its market, zone and note', async () => {
     const { view, store } = await start({ welcomed: true, url: '/location?next=/cart' });
     expect(await screen.findByRole('header', { name: 'Choose your location' })).toBeTruthy();
-    expect(await screen.findByText('Showing Sampleville until you choose your location.')).toBeTruthy();
+    expect(await screen.findByText('Showing everything on Northline. Choose where you are to see what’s near you first.')).toBeTruthy();
     expect(await screen.findByRole('button', { name: 'Sampleville, Sample Province' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Exampleton, Sample Province' })).toBeTruthy();
     expect(screen.queryByText(/Waitlist Province/)).toBeNull(); // only live markets are offered
@@ -371,10 +372,10 @@ describe('A5 the location sheet (the web\'s location dialog)', () => {
     expect(JSON.parse(store.data.get('nl.location')!)).toMatchObject({ label: '1204 Example Ave, Sampleville', city: 'Sampleville', marketId: 'mkt-sampleville', zone: 'Old Town' });
   });
 
-  it('keeps the fallback market when location is refused, and points to Settings when it can’t ask again', async () => {
+  it('keeps browsing everything when location is refused, and points to Settings when it can’t ask again', async () => {
     (Location.requestForegroundPermissionsAsync as jest.Mock).mockResolvedValueOnce({ status: 'denied', granted: false, canAskAgain: false });
     await start({ welcomed: true, url: '/location' });
-    expect(await screen.findByText('Showing Sampleville until you choose your location.')).toBeTruthy();
+    expect(await screen.findByText('Showing everything on Northline. Choose where you are to see what’s near you first.')).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Use my current location' }));
     expect(await screen.findByText('Location is off for Northline. Search for your address or postal code instead, or allow location in Settings.')).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Open Settings' }));
@@ -392,12 +393,13 @@ describe('A5 the location sheet (the web\'s location dialog)', () => {
     expect(JSON.parse(store.data.get('nl.location')!)).toMatchObject({ label: '12 Sample Street, Sampleville', street: '12 Sample Street', postalCode: 'A1A 1A1' });
   });
 
-  it('the sources, in order: a saved place, else the account’s default address, else the fallback market', async () => {
+  it('the sources, in order: a saved place, else the account’s default address, else nothing (S-190: no guessed city)', async () => {
     const { server } = await start({ signedIn: true, url: '/home' });
     await screen.findByTestId('home');
-    expect(await defaultAddress()).toBeNull(); // no address on the account yet → the fallback market stands
-    expect(screen.getByRole('button', { name: 'Delivery address: Sampleville' })).toBeTruthy();
-    expect(screen.getByText('Near')).toBeTruthy();
+    expect(await defaultAddress()).toBeNull(); // no address on the account yet → nothing known, and Home still browses
+    expect(screen.getByRole('button', { name: 'Set your delivery address' })).toBeTruthy();
+    expect(screen.getByText('Choose your location')).toBeTruthy();
+    expect(screen.queryByText('Near')).toBeNull();
     server.shop.addresses.push({ id: 'ad-2', street: '9 Other Way', city: 'Sampleville', province: 'XA', postal: 'A1A 1A1', isDefault: false });
     server.shop.addresses.push({ id: 'ad-1', street: '12 Sample Street', city: 'Sampleville', province: 'XA', postal: 'A1A 1A1', isDefault: true });
     expect(await defaultAddress()).toMatchObject({ status: 'address', label: '12 Sample Street, Sampleville', street: '12 Sample Street' });

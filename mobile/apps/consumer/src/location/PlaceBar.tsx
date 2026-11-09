@@ -10,8 +10,9 @@ export const openLocation = () => router.push('/location');
 
 /**
  * The tabs' top (E-15 Plainsight, the web header's phone rows): the brand and `actions`, the one search bar, then
- * where things come from — "Deliver to" an address the person chose (or their default address), "Near" the fallback
- * market — on one line with an ellipsis, opening the location sheet; `below` under it (Home's department strip).
+ * where things come from — "Deliver to" an address the person chose (or their default address), or a quiet "Choose
+ * your location" when nothing is known (S-190: never required, never a guessed city) — on one line with an ellipsis,
+ * opening the location sheet; `below` under it (Home's department strip).
  */
 export function PlaceBar({ lead, actions, below, search = true, searchTestID = 'home-search' }: { lead?: ReactNode; actions?: ReactNode; below?: ReactNode; search?: boolean; searchTestID?: string }) {
   const { t } = useI18n();
@@ -21,7 +22,7 @@ export function PlaceBar({ lead, actions, below, search = true, searchTestID = '
   return (
     <TopBar
       lead={lead}
-      kicker={exact ? t('rd.home.deliverTo') : t('lt.near')}
+      kicker={exact || !place ? t('rd.home.deliverTo') : t('lt.near')}
       place={place ?? t('lt.setPlace')}
       placeLabel={place ? t('shop.home.placeLabel', { place }) : t('shop.home.setAddressLabel')}
       placeHint={t('shop.home.placeHint')}

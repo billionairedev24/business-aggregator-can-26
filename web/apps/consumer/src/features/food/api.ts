@@ -18,9 +18,12 @@ export const Card = z.object({
   etaFromMin: z.number().int(), etaToMin: z.number().int(), pickupFromMin: z.number().int(), pickupToMin: z.number().int(),
   distanceKm: z.number().nullish(), delivers: z.boolean().nullish(), deliveryFeeCents: z.number().int(),
   rating: z.number(), reviews: z.number().int(), brandColor: z.string().nullish(),
+  // S-190: the kitchen's city (said on the card when the visitor's place isn't known)
+  city: z.string().nullish(),
 });
 export type Card = z.infer<typeof Card>;
-export const Kitchens = z.object({ city: z.string(), items: z.array(Card) });
+/** `city` is null when no city was asked: every live market's kitchens (S-190). */
+export const Kitchens = z.object({ city: z.string().nullish(), items: z.array(Card) });
 
 export const Option = z.object({ id: z.string(), name: z.string(), deltaCents: z.number().int(), isDefault: z.boolean(), soldOut: z.boolean() });
 export type Option = z.infer<typeof Option>;
@@ -55,13 +58,18 @@ export type Restaurant = z.infer<typeof Restaurant>;
 const q = (p: Record<string, string | number | undefined | null>) =>
   Object.entries(p).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join('&');
 
-export const kitchensQuery = (city: string, lat?: number, lng?: number) => queryOptions({
-  queryKey: ['public', 'kitchens', city.toLowerCase(), lat?.toFixed(3), lng?.toFixed(3)],
-  queryFn: () => http(`/api/v1/public/kitchens?${q({ city, lat: lat?.toFixed(5), lng: lng?.toFixed(5) })}`, {}, Kitchens),
+/** `city` undefined = the visitor's place isn't known: every live market's kitchens (S-190; nearest first with a point). */
+export const kitchensQuery = (city: string | undefined, lat?: number, lng?: number) => queryOptions({
+  queryKey: ['public', 'kitchens', city?.toLowerCase() ?? '', lat?.toFixed(3), lng?.toFixed(3)],
+  queryFn: () => {
+    const qs = q({ city, lat: lat?.toFixed(5), lng: lng?.toFixed(5) });
+    return http(`/api/v1/public/kitchens${qs ? `?${qs}` : ''}`, {}, Kitchens);
+  },
   staleTime: 30_000,
 });
-export const useKitchens = (city: string | undefined, lat?: number, lng?: number) =>
-  useQuery({ ...kitchensQuery(city ?? '', lat, lng), enabled: !!city });
+/** `ready` = the location's sources have been read (no fetch for the "locating" moment, then with or without a city). */
+export const useKitchens = (city: string | undefined, lat: number | undefined, lng: number | undefined, ready: boolean) =>
+  useQuery({ ...kitchensQuery(city, lat, lng), enabled: ready });
 
 export const restaurantQuery = (slug: string) => queryOptions({
   queryKey: ['public', 'kitchen', slug],

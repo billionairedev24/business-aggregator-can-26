@@ -75,10 +75,10 @@ export function pickMaker(shops: readonly ShopCard[], run: Run | null | undefine
 
 /**
  * Home (E-15 A · Plainsight with S-188's Plainsight + Chinook brand layer, design/revamp/hybrid "Consumer home · phone
- * (390)"): the violet header — the mark on violet, the inbox, the white search field with its violet button and
- * "Deliver to" (the location sheet) — with the violet department strip under it; the "tonight" hero band (the
+ * (390)"): the forest header — the mark on the forest, the inbox, the white search field with its spruce button and
+ * "Deliver to" (the location sheet) — with the forest department strip under it; the "tonight" hero band (the
  * headline with the place, the trust line, the run card with the next pooled run's cut-off counting down on the
- * yellow sticker, three department photo tiles, the last one reaching onto the white page; it replaces the cut-off
+ * gold sticker, three department photo tiles, the last one reaching onto the white page; it replaces the cut-off
  * strip); what's under way (`GET /me/upcoming`) for a signed-in person; the maker of the week (one featured local
  * shop: its photo, story in Archivo and two actions) and its two side tiles (book a pro, start a group order); the
  * departments and services tiles; S-152's rewards near you; "Popular near …" as product cards with Add to cart;
@@ -100,7 +100,8 @@ export function Home() {
 
   const refresh = () => void Promise.all([landing.refetch(), signedIn ? week.refetch() : null]);
   // a city, not the person's street ("Popular near Sampleville", "Tonight's pooled run to Sampleville")
-  const place = market.city ?? landing.data?.market;
+  // S-190: no place known = every live market ("Popular on {brand}"), never a guessed city
+  const place = market.city ?? landing.data?.market ?? undefined;
   const active = week.data?.items.map((w) => ({ w, to: appRoute(w.href) })).find((x) => !!x.to);
   const departments = landing.data?.departments ?? [];
 
@@ -165,7 +166,7 @@ export function Home() {
               <ErrorState error={landing.error} onRetry={() => void landing.refetch()} />
             </View>
           ) : null}
-          {landing.data && !landing.data.served ? (
+          {landing.data && !landing.data.served && landing.data.market ? (
             <View style={styles.pad}>
               <Body tone="muted">{t('shop.home.notServed', { place: landing.data.market })}</Body>
             </View>
@@ -267,7 +268,7 @@ function PopularServices() {
 const openDepartment = (d: DepartmentTile) => router.push({ pathname: '/search', params: { department: d.slug, name: d.name } });
 
 /**
- * The department strip under the header (S-188: the violet `subheader-*` strip): All · Services · Shop, then the
+ * The department strip under the header (S-188: the forest `subheader-*` strip): All · Services · Shop, then the
  * market's departments — the kit's underline tabs on the chrome, white words, "All" current on Home with the white
  * bar; each opens its landing.
  */

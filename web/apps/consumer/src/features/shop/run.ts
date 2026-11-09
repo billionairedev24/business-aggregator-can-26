@@ -19,7 +19,7 @@ export function useNextRun(): { landing: Landing | undefined; run: Run | null | 
   const known = explicit !== undefined || location.status !== 'locating';
   const landing = useQuery({ ...landingQuery(explicit ?? (known ? location.city : undefined), locale), enabled: known });
   const data = landing.data;
-  return { landing: data, run: data ? (data.served ? data.run ?? null : null) : landing.isError ? null : undefined, market: data?.market };
+  return { landing: data, run: data ? (data.served ? data.run ?? null : null) : landing.isError ? null : undefined, market: data?.market ?? undefined };
 }
 
 /**

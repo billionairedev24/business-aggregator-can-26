@@ -12062,3 +12062,200 @@ cut-off pills, violet actions, links and focus in both apps, the courier app's s
   the hero (the headline wraps; the tile names are one line and cap at 1.6×). The web's "Today's deals" link on the
   strip isn't drawn: the app has no deals destination. The kit's `HomeHero` holds no minimum headline height (no
   server render to shift against).
+
+## 2026-11-09 — S-189 Northern Pine theme
+
+The owner deployed the violet brand layer (S-188) and doesn't like the purple. From four palettes
+(`design/revamp/palettes/index.html`, now in the repo as the reference, with its photos and credits) they chose
+**Northern Pine**. Only colours change: type, shapes, density, layout, the hero, the deal-sticker mechanic, selected
+states in ink #121418 and the status colours are as S-188 left them.
+
+- **Tokens.** The page's token diff against `palettes/plainsight.json`, all 52 values, applied by script from the page's
+  own data (`palettes.py`) and checked to leave no difference: chrome `header-bg` / `footer-bg` / `hero-bg` #0F2A21, strip
+  `subheader-bg` / `header-hover-bg` #173B2E (hover #22503F, line #33604E), meta `header-muted` / `header-ring` /
+  `footer-muted` #B5D2C4, focus on the chrome `header-focus` / `focus-on-dark` / `focus-on-inverse` #8FDCC4, scope
+  #EAF2EE / #173B2E; action, link, focus, `topbar-focus`, `nav-active-marker`, `mark` spruce #0E6B58 (hover #0A5546),
+  halo and selection #BFE4D9, `nav-active-bg` / `surface-brand` / `badge-brand-bg` #E7F3EE (text #173B2E), promo
+  #E8F4EE / #173B2E; commerce, `cart-badge`, `mark-highlight` gold #F5B82E with ink, its tint #FDEFC9; `subheader-deal`
+  and `hero-accent` #F7C75A; hero glow #1F7A5E (peak #15523F), text #D4E7DD, tile meta #E2EEE7, scrim #0B1F17, card
+  line #33604E; and the `color.*` brand values EmailBrand.java copies (primary/link/focus, hovers, accent, accentTint,
+  markHighlight). The derived ramps follow. `theme.json`, the favicons (the four apps and the docs site) regenerated.
+- **Contrast gate.** Every pair of the page's table passes with its ratios: white on spruce 6.44 (hover 8.75), the link
+  on white 6.44 and on the page ground 5.85, the nav marker on its tint 5.66, ink on gold 10.34, the strip's gold 7.80,
+  the hero accent 9.66, the trust line 11.85, the header meta 9.45, white on the strip 12.34 (hover 9.18), tile meta on
+  the scrim 14.41, the scope 10.83, the promo 10.94, focus on the chrome 9.61, the search button 6.44, ink on the gold
+  tint 16.13. Changes to the guards: the hero accent is now gold text, so its pairs are held to 4.5 (they were 3 for the
+  light violet) and it is `CHROME_ONLY` — refused as the text of a pair on any light surface (#F7C75A on white is
+  1.58:1). The rejected pairs now cover gold on white (1.78) and on the page ground, the hero accent and the strip's
+  gold on white, and the spruce on the chrome (2.38) and on the strip; all stay failing (a test checks it, and that
+  spruce on the chrome is 2.38). `lint:tokens` also refuses `var(--color-hero-accent)` outside `hero.css`, and the
+  native screen rules refuse `semantic['hero-accent']` outside the home band (the kit's `HomeHero` draws it).
+- **Hero glow.** The page draws Pine's lower-left glow in the commerce gold at 13 % (the violet drew the action colour
+  at 30 %). The web band and the kit's `HomeHero` do the same with `--color-commerce` / `semantic.commerce` (a fill in a
+  gradient stop, not text), so no new role. The top-right glow is `hero-glow` at 55 % as before. The page's band
+  bottom (#0C241B) and sticker shade (#04120C) are approximated by `hero-scrim` #0B1F17, as S-188 did with the violet.
+- **Spruce and success.** Spruce #0E6B58 is 168°, success #137A3A 142° (a test holds them ≥ 20° apart). In the gallery
+  success is only ever a tinted tag or text with an icon (status tags, "Verified", KPI deltas, the payout card's edge);
+  actions are solid spruce. They read apart, though they are related greens. **Open point for the lead:** the "New" tag
+  (`badge-brand`, #E7F3EE / #173B2E, from the page's diff) now looks close to the success tag (#E4F3E9 / #137A3A); they
+  differ by the status tag's square marker and the text hue. Left as the page draws it.
+- **Email.** `EmailBrand` ACCENT #0E6B58, HIGHLIGHT #F5B82E, HIGHLIGHT_100 #FDEFC9; `./gradlew :email:test` green
+  (180 tests; JDK 25 installed from the Ubuntu archive in this container, it had only 21).
+- **Web.** No raw violet or yellow anywhere outside the tokens (grep of every violet value, the glow and #FFD23F; the
+  lints already forbade them). Comments that named violet / yellow now name the forest chrome, spruce and gold.
+- **Mobile.** Both apps and the kit read `theme.json`, so every colour followed; `gen-brand --check` unchanged (fonts
+  only). The kit's `STICKER` holds no colour (tilt and edge widths; the edges are `sticker-edge` ink and `hero-scrim`),
+  so it is unchanged. The status bar stays light on the forest tabs (`setStatusBarStyle('light')`, the strip
+  `header-bg`). The store icons and splash (`scripts/gen-icons.mjs`, a placeholder from the 2026-10-18 palette, not
+  re-run by S-188) are left as they are: already green and honey.
+- **Visual gate.** Develop's own baselines fail `test:visual` in this container (10 of 16 tests: text anti-aliasing
+  differs, and the shell baseline was stale — an ink current-page marker and the pre-S-188 mark). All 71 changed
+  baselines were retaken here and reviewed by eye against the old ones (section by section, old above new, plus a
+  pixel check that the geometry did not move); the gate then passes 16/16.
+- **Checks.** Tokens build + gate, `lint:tokens`, `lint:brand`, `lint:colors`, web typecheck (all packages) and build (all
+  apps, the docs site included), `./gradlew :email:test`, mobile typecheck, lint and tests (kit 144, consumer 330,
+  courier 79, release) green. Web tests green except the two consumer booking tests below. `test:visual` 16/16 after the
+  re-baseline. `make ui-a11y` (three apps, 1440 + 390, en + fr): 304 passed, 0 axe findings; the two console keyboard
+  checks (the Suspend and Change tier dialogs' textarea / select "shows its focus") fail identically on develop.
+  `make ui-hydration`: 48 passed; sign-in, register and forgot-password raise React #418 (a text mismatch) identically on
+  develop. `make ui-shots` (all routes) and `make mobile-shots` (both apps) taken; the consumer home (1440, 390), the
+  product row, the Studio dashboard and the phone home compared with the palette page's Pine renders by eye: they match.
+  `make mobile-shots` needs `CHROMIUM_PATH=/opt/pw-browsers/chromium-1243/chrome-linux64/chrome` here (the script
+  looks under `chrome-linux/`).
+- **Not done / not verified:** no device or simulator (react-native-web only). The consumer web's two booking tests that assume Halifax
+  is UTC−3 fail since daylight time ended on 1 Nov (real clock; not this story). `docs/design/revamp-walkthrough.md`
+  (the S-180 walkthrough, a record) still says violet.
+
+## 2026-11-09 — S-191 Amazon-grade consumer shell
+
+Owner feedback on the deployed consumer site: "this website does not match amazon in any way", "the footer is so dry",
+"the current website is also bizarre on mobile". The audit is `docs/design/amazon-parity.md` (21 gaps, ranked, with
+what is fixed and what is open). amazon.ca is blocked by the proxy (403), so the audit works from Amazon's well-known
+desktop and mobile web patterns; it says so. Patterns only, no Amazon trade dress, tokens only (S-189 is moving the
+palette to Northern Pine; nothing here names a colour).
+
+- **Footer.** Replaces S-170's one-line band (audit #9 then; the owner now finds it "so dry"): a "Back to top" bar
+  (scrolls to the top, focus to `#main`, no smooth scroll under reduced motion), four columns — Get to know us · Make
+  money with us · Payments and policies · Let us help you — a row with the logo, the FR/EN switch and "Canada · CAD $",
+  and the legal strip: Conditions of use, Privacy notice, Cookies and ads notice (→ privacy § 9 "Cookies and analytics";
+  we run no interest-based ads, so the notice is the cookies section) and "© {year} {company}". **The year is back**:
+  S-170 dropped it because a clock read at render could differ; it now reads the render clock (`useRenderNow`, S-182),
+  the same on the server and the browser's first render. Every link is a real route or a help-centre section
+  (`/help#help-pay`, `#help-a11y`); a test fails on any other target. "Run a kitchen" is now in the footer (S-170 left it
+  out pending the owner: Amazon's "Make money with us" lists every way in). Footer link names differ from the hero
+  tiles' ("Find a pro", not "Book a pro") so a page never has two links of one name going to different places. Every
+  footer link is a 44 px row as wide as its column (ui-a11y's 44 px report is clean for the footer); two columns on phones.
+- **Phone header.** Rows as before (menu · logo · account · cart / search / place / strip), but: the place is a slim
+  full-width bar on the strip's colour, the strip's items are square chips (32 px drawn in the 44 px target) without
+  the group hairlines, and **scrolling down keeps only the search**: `useStickyOffset` now also measures what sits under
+  the `tuckTo` element and publishes `--nl-header-clip`; the tucked header clips it away (`clip-path`, which also stops
+  clicks there), and `--nl-header-h` is then the search alone, so sticky bars sit right under it. Focus into the header
+  or scrolling up shows it all. Desktop never tucks (the 16 % rule), unchanged. Only a header that starts the page
+  tucks (its container's top at the page's top): the gallery shows the header further down, where a tuck used to be
+  invisible but a clip hid the place and the strip. The location slot's words and behaviour
+  are S-190's; this story only gave the bar its look.
+- **16 px phone gutters** in the consumer shell (`.nl-app` under 600 px; safe areas kept). The scale's fluid gutter
+  (12 px at 390) stays for the Studio and console.
+- **Home.** Phones: a compact band — the 24 px display headline on two lines, one trust point, the run card in an 88 px
+  box, the three department tiles side by side at 88 px with their name only (11 px under 400 px so "Commander" never
+  breaks). **Order changed on every width**: band → the four cards (the deal of the day first) → "Order again" and
+  "Popular near …" → maker of the week → pros → kitchens. The hybrid mockup has the maker right after the band; the owner's
+  "does not match Amazon" and "bizarre on mobile" outrank it here (Amazon: card grid, then rails). A product now shows at
+  about 540 px on a 390 × 844 phone (was about 2,350 px).
+- **Results (phones).** The Filters button moved out of the chips row into one bar with Sort (`.nl-results-tools`),
+  sticky under the header; on wide screens the same element sits at the summary bar's right end (absolute; the summary
+  reserves its width) and the Filters button stays hidden. The chips row only shows with applied filters.
+- **Product page.** The details column is three blocks — head (store, title, rating, run tag), info (price, options),
+  details (about, facts) — in the same column on wide screens; on phones head → photo → thumbnails → info → **buy box**
+  → details. DOM order follows the phone's reading order. The buy box hides its own price on phones (it is just above).
+- **Cart (phones under 480 px).** The line's body joins the line grid (`display: contents`): photo beside name, meta,
+  stock and price; stepper, Delete and Save for later in one row under both; the "|" separators hidden there.
+- **Checks.** Before/after shots in `$SCRATCH/s191-shots/` (1440, 390, 360; en + fr; scrolled phone states in
+  `after/scrolled/`); no sideways scroll at 360, nothing cut off. `make ui-shots` fails on `/sign-in`, `/register` and
+  `/forgot-password` with React error 418 — **the same on a build of develop** (checked), not from this story: a
+  follow-up for the lead (the `ui-hydration` result below says the same).
+- **Focus under the bottom bars (WCAG 2.4.11).** After the 16 px gutters, `ui-a11y` found focused controls on the
+  checkout and the quote wizard sitting under their sticky bottom bars (nothing gave the browser a bottom
+  scroll-padding). Under 1000 px, a page with `.nl-stickybar`, `.co-bar`, `.nl-qt-actions` or `.nl-bk-actions` now
+  sets `scroll-padding-bottom` (the bar's height plus room). On the desktop product page the rails and reviews moved
+  out of `.product-grid`: a sticky item's limit is its grid container, so the sticky buy box could slide over "Visit
+  the store" in the rail below (`ui-a11y` 1440).
+- **Visual gate.** After merging S-189 (Northern Pine), develop's baselines pass in this container. Only `site` and
+  `hero` changed at 390, and every 390 section under them moved by a fraction of a pixel. Those 33 phone baselines were
+  re-shot on the Northern Pine tokens and reviewed by eye (the header's slim place bar and chips, the compact hero). The
+  desktop baselines are unchanged, and `pnpm test:visual` passes 16/16. The run card is 88 px and the trust line has a
+  whole-pixel line height, so the band's height is whole pixels.
+- **Not done here (backlog S-191a–l):** recently viewed card, a real deals feed, a phone results list layout, a swipe
+  carousel, the "Returns & orders" shortcut (owner decision), best-seller badges, interleaved results rails, product
+  reviews / Q&A / bought together (api), a region picker, denser checkout review lines, account rows at the top of the
+  phone menu, the 0.37 phone header layout shift.
+
+## 2026-11-09 — S-190 Location is never required
+
+Owner direction (2026-11-09): "We should not require location to show stuff, but if we discover location, we can
+simply show products that are closer to that user." On the demo every Shop page answered `422 "Choose a city."`: the
+Shop fell back to the region's fallback market, and with no live market there was none. Supersedes the "fallback
+market" source of the 2026-10-19 light-foundation location rules and S-46/S-49/S-57's required city. No migration.
+
+**API (`/api/v1/public/home`, `/public/shop`, `/public/shop/departments/{slug}`, `/public/shop/products/{id}`,
+`/public/kitchens`).**
+- City/market optional. Blank = not known. Malformed values stay 422 with one set of rules and messages,
+  `ca.northline.shared.PlaceParams` (validation-rules.md § Location, new): > 60 characters "At most 60 characters.",
+  not a place name "Enter a city name." (new, fr-CA in the TSV), lat/lng both or neither and in range. The Shop's
+  too-long market now says "At most 60 characters." (was "Choose a city."); the kitchens now require lat and lng
+  together, like search and services.
+- **No place = every live market** of the region model (`Regions.liveMarkets()`, new default method; the Shop uses
+  `DeliveryRuns.markets()`, new: the live markets plus any configured extra market — test markets only). Never a
+  city in code. `market`/`city` in the answer is `null`. Nothing claims a run (`run` null, offers without runs, no
+  direct-courier line) since the run is per market. Ranking: products by popularity (30-day sales, then newest —
+  the catalogue's existing order); shops by tier, rating, products, name; kitchens open first, then distance, then
+  rating and reviews (new tiebreak, also with a city), then name; home's trusted providers unchanged (rating,
+  reviews, tier).
+- **A point without a market**: markets are ordered by the distance from the point to their centre (region data;
+  a market without a centre last), products listed market by market, each by popularity. Kitchens use their own
+  location (unchanged).
+- **A market**: its lists stay filtered to it (`deliverable: true`). What the other live markets sell is listed
+  apart, nearest market first (from the point, else the market's centre): `nearby` on the landing and department
+  (8 products), `elsewhere` on the product page (offers) — labelled `deliverable: false` with `shipsFrom`, on no run,
+  instead of hidden. A city without delivery (`served: false`) keeps empty lists but still gets `nearby`. New fields:
+  `ShopCard.city`, `ProductCard.shipsFrom/deliverable`, `Offer.shipsFrom/deliverable`, kitchen `Card.city`.
+  "Ships from" is the shop's market, not a parcel service: there is no shipping between markets; the label says
+  "not available for delivery to you".
+- Search: with no `market` and no configured default, the first served province (was a 422); still one province per
+  query (a multi-province index query would touch three adapters for little gain while one province is served).
+- `PublicDirectory.activeIn(types, cities)` (new, named apart from `active` so Mockito's `any()` stays unambiguous).
+  The home and kitchen caches key "no city" as "".
+- **Services providers (`/public/services/{slug}/providers`, owner answer to the open question):** the same rule. No
+  place = every published provider of the category, by tier, rating, reviews, name (`city: null`); a point = the
+  covering providers nearest first (km to the nearest centre of their zones, `ServiceAreas.distanceKm`, new), then
+  trust; a city keeps S-53's trust order. The region's fallback city is gone (`RegionDefaults.fallbackCity` removed);
+  the city is checked by `PlaceParams` (the point keeps its own messages). No contract change (`city` was already
+  nullable on the wire; the web's schema now says so). The BFF relays these paths untouched (no change needed).
+- **Nothing live yet** (every market pilot / waitlist): correct, and the pages say so — "We’re not live near you yet."
+  (Shop, department, food, home, providers on the web; Home and providers in the app), never a blank page.
+  OpenAPI `api-public.yaml` hand-edited to what springdoc generates (lat/lng on the Shop reads, the new properties);
+  the generated check (`make openapi-check`) needs Docker and wasn't run. The kitchen card schema is collapsed onto
+  the payment `Card` by springdoc's name clash (pre-existing), so its `city` isn't documented.
+
+**Consumer web.** Sources: saved choice → default address → CDN city → nothing (`status: 'denied'`), the api's
+fallback market dropped (`resolveLocation` lost `fallback`; `knowsPlace()` new). Server render and first browser
+render agree on "locating" (no hydration change). Nothing waits for a place: home, Shop, department, product and
+food fetch as soon as the sources are read, without a city. Header: "Deliver to" over "Choose your location"
+(was "Set your location"), a button that opens the existing dialog; the dialog's line says "Showing everything on
+{brand}…". Copy: "Popular on {brand}", "Top-rated pros on {brand}", "Popular kitchens on {brand}", "Ships from
+{city}", "From {city} · not available for delivery to you" (no Add to cart on those cards), "From nearby cities"
+rail/section, "Sold in other cities" on a product without offers here; meta descriptions without a city. The header
+change is copy only (S-191 owns the header layout; S-189 the colours).
+
+**Consumer app.** No forced location step: sign-up and sign-in land on Home (was `/location?step=address`); the
+place bar says "Deliver to · Choose your location" when nothing is known; the fallback market is no longer a source
+(`fallbackLocation` removed). Cards say "Ships from" / "not available for delivery to you" (no Add). Fixtures answer
+home/shop/department/product without a city like the api and refuse a malformed one with its messages. "Rewards
+near you" still needs a place (it is "near").
+
+**Tests.** The shared test database's markets are pilot/waitlist (V345), so the no-location and distance cases open
+made-up live markets for the test and turn them off afterwards (`support.TestMarkets`). Run with Docker: PublicShopApiTest
+10, ProductPageApiTest 6, HomeApiTest 6, FoodOrderingApiTest 13, ServicesBrowsingApiTest 9, OrderTrackingApiTest 4,
+SearchApiTest 17, MeilisearchSearchApiTest 13, SecondProvinceTest 9, OpenApiSpecsTest 9 (the hand-edited spec matches),
+plus the unit tests — all green. After merging S-191 the location copy lives in its "Deliver to" bar (still
+`LocationPill`); the footer's "Your delivery location" keeps `/location`, which still exists and opens the dialog.

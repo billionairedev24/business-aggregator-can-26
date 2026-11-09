@@ -135,6 +135,18 @@ describe('Food landing (design 06 food)', () => {
     expect(await screen.findByRole('heading', { level: 2, name: 'Italian · 1 kitchen' })).toBeInTheDocument();
   });
 
+  it('S-190: with no location, lists every live market’s kitchens (no city asked), each saying its city', async () => {
+    user = null;
+    localStorage.clear();
+    routes['GET /api/v1/me/addresses'] = () => ({ body: { items: [] } });
+    routes['GET /api/v1/public/kitchens'] = () => ({ body: { city: null, items: [{ ...PHO, city: 'Calgary', delivers: null, distanceKm: null }] } });
+    const { calls } = open('/food');
+    expect(await screen.findByRole('heading', { level: 2, name: 'Popular kitchens on Northline' })).toBeInTheDocument();
+    expect(calls.find(c => c.url.startsWith('/api/v1/public/kitchens'))!.url).toBe('/api/v1/public/kitchens');
+    expect(screen.getByRole('link', { name: /Pho Lucky/ })).toHaveTextContent('In Calgary');
+    expect(screen.getByText(/choose your location to see who delivers to you/)).toBeInTheDocument();
+  });
+
   it('says when no kitchen serves the area, and when loading fails', async () => {
     routes['GET /api/v1/public/kitchens'] = () => ({ body: { city: 'Calgary', items: [] } });
     const first = open('/food');

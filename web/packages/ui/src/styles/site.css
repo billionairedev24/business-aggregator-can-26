@@ -1,14 +1,17 @@
-/* Consumer site header (E-15 A · Plainsight, design/revamp/a.html, in the S-188 brand layer's violet chrome,
-   design/revamp/hybrid/index.html): a deep violet search-led bar — logo, deliver-to, the white search field joined to the
-   violet search button, "Hello, … / Account & orders", the cart with its yellow count — and the violet department strip
+/* Consumer site header (E-15 A · Plainsight, design/revamp/a.html, in the S-188 brand layer's chrome,
+   design/revamp/hybrid/index.html, S-189 Northern Pine colours): a deep forest search-led bar — logo, deliver-to, the white
+   search field joined to the spruce search button, "Hello, … / Account & orders", the cart with its gold count — and the
+   forest department strip
    under it: All, the sections (the current one underlined in white), the departments and service categories in groups,
-   "Today's deals" (yellow, the one place yellow is text: on violet) and "Sell on …" at the right end. No violet text on
-   violet: text, icons and focus there are white or the light violet `header-focus`. Under 900px a compact bar (menu,
+   "Today's deals" (gold, the one place the commerce colour is text: on the strip) and "Sell on …" at the right end. No
+   action-coloured text on the chrome: text, icons and focus there are white or the light mint `header-focus`. Under 900px a compact bar (menu,
    logo, account, cart), the search on its own row, then the place on one line. Every item ≥ 44px (S-143).
    Semantic tokens only. */
-.nl-site-header { position: sticky; top: 0; z-index: var(--z-sticky); background: var(--color-header-bg); color: var(--color-header-text); padding-top: env(safe-area-inset-top, 0px); border-bottom: 1px solid var(--color-header-border); transition: top var(--duration) var(--ease); }
-/* short phone screens, scrolling down: the first row tucks away above the top edge (useStickyOffset `tuckTo`) */
-.nl-site-header[data-tucked] { top: calc(-1 * var(--nl-header-tuck, 0px)); }
+.nl-site-header { position: sticky; top: 0; z-index: var(--z-sticky); background: var(--color-header-bg); color: var(--color-header-text); padding-top: env(safe-area-inset-top, 0px); border-bottom: 1px solid var(--color-header-border); transition: top var(--duration) var(--ease), clip-path var(--duration) var(--ease); clip-path: inset(0 0 0 0); }
+/* short phone screens, scrolling down (S-191, Amazon's phone header): the first row tucks away above the top edge and
+   the place and the strip under the search are clipped, so only the search stays (useStickyOffset `tuckTo`) */
+.nl-site-header[data-tucked] { top: calc(-1 * var(--nl-header-tuck, 0px)); clip-path: inset(0 0 var(--nl-header-clip, 0px) 0); }
+@media (prefers-reduced-motion: reduce) { .nl-site-header { transition: none; } }
 .nl-site-bar { position: relative; display: flex; align-items: center; gap: var(--space-2) var(--space-4); max-width: var(--page-max); margin: 0 auto; padding: var(--space-1-5) var(--page-gutter); min-width: 0; box-sizing: border-box; }
 .nl-site-spacer { flex: 1; }
 .nl-site-search { flex: 1 1 auto; min-width: 0; }
@@ -59,7 +62,7 @@
 .nl-site-link[aria-current='page']::after { background: var(--color-header-indicator); }
 .nl-site-all, .nl-site-section, .nl-site-end { font-weight: var(--weight-semibold); }
 .nl-site-all svg { color: var(--color-subheader-text); }
-/* "Today's deals": yellow on the violet strip (10.11:1) — the one place the commerce yellow is text; never on white */
+/* "Today's deals": gold on the forest strip (7.80:1) — the one place the commerce gold is text; never on white */
 .nl-site-deal, .nl-site-deal:hover { color: var(--color-subheader-deal); }
 
 /* the "All" sheet: a group per section (its heading, "See all", the categories), then help, sell, the language */
@@ -86,6 +89,21 @@
   .nl-site-cart-label { display: none; }
   .nl-site-cart { margin-right: calc(-1 * var(--space-1)); padding-bottom: 0; align-items: center; }
   .nl-site-nav-fill { min-width: var(--space-2); }
+  /* S-191: the slim "Deliver to" bar — one line on the strip's colour, the full width of the screen */
+  .nl-site-location { flex-basis: calc(100% + 2 * var(--page-gutter)); box-sizing: border-box; margin: var(--space-1) calc(-1 * var(--page-gutter)) calc(-1 * var(--space-1-5)); padding: 0 var(--page-gutter); background: var(--color-subheader-bg); border-bottom: 1px solid var(--color-subheader-line); }
+  .nl-site-location .nl-location { min-height: var(--size-touch); padding-inline: 0; }
+  .nl-site-location .nl-location:hover { background: none; box-shadow: none; text-decoration: underline; }
+  /* the department row as square chips that scroll sideways (a 44 px target around a 32 px chip; never pills) */
+  .nl-site-nav { gap: var(--space-1-5); padding-block: 0; }
+  .nl-site-nav > li:first-child { margin-left: 0; }
+  .nl-site-nav > li:last-child { margin-right: 0; }
+  .nl-site-link { z-index: 0; padding: 0 var(--space-3); }
+  .nl-site-link::before { content: ''; position: absolute; z-index: -1; inset: var(--space-1-5) 0; border-radius: var(--radius-control); box-shadow: inset 0 0 0 1px var(--color-subheader-line); pointer-events: none; }
+  .nl-site-link::after { left: var(--space-2); right: var(--space-2); bottom: var(--space-1-5); height: 2px; }
+  .nl-site-link:hover { background: none; }
+  .nl-site-link:hover::before { background: var(--color-subheader-hover-bg); }
+  .nl-site-link[aria-current='page']::before { box-shadow: inset 0 0 0 1px var(--color-header-indicator); }
+  .nl-site-nav > .nl-site-nav-sep, .nl-site-nav > .nl-site-nav-fill { display: none; }
 }
 @media (max-width: 359.98px) {
   .nl-site-brand .nl-logo-word { display: none; }
@@ -104,8 +122,8 @@
   .nl-location-kicker { flex: none; }
 }
 
-/* search: the header's box is the white field itself (S-188: no edge on the violet bar, a soft drop shadow) — the
-   department scope on its violet tint, the field, the violet button with the magnifier joined to it (6.57:1 against
+/* search: the header's box is the white field itself (S-188: no edge on the dark bar, a soft drop shadow) — the
+   department scope on its pale green tint, the field, the spruce button with the magnifier joined to it (6.44:1 against
    the white field); the page's larger box keeps its 2 px ink edge and a labelled button (hero) */
 .nl-search { position: relative; display: flex; align-items: center; }
 .nl-search-header { height: var(--size-touch); box-sizing: border-box; border-radius: var(--radius-panel); background: var(--color-surface); border: 0; padding: 0; overflow: visible; box-shadow: var(--shadow-md); }

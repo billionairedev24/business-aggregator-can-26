@@ -2,13 +2,15 @@ import { z } from 'zod';
 import type { LocationStatus } from '@northline/ui';
 
 /**
- * Where the visitor is, and how we know — the pure part of the consumer location (2026-10-19 rebuild), unit-tested in
- * sources.test.ts. The page never asks the browser for its position on its own: the sources, in order, are
+ * Where the visitor is, and how we know — the pure part of the consumer location (2026-10-19 rebuild; S-190 "Location
+ * is never required"), unit-tested in sources.test.ts. The page never asks the browser for its position on its own,
+ * and never blocks on it: the sources, in order, are
  *   1. saved   — what the person chose in the location dialog (this browser, localStorage);
  *   2. address — the signed-in person's default address (`GET /api/v1/me/addresses`);
- *   3. ip      — the CDN's city for this visit (the session's `location.city`);
- *   4. default — the api's fallback market (`GET /api/v1/geo/markets` → `fallback`: region configuration, never a city
- *                in code); none configured → nothing known, and the control asks to set a location.
+ *   3. ip      — the CDN/edge city for this visit (the session's `location.city`);
+ *   4. nothing — status `denied`: the header offers "Choose your location" and every page shows all markets, popular
+ *                first. S-190 dropped the api's fallback market as a source: guessing a city the person isn't in hid
+ *                everything else.
  * The device's position is read only when the person presses "Use my current location" ({@link locateDevice}).
  */
 export interface DeliveryLocation {
@@ -19,7 +21,7 @@ export interface DeliveryLocation {
   city?: string;
   lat?: number;
   lng?: number;
-  source?: 'saved' | 'device' | 'address' | 'ip' | 'default';
+  source?: 'saved' | 'device' | 'address' | 'ip';
   /** When known: two-letter province (tax), the chosen address's parts, its market and delivery zone. */
   province?: string;
   street?: string;
@@ -71,18 +73,19 @@ export interface Known {
   /** The signed-in person's addresses (null: a guest, or not loaded). */
   addresses: readonly BookAddress[] | null;
   ipCity: string | null | undefined;
-  fallback: MarketRef | null;
 }
 
-/** The location the control shows, from what is known — saved → default address → IP city → fallback market. */
-export function resolveLocation({ saved, addresses, ipCity, fallback }: Known): DeliveryLocation {
+/** The location the control shows, from what is known — saved → default address → CDN city → nothing. */
+export function resolveLocation({ saved, addresses, ipCity }: Known): DeliveryLocation {
   if (saved) return { status: 'saved', source: 'saved', ...saved };
   const home = addresses?.find(a => a.isDefault) ?? addresses?.[0];
   if (home) return { status: 'address', source: 'address', ...fromAddress(home) };
   if (ipCity) return { status: 'detected', source: 'ip', label: ipCity, city: ipCity };
-  if (fallback) return { status: 'fallback', source: 'default', ...fromMarket(fallback) };
   return { status: 'denied' };
 }
+
+/** A place is known (the pages rank and filter by it); `denied` = nothing known, `locating` = not read yet. */
+export const knowsPlace = (l: DeliveryLocation): boolean => l.status !== 'locating' && l.status !== 'denied' && !!l.city;
 
 /** `GET /api/v1/geo/reverse` — `market` is null outside every market; 404 when nothing is there. */
 export const Reverse = z.object({

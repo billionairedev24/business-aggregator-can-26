@@ -10,7 +10,7 @@
  */
 export const DISPLAY_FACE_FILES: readonly string[] = ['src/shop/HomeBand.tsx', 'src/shop/Home.tsx'];
 
-/** S-188: colours that are a fill only (yellow `commerce`, the cart count, the mark's dot, …): never text or an icon. */
+/** S-188: colours that are a fill only (gold `commerce`, the cart count, the mark's dot, …): never text or an icon. */
 const FILL_ONLY = ['commerce', 'cart-badge', 'mark-highlight', 'subheader-deal', 'hero-glow'];
 
 /** [what it is, the pattern, the files (relative to the app) where it is allowed]. */
@@ -20,7 +20,9 @@ export const SCREEN_RULES: ReadonlyArray<readonly [string, RegExp, (readonly str
   ['raw line height (use textStyles)', /lineHeight:\s*\d/],
   ['the display face by name (use textStyles.displayHero / displayTile / displayMaker)', /fonts\.display/],
   ['the display face outside the home hero, its tiles and the maker headline', /textStyles\.display(?:Hero|Tile|Maker)\b/, DISPLAY_FACE_FILES],
-  ['a fill-only colour as text or an icon (yellow is ink on yellow: DealBadge, CutoffPill)', new RegExp(`\\b(?:color|fill|stroke|tintColor)\\b[^,;]*semantic(?:\\.commerce\\b|\\[['"](?:${FILL_ONLY.join('|')})['"]\\])`)],
+  ['a fill-only colour as text or an icon (gold is ink on gold: DealBadge, CutoffPill)', new RegExp(`\\b(?:color|fill|stroke|tintColor)\\b[^,;]*semantic(?:\\.commerce\\b|\\[['"](?:${FILL_ONLY.join('|')})['"]\\])`)],
+  // S-189: the hero's gold accent (#F7C75A, 1.58:1 on white) is text on the dark hero band only (the kit's HomeHero)
+  ['the hero\'s gold accent off the hero band (gold is never text on white)', /semantic\[['"]hero-accent['"]\]/, ['src/shop/HomeBand.tsx']],
   ['raw spacing (use space[…]; 0–2 pt nudges allowed)', /\b(?:padding|margin|gap|rowGap|columnGap)(?:Horizontal|Vertical|Top|Bottom|Left|Right)?:\s*-?(?:[3-9]|\d{2,})\b/],
   ['raw corner radius (use radius.control / panel / image / status / round)', /\bborder(?:Top|Bottom)?(?:Left|Right)?Radius:\s*[1-9]/],
   ['an older radius name (use radius.control / panel)', /radius\.(?:pill|lg|md|sm|xs)\b/],

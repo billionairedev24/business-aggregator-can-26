@@ -117,8 +117,11 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
         var published = providers.published(byMerchant.keySet(), lang).stream()
                 .collect(Collectors.toMap(PublicProviders.Provider::merchantId, Function.identity()));
         var zones = areas.zones(published.keySet());
-        Set<String> covering = new HashSet<>(areas.covering(published.keySet(), place));
-        if (!kind.comesToCustomer()) {
+        // S-190: no place known = every provider (a location is never required)
+        var anywhere = !place.hasPoint() && place.city() == null;
+        Set<String> covering =
+                anywhere ? new HashSet<>(published.keySet()) : new HashSet<>(areas.covering(published.keySet(), place));
+        if (!anywhere && !kind.comesToCustomer()) {
             // the customer goes to them: a shop or office in the customer's city counts too
             published.values().stream()
                     .filter(p -> p.city() != null && p.city().equalsIgnoreCase(place.city()))
@@ -131,6 +134,7 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
         var ids = shown.stream().map(PublicProviders.Provider::merchantId).toList();
         var rated = ratings.summaries(ids);
         var scores = quality.latestOf(ids);
+        var km = areas.distanceKm(ids, place);
         var cards = shown.stream()
                 .map(p -> card(
                         p,
@@ -141,11 +145,33 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
                         nextSlots
                                 .next(p.merchantId(), shortest(byMerchant.getOrDefault(p.merchantId(), List.of())))
                                 .orElse(null)))
-                .sorted(TrustRank.by(c -> new TrustRank.Signals(
-                        c.tier(), c.onTimePct(), c.disputePct(), c.rebookPct(), c.rating(), c.name())))
+                .sorted(order(anywhere, km))
                 .toList();
         return new Providers(slug, kind, areas.zoneAt(place).orElse(null), place.city(), cards);
     }
+
+    /**
+     * With a point: nearest first (the nearest centre of the provider's zones; without zones last), then trust. No
+     * place (S-190): tier, then rating, then reviews, then name. Otherwise (a city): trust (S-53).
+     */
+    private static Comparator<ProviderCard> order(boolean anywhere, Map<String, Double> km) {
+        Comparator<ProviderCard> trust = TrustRank.by(c ->
+                new TrustRank.Signals(c.tier(), c.onTimePct(), c.disputePct(), c.rebookPct(), c.rating(), c.name()));
+        if (anywhere) {
+            return Comparator.comparingInt(
+                            (ProviderCard c) -> TIERS.indexOf(c.tier()) < 0 ? TIERS.size() : TIERS.indexOf(c.tier()))
+                    .thenComparingDouble(c -> -c.rating())
+                    .thenComparingInt(c -> -c.reviewCount())
+                    .thenComparing(ProviderCard::name);
+        }
+        if (km.isEmpty()) {
+            return trust;
+        }
+        return Comparator.comparingDouble((ProviderCard c) -> km.getOrDefault(c.merchantId(), Double.MAX_VALUE))
+                .thenComparing(trust);
+    }
+
+    private static final List<String> TIERS = List.of("master", "trusted", "registered");
 
     /** Where the live providers are (province codes from their businesses, sorted): the pages name no place of their own. */
     private List<String> provinces(Collection<String> merchantIds, String lang) {

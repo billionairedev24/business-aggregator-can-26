@@ -47,10 +47,13 @@ export function ProductDetail({ productId, market: explicit, offerId }: { produc
         {crumbs}
         <h1 className="product-title">{data.name}</h1>
         <div className="product-empty">
-          {data.served
-            ? <EmptyState action={<SiteLink href={link('/shop')} className="btn btn-primary">{t('backToShop')}</SiteLink>}>{t('unavailable', { city: data.market })}</EmptyState>
-            : <EmptyState action={<PlaceButton>{t('changeLocation')}</PlaceButton>}>{t('notServed', { city: data.market })}</EmptyState>}
+          {!data.market
+            ? <EmptyState action={<SiteLink href={link('/shop')} className="btn btn-primary">{t('backToShop')}</SiteLink>}>{t('unavailableAnywhere')}</EmptyState>
+            : data.served
+              ? <EmptyState action={<SiteLink href={link('/shop')} className="btn btn-primary">{t('backToShop')}</SiteLink>}>{t('unavailable', { city: data.market })}</EmptyState>
+              : <EmptyState action={<PlaceButton>{t('changeLocation')}</PlaceButton>}>{t('notServed', { city: data.market })}</EmptyState>}
         </div>
+        <Elsewhere offers={data.elsewhere} />
       </div>
     );
   }
@@ -109,7 +112,21 @@ function OfferView({ data, offer, link, market }: { data: ProductPage; offer: Of
   ];
 
   return (
+    <>
     <div className="product-grid">
+      {/* S-191 (Amazon's product page on a phone): the store, title and rating come before the photo there */}
+      <div className="product-head">
+        <SiteLink href={store} className="product-store"><Storefront size={16} aria-hidden />{t('visitStore', { shop: offer.shopName })}</SiteLink>
+        <h1 className="product-title">{data.name}</h1>
+        {offer.ratingCount > 0 ? <Stars rating={offer.rating} reviewCount={offer.ratingCount} showValue /> : null}
+        {(run && when) || plus ? (
+          <div className="product-badges">
+            {run && when ? <span className="tag tag-neutral product-run">{t(`tag_${when}`, { weekday: weekday(run.startsAt, locale, zone) })}</span> : null}
+            {plus ? <span className="tag tag-accent product-plus">{plus}</span> : null}
+          </div>
+        ) : null}
+      </div>
+
       <div className="product-thumbs" role="group" aria-label={t('gallery')}>
         {images.length > 1
           ? images.slice(0, 6).map((src, i) => (
@@ -124,15 +141,6 @@ function OfferView({ data, offer, link, market }: { data: ProductPage; offer: Of
       </div>
 
       <div className="product-info">
-        <SiteLink href={store} className="product-store"><Storefront size={16} aria-hidden />{t('visitStore', { shop: offer.shopName })}</SiteLink>
-        <h1 className="product-title">{data.name}</h1>
-        {offer.ratingCount > 0 ? <Stars rating={offer.rating} reviewCount={offer.ratingCount} showValue /> : null}
-        {(run && when) || plus ? (
-          <div className="product-badges">
-            {run && when ? <span className="tag tag-neutral product-run">{t(`tag_${when}`, { weekday: weekday(run.startsAt, locale, zone) })}</span> : null}
-            {plus ? <span className="tag tag-accent product-plus">{plus}</span> : null}
-          </div>
-        ) : null}
         <hr className="product-rule" />
         <div className="product-price">
           <Price cents={price} compareAtCents={offer.compareAtCents} unit={unit} size="xl" />
@@ -146,18 +154,6 @@ function OfferView({ data, offer, link, market }: { data: ProductPage; offer: Of
               options={offer.variants.map(v => ({ value: v.variantId, label: v.stock > 0 ? t('variantOption', { value: v.value, price: money(v.priceCents) }) : t('variantSoldOut', { value: v.value }) }))} />
           </div>
         ) : null}
-
-        {data.description || data.bullets.length > 0 ? (
-          <section aria-labelledby="product-about" className="product-about">
-            <h2 id="product-about" className="product-h2">{t('about')}</h2>
-            {data.description ? <p className="product-desc">{data.description}</p> : null}
-            {data.bullets.length > 0 ? <ul className="product-bullets">{data.bullets.map(b => <li key={b}>{b}</li>)}</ul> : null}
-          </section>
-        ) : null}
-        <table className="product-specs">
-          <caption className="nl-sr-only">{t('specs')}</caption>
-          <tbody>{specs.map(([k, v]) => <tr key={k}><th scope="row">{k}</th><td>{v}</td></tr>)}</tbody>
-        </table>
       </div>
 
       <aside className="product-buy" aria-label={t('buyBox')}>
@@ -174,6 +170,7 @@ function OfferView({ data, offer, link, market }: { data: ProductPage; offer: Of
                 </>
               ) : <strong>{t('notOnRun')}</strong>}
             {stock > 0 && data.direct ? <span className="product-buy-meta">{t('direct', { eta: data.direct.etaMinutes, fee: money(data.direct.feeCents) })}</span> : null}
+            {offer.deliverable == null && offer.shipsFrom ? <span className="product-buy-meta">{t('shipsFrom', { city: offer.shipsFrom })}</span> : null}
           </div>
         </div>
         {stock <= 0 ? <span className="product-stock product-stock-out">{t('outOfStock')}</span>
@@ -223,6 +220,23 @@ function OfferView({ data, offer, link, market }: { data: ProductPage; offer: Of
         ) : null}
       </aside>
 
+      <div className="product-details">
+        {data.description || data.bullets.length > 0 ? (
+          <section aria-labelledby="product-about" className="product-about">
+            <h2 id="product-about" className="product-h2">{t('about')}</h2>
+            {data.description ? <p className="product-desc">{data.description}</p> : null}
+            {data.bullets.length > 0 ? <ul className="product-bullets">{data.bullets.map(b => <li key={b}>{b}</li>)}</ul> : null}
+          </section>
+        ) : null}
+        <table className="product-specs">
+          <caption className="nl-sr-only">{t('specs')}</caption>
+          <tbody>{specs.map(([k, v]) => <tr key={k}><th scope="row">{k}</th><td>{v}</td></tr>)}</tbody>
+        </table>
+      </div>
+    </div>
+
+    {/* the wide rows and the phone bar sit outside the grid, so the sticky photo and buy box stop at the grid's end (S-191) */}
+
       {offer.more.length > 0 ? (
         <div className="product-wide">
           <RailSection id="product-more" title={t('alsoFrom', { shop: offer.shopName })} more={{ href: store, label: t('seeStore') }}>
@@ -254,12 +268,12 @@ function OfferView({ data, offer, link, market }: { data: ProductPage; offer: Of
         <span className="nl-stickybar-sum"><strong>{money(price)}</strong>{run ? <span>{windowText(run)}</span> : null}</span>
         <button type="button" className="btn btn-primary btn-lg" disabled={disabled} onClick={onAdd}>{t('addToCart')}</button>
       </div>
-    </div>
+    </>
   );
 }
 
 /**
- * "Order within 2 h 48 min" — the time left before the run closes, an ink-on-yellow pill (S-188). The server and the browser's first render say "Order
+ * "Order within 2 h 48 min" — the time left before the run closes, an ink-on-gold pill (S-188). The server and the browser's first render say "Order
  * by 5:20 p.m." (a clock read at render would differ between them); the browser then counts down.
  */
 function OrderWithin({ orderBy, by }: { orderBy: string; by: string }) {
@@ -286,5 +300,26 @@ export function ProductSkeleton() {
         <Skeleton height={320} radius="var(--radius-panel)" />
       </div>
     </div>
+  );
+}
+
+/**
+ * S-190: the shops of other markets selling the product (the api's `elsewhere`, nearest first) — listed, labelled "not
+ * available for delivery to you", instead of a dead end.
+ */
+function Elsewhere({ offers }: { offers: readonly Offer[] }) {
+  const t = useProductT();
+  const { money } = useFormatters();
+  if (offers.length === 0) return null;
+  return (
+    <section className="nl-section" aria-labelledby="product-elsewhere">
+      <div className="nl-section-head">
+        <h2 id="product-elsewhere" className="nl-section-title">{t('elsewhereTitle')}</h2>
+        <span className="nl-section-lede">{t('elsewhereNote')}</span>
+      </div>
+      <ul className="product-elsewhere">
+        {offers.map(o => <li key={o.offerId}>{t('elsewhereLine', { shop: o.shopName, city: o.shipsFrom ?? '', price: money(o.priceCents) })}</li>)}
+      </ul>
+    </section>
   );
 }

@@ -43,7 +43,8 @@ export function useOrderByTag() {
  * A popular product of a Shop page as the results' card (E-15: one card everywhere): the price with its unit price
  * (from the product's unit or name), "Get it Tonight" when it rides the market's next run, "Add to cart" (its offer).
  * Sold by several shops: "from $6.50" and the product page picks the offer. Age-restricted products and a shop's Plus
- * price say so under the shop's name.
+ * price say so under the shop's name. S-190: where it ships from when the visitor's place isn't known, and "not
+ * available for delivery to you" (no Add to cart) for another market's product listed beside the visitor's.
  */
 export function ProductCardTile({ product, withMarket, next }: { product: ProductCard; withMarket: (path: string) => string; next?: Run | null }) {
   const t = useShopT();
@@ -55,8 +56,11 @@ export function ProductCardTile({ product, withMarket, next }: { product: Produc
   const age = product.age ? (product.age.minimumAge ? t('ageCard', { age: product.age.minimumAge }) : t('ageCardNoAge')) : null;
   const meta = <>{shops}{age ? <span className="nl-age-chip">{age}</span> : null}</>;
   const href = withMarket(`/products/${product.productId}`);
+  const away = product.deliverable === false;
+  const note = away ? t('notDeliverable', { city: product.shipsFrom ?? '' })
+    : product.deliverable == null && product.shipsFrom ? t('shipsFrom', { city: product.shipsFrom }) : undefined;
   return (
-    <OfferCard offerId={many ? null : product.offerId} href={href} name={product.name} image={product.imageUrl}
+    <OfferCard offerId={many || away ? null : product.offerId} href={href} note={note} name={product.name} image={product.imageUrl}
       fallback={<PhotoWell subject={`${product.categoryId ?? ''} ${product.name}`} />}
       priceCents={product.priceCents} priceText={many ? t('from', { price: money(product.priceCents) }) : undefined}
       sizeWords={[product.unit, product.name]} meta={meta}

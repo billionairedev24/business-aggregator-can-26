@@ -6,6 +6,7 @@ import { BrandMark, EmptyState, ErrorState, ServiceCard, Skeleton, useLocale, ty
 import { useDeliveryLocation, type DeliveryLocation } from '../location/useDeliveryLocation';
 import { providersQuery, serviceCategoryQuery, type ProviderCard, type ProviderPlace, type ServiceKind } from './api';
 import { nextAvailable, percent, price } from './format';
+import { PlaceButton } from '../pages/PlaceButton';
 import { useServicesT } from './messages';
 import { categoryName, familyOf, nouns } from './taxonomy';
 import { Crumbs } from '../pages/Crumbs';
@@ -65,9 +66,9 @@ export function ProviderList({ slug }: { slug: string }) {
       <div className="nl-svc-list-split">
         <div className="nl-svc-list-main">
           <h1 className="nl-svc-list-title" lang={name.lang && noun === name.text ? name.lang : undefined}>
-            {list.data ? heading(t, category.kind, noun, area, shown.length) : noun}
+            {list.data ? (area ? heading(t, category.kind, noun, area, shown.length) : t('headingAnywhere', { noun, count: shown.length })) : noun}
           </h1>
-          <div className="nl-svc-muted nl-svc-sortnote">{t('sortNote')}</div>
+          <div className="nl-svc-muted nl-svc-sortnote">{!area ? t('sortNoteAnywhere') : place?.lat !== undefined ? t('sortNoteNearest') : t('sortNote')}</div>
           <div className="nl-chips nl-svc-filter-chips" role="group" aria-label={t('filter')}>
             {FILTERS.map(f => <button key={f} type="button" className="nl-chip" aria-pressed={filters.has(f)} onClick={() => toggle(f)}>{t(`f_${f}`)}</button>)}
           </div>
@@ -77,7 +78,10 @@ export function ProviderList({ slug }: { slug: string }) {
               ? <ErrorState message={t('loadError')} onRetry={() => void list.refetch()} />
               : shown.length === 0
                 ? (list.data.items.length === 0
-                  ? <EmptyState action={<Link to="/services" className="btn btn-secondary">{t('listEmptyAction')}</Link>}>{t('listEmpty', { area })}</EmptyState>
+                  ? (area
+                    ? <EmptyState action={<Link to="/services" className="btn btn-secondary">{t('listEmptyAction')}</Link>}>{t('listEmpty', { area })}</EmptyState>
+                    // S-190: nothing live anywhere (pilot / waitlist markets) — a friendly state, never a blank page
+                    : <EmptyState title={t('notLiveYet')} action={<PlaceButton>{t('chooseLocation')}</PlaceButton>}>{t('notLiveHint')}</EmptyState>)
                   : <EmptyState action={<button type="button" className="btn btn-secondary" onClick={() => setFilters(new Set())}>{t('clearFilters')}</button>}>{t('filteredEmpty')}</EmptyState>)
                 : <ul className="nl-svc-rows">{shown.map(p => <li key={p.merchantId}><ProviderRow provider={p} locale={locale} kind={name} /></li>)}</ul>}
         </div>

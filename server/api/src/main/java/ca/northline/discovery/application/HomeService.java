@@ -4,6 +4,8 @@ import ca.northline.food.api.KitchenAvailability;
 import ca.northline.merchants.api.CategorySource;
 import ca.northline.merchants.api.PublicDirectory;
 import ca.northline.merchants.api.PublicDirectory.PublicBusiness;
+import ca.northline.region.api.MarketProfile;
+import ca.northline.region.api.Regions;
 import ca.northline.trust.api.RatingQuery;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -13,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * {@link ViewHome}: counts the city's active businesses (a {@code both} counts as a provider and a shop), the kitchens
  * open right now per cuisine, and picks three "Trusted near you" providers — best rated first, then most reviewed,
- * then the higher tier. Providers go to the customer, so "near" is the city; no distance is claimed.
+ * then the higher tier. Providers go to the customer, so "near" is the city; no distance is claimed. Without a city
+ * (S-190: the visitor's place isn't known, and a location is never required) every live market of the region model is
+ * counted together, and "Trusted" becomes the platform's best rated.
  */
 @Service
 @RequiredArgsConstructor
@@ -36,16 +41,22 @@ class HomeService implements ViewHome {
     private final RatingQuery ratings;
     private final CategorySource categories;
     private final HomeCache cache;
+    private final Regions regions;
 
     /** A cache hit takes no database connection (SUPPORTS: one is bound on the first query of a miss). */
     @Override
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
-    public HomeSummary of(String city, Locale locale) {
+    public HomeSummary of(@Nullable String city, Locale locale) {
         return cache.get(city, locale, () -> read(city, locale));
     }
 
-    private HomeSummary read(String city, Locale locale) {
-        var businesses = directory.active(Set.of("provider", "seller", "kitchen", "both"), city);
+    private HomeSummary read(@Nullable String city, Locale locale) {
+        var types = Set.of("provider", "seller", "kitchen", "both");
+        var businesses = city == null
+                ? directory.activeIn(
+                        types,
+                        regions.liveMarkets().stream().map(MarketProfile::city).toList())
+                : directory.active(types, city);
         var providers =
                 only(businesses, b -> b.type().equals("provider") || b.type().equals("both"));
         var shops = only(businesses, b -> b.type().equals("seller") || b.type().equals("both"));

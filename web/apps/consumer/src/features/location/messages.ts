@@ -5,7 +5,7 @@ export const useLocationT = defineMessages({
   en: {
     title: 'Choose your location',
     currentLocating: 'Finding your area…',
-    currentNone: 'Choose where you are to see what’s available near you.',
+    currentNone: 'Showing everything on {brand}. Choose where you are to see what’s near you first.',
     currentSaved: 'Showing what’s available near {place}.',
     currentAddress: 'Showing what’s available near your default address, {place}.',
     currentIp: 'We guessed {place} from your connection. Choose your address for exact delivery times.',
@@ -37,7 +37,7 @@ export const useLocationT = defineMessages({
   fr: {
     title: 'Choisissez votre adresse',
     currentLocating: 'Recherche de votre secteur…',
-    currentNone: 'Indiquez où vous êtes pour voir ce qui est offert près de chez vous.',
+    currentNone: 'Vous voyez tout {brand}. Indiquez où vous êtes pour voir d’abord ce qui est près de chez vous.',
     currentSaved: 'Vous voyez ce qui est offert près de {place}.',
     currentAddress: 'Vous voyez ce qui est offert près de votre adresse par défaut, {place}.',
     currentIp: 'Nous avons déduit {place} de votre connexion. Choisissez votre adresse pour des délais de livraison exacts.',

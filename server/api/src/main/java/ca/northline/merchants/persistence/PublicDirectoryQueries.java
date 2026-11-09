@@ -51,6 +51,22 @@ class PublicDirectoryQueries implements PublicDirectory {
     }
 
     @Override
+    public List<PublicBusiness> activeIn(Collection<String> types, Collection<String> cities) {
+        if (types.isEmpty() || cities.isEmpty()) {
+            return List.of();
+        }
+        var lower = cities.stream()
+                .map(c -> c.strip().toLowerCase(java.util.Locale.ROOT))
+                .distinct()
+                .toList();
+        return jdbc.sql(SELECT + " and m.type in (:types) and lower(m.city) in (:cities) order by m.display_name")
+                .param("types", types)
+                .param("cities", lower)
+                .query((rs, _) -> row(rs))
+                .list();
+    }
+
+    @Override
     public Optional<PublicBusiness> bySlug(String slug) {
         return jdbc.sql(SELECT + " and s.slug = :slug")
                 .param("slug", slug)

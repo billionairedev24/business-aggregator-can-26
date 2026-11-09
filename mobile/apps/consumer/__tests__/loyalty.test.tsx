@@ -218,9 +218,12 @@ describe('Northline Plus (wallet)', () => {
   });
 });
 
+// S-190: "near you" needs a place, and no fallback market is guessed any more — these visitors chose one
+const PLACE = { 'nl.location': JSON.stringify({ label: 'Sampleville', city: 'Sampleville', marketId: 'mkt-sampleville' }) };
+
 describe('Rewards near you (Home)', () => {
   it('shows the businesses paying extra points, and opens the provider', async () => {
-    const { view } = await start({ welcomed: true, url: '/home' });
+    const { view } = await start({ welcomed: true, url: '/home', store: PLACE });
     expect(await screen.findByText('Rewards near you')).toBeTruthy();
     const card = screen.getByTestId('reward-mer-garage');
     expect(card.props.accessibilityLabel).toMatch(/^Sample Garage, 2× points on Brake service, until /);
@@ -239,7 +242,7 @@ describe('Rewards near you (Home)', () => {
 
   it('is in French', async () => {
     french();
-    await start({ welcomed: true, url: '/home' });
+    await start({ welcomed: true, url: '/home', store: PLACE });
     expect(await screen.findByText('Récompenses près de chez vous')).toBeTruthy();
   });
 });

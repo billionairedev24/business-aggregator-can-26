@@ -9,12 +9,13 @@ import org.jspecify.annotations.Nullable;
  * "58 shops", "42 open"), businesses per approved category (departments and service categories), open kitchens per
  * cuisine (plus {@code meal_kits}), and "Trusted near you". Serialized as is ({@code GET /api/v1/public/home}).
  *
+ * @param city the city counted, or null when the visitor's place isn't known: every live market together (S-190)
  * @param categories active businesses per category id ({@code shop.food-and-grocery.bakery} → 7)
  * @param cuisines kitchens open now per cuisine code ({@code vietnamese} → 4; {@code meal_kits} = kitchens offering
  *     meal kits on the pooled run)
  */
 public record HomeSummary(
-        String city,
+        @Nullable String city,
         int providers,
         int shops,
         int kitchensOpen,

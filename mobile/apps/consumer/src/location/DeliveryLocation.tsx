@@ -10,8 +10,8 @@ import { services } from '../services';
  * Where to deliver (S-98; the location model of the web's "UI foundation", DECISIONS 2026-10-19). In order:
  *   1. saved — the place chosen in the location sheet (key-value store `nl.location`);
  *   2. address — signed in: the account's default address (`GET /me/addresses`, `isDefault`, else the first);
- *   3. fallback — the api's fallback market (`GET /geo/markets` → `fallback`, from region configuration); none
- *      configured or no answer → no place (screens ask to set one).
+ *   3. nothing — status `fallback` with no place (S-190 "Location is never required": the api's fallback market is
+ *      no longer guessed). Every screen browses every live market; the place bar offers "Choose your location".
  * The phone's position is never read on launch: only the sheet's "Use my current location" asks, on the press
  * (`detected` is what that press finds, until it is saved). There is no CDN city in the app.
  */
@@ -108,20 +108,11 @@ export async function nameOf(lat: number, lng: number): Promise<DeliveryLocation
   };
 }
 
-export async function fallbackLocation(): Promise<DeliveryLocation> {
-  const m = await geoApi(services().api)
-    .markets()
-    .then((r) => r?.fallback ?? null)
-    .catch(() => null);
-  return m
-    ? { status: 'fallback', label: m.city, city: m.city, province: m.province, marketId: m.id, ...(m.lat != null && m.lng != null ? { lat: m.lat, lng: m.lng } : {}) }
-    : { status: 'fallback' };
-}
 
 async function resolve(signedIn: boolean): Promise<DeliveryLocation> {
   const saved = parseSaved(await services().store.getItem(SAVED_LOCATION_KEY).catch(() => null));
   if (saved) return { status: 'saved', ...saved };
-  return (signedIn ? await defaultAddress() : null) ?? (await fallbackLocation());
+  return (signedIn ? await defaultAddress() : null) ?? { status: 'fallback' };
 }
 
 export function DeliveryLocationProvider({ children }: { children: ReactNode }) {

@@ -10,8 +10,8 @@ import { CAP, DENSITY, LINE, SIZE, STICKER, TYPE, slopFor, textStyles } from './
 
 /**
  * Commerce pieces (Plainsight): product on white in a 1:1 grey well with a 12 pt inset, the dashed well with the
- * category icon when there is no photo; one price format; ink stars; S-188's yellow commerce — the tilted deal sticker,
- * the cut-off pill, the hero's countdown sticker and the cart count, always ink on yellow (yellow is never text, never a
+ * category icon when there is no photo; one price format; ink stars; S-188's gold commerce — the tilted deal sticker,
+ * the cut-off pill, the hero's countdown sticker and the cart count, always ink on gold (gold is never text, never a
  * button); status tags with a square dot, one colour per status.
  */
 
@@ -117,7 +117,7 @@ export function Rating({ value, count, testID }: { value: number; count?: number
 }
 
 /**
- * The deal sticker (S-188, the web's `DealBadge`): yellow, ink, bold, tilted −2.5° on a 1.5 pt hard ink edge
+ * The deal sticker (S-188, the web's `DealBadge`): gold, ink, bold, tilted −2.5° on a 1.5 pt hard ink edge
  * (`sticker-edge`) — every deal and discount ("20% off").
  */
 export function DealBadge({ label, testID }: { label: string; testID?: string }) {
@@ -131,8 +131,8 @@ export function DealBadge({ label, testID }: { label: string; testID?: string })
 }
 
 /**
- * A cut-off or deal timer on white (S-188, the web's `CutoffPill`): ink on yellow with a clock and a 1 pt ink edge,
- * upright; it wraps on a narrow phone ("Order within 2 h 48 min", "Ends in 6 h 12 min"). Never yellow text on white.
+ * A cut-off or deal timer on white (S-188, the web's `CutoffPill`): ink on gold with a clock and a 1 pt ink edge,
+ * upright; it wraps on a narrow phone ("Order within 2 h 48 min", "Ends in 6 h 12 min"). Never gold text on white.
  */
 export function CutoffPill({ label, icon = true, testID }: { label: string; icon?: boolean; testID?: string }) {
   return (
@@ -145,7 +145,7 @@ export function CutoffPill({ label, icon = true, testID }: { label: string; icon
   );
 }
 
-/** The home hero's countdown on the run card (S-188, the web's `Sticker`): larger, ink on yellow, a hard dark edge, tilted. */
+/** The home hero's countdown on the run card (S-188, the web's `Sticker`): larger, ink on gold, a hard dark edge, tilted. */
 export function Sticker({ label, testID }: { label: string; testID?: string }) {
   return (
     <View style={styles.sticker} testID={testID}>
@@ -171,7 +171,7 @@ export function StatusTag({ label, tone = 'neutral', large, testID }: { label: s
   );
 }
 
-/** A round count (the cart's): ink on the commerce yellow, `radius.round` — a circle stays a circle. */
+/** A round count (the cart's): ink on the commerce gold, `radius.round` — a circle stays a circle. */
 export function CountBadge({ count, max = 99, testID }: { count: number; max?: number; testID?: string }) {
   if (count <= 0) return null;
   return (

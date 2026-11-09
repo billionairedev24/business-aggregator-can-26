@@ -41,7 +41,7 @@ export function StorePage({ data, market }: { data: StoreData; market?: string }
       <header className="store-head">
         <span className="store-pic" aria-hidden>{shop.imageUrl ? <img src={shop.imageUrl} alt="" /> : <PhotoWell subject={shop.departmentSlug} />}</span>
         <div className="store-id">
-          <span className="store-kicker">{t('storeKicker', { department: shop.departmentName, city: landing.market })}</span>
+          <span className="store-kicker">{landing.market ?? shop.city ? t('storeKicker', { department: shop.departmentName, city: landing.market ?? shop.city ?? '' }) : shop.departmentName}</span>
           <h1 className="store-name">{shop.name}</h1>
           <div className="store-meta">
             <Tag tone={TIER_TONE[shop.tier] ?? 'neutral'}>{tier(shop.tier)}</Tag>

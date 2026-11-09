@@ -1,8 +1,10 @@
 /* Search results (E-15 A · Plainsight, design/revamp/a.html "Search results"): the summary bar with the sort, a 224 px
    filter rail with counts beside the applied-filter chips, the dense grid (5 a row at 1280) and pagination; on phones a
    Filters button (a sheet) and the chips in one sideways row. Semantic tokens only. */
-.nl-results-page { padding-top: 0; }
-.nl-results-bar { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2) var(--space-4); margin-inline: calc(-1 * var(--page-gutter)); padding: var(--space-2-5) var(--page-gutter); border-bottom: 1px solid var(--color-border); }
+.nl-results-page { position: relative; padding-top: 0; }
+.nl-results-bar { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2) var(--space-4); min-height: calc(var(--size-touch) + 2 * var(--space-2-5)); box-sizing: border-box; margin-inline: calc(-1 * var(--page-gutter)); padding: var(--space-2-5) calc(var(--page-gutter) + 4 * var(--space-16)) var(--space-2-5) var(--page-gutter); border-bottom: 1px solid var(--color-border); }
+/* Filters (phones only) and Sort (S-191): at the summary's right end on wide screens */
+.nl-results-tools { position: absolute; top: 0; right: 0; display: flex; align-items: center; gap: var(--space-2); min-height: calc(var(--size-touch) + 2 * var(--space-2-5)); }
 .nl-results-h1 { margin: 0; font-size: var(--type-card-title); font-weight: var(--weight-regular); line-height: var(--leading-normal); overflow-wrap: anywhere; min-width: 0; flex: 1; }
 .nl-results-h1 strong { font-weight: var(--weight-bold); color: var(--color-text); }
 .nl-results-sort { display: inline-flex; align-items: center; gap: var(--space-2); flex: none; }
@@ -42,11 +44,16 @@
 @media (max-width: 899.98px) {
   .nl-results-layout { grid-template-columns: minmax(0, 1fr); margin-top: var(--space-3); }
   .nl-results-aside { display: none; }
-  .nl-results-bar { flex-wrap: wrap; }
+  .nl-results-bar { flex-wrap: wrap; min-height: 0; padding-right: var(--page-gutter); border-bottom: 0; }
   .nl-results-h1 { flex-basis: 100%; }
+  /* S-191 (Amazon's results on a phone): Filters and Sort in one bar that sticks under the header (only the search
+     while scrolling down) */
+  .nl-results-tools { position: sticky; top: var(--nl-header-h, 0px); z-index: calc(var(--z-sticky) - 1); justify-content: space-between; min-height: 0; margin-inline: calc(-1 * var(--page-gutter)); padding: var(--space-1) var(--page-gutter); background: var(--color-surface); border-block: 1px solid var(--color-border); transition: top var(--duration) var(--ease); }
+  .nl-results-tools .nl-results-filters-toggle { min-height: var(--size-touch); }
+  .nl-results-tools .nl-results-sort .input { max-width: 60vw; }
   /* S-180: hidden from sight only — the select keeps "Sort by" as its name (axe select-name) */
   .nl-results-sort-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .nl-results-chips, .nl-results-chips:not(:has(.nl-chip, .nl-results-clear)) { display: flex; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; margin-right: calc(-1 * var(--page-gutter)); padding: var(--space-1) var(--page-gutter) var(--space-1) 0; scrollbar-width: none; }
+  .nl-results-chips { display: flex; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; margin-right: calc(-1 * var(--page-gutter)); padding: var(--space-1) var(--page-gutter) var(--space-1) 0; scrollbar-width: none; }
   .nl-results-chips > * { flex: none; }
   .nl-results-filters-toggle { display: inline-flex; }
 }

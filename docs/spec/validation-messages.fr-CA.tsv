@@ -194,6 +194,7 @@ End time must be after start time.	L’heure de fin doit suivre l’heure de dé
 Enter 1 to 14 days.	Entrez de 1 à 14 jours.	shipped
 Enter a birthday like 03/14 (month / day).	Entrez une date comme 03/14 (mois / jour).	shipped
 Enter a Canadian postal code, like T2P 1B5.	Entrez un code postal canadien, comme T2P 1B5.	shipped
+Enter a city name.	Entrez un nom de ville.	new
 Enter a combo name.	Entrez un nom de combo.	shipped
 Enter a discount from 1 to 90 %.	Entrez un rabais de 1 à 90 %.	shipped
 Enter a domain like book.yourbusiness.ca.	Entrez un domaine comme reserver.votreentreprise.ca.	new

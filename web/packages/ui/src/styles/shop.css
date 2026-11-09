@@ -73,7 +73,9 @@
 .nl-picture-grid-label { font-size: var(--type-meta); line-height: 1.25; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; }
 @media (max-width: 899.98px) { .nl-panel-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2-5); } }
 @media (max-width: 599.98px) {
-  .nl-panel-tile { padding: var(--space-3); gap: var(--space-2); }
+  .nl-panel-tile { padding: var(--space-2-5); gap: var(--space-2); }
+  .nl-panel-tiles { gap: var(--space-2); }
+  .nl-panel-tile-more { font-size: var(--type-label); }
   .nl-panel-tile-title { font-size: var(--type-card-title); }
   .nl-picture-grid { gap: var(--space-1-5); }
   .nl-picture-grid-label { font-size: var(--type-caps); }

@@ -7,7 +7,7 @@ import ca.northline.hire.application.BrowseServices.ListCategories;
 import ca.northline.hire.application.BrowseServices.ListProviders;
 import ca.northline.hire.application.BrowseServices.Providers;
 import ca.northline.hire.application.BrowseServices.ViewCategory;
-import ca.northline.hire.application.RegionDefaults;
+import ca.northline.shared.PlaceParams;
 import ca.northline.shared.RuleViolation;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
@@ -31,12 +31,10 @@ class PublicServicesController {
 
     static final String POINT_INCOMPLETE = "Send both lat and lng, or neither.";
     static final String POINT_RANGE = "That location is outside the map.";
-    static final String CITY_TOO_LONG = "At most 60 characters.";
 
     private final ListCategories landing;
     private final ViewCategory categories;
     private final ListProviders providers;
-    private final RegionDefaults region;
 
     @GetMapping("/api/v1/public/services")
     ResponseEntity<Landing> landing(@RequestParam(defaultValue = "en") String lang) {
@@ -56,14 +54,14 @@ class PublicServicesController {
             @RequestParam(required = false) @Nullable Double lng,
             @RequestParam(required = false) @Nullable String city,
             @RequestParam(defaultValue = "en") String lang) {
-        return cached(
-                providers.providers(slug, place(lat, lng, city, region.fallbackCity()), Languages.of(lang)),
-                Duration.ofSeconds(30));
+        return cached(providers.providers(slug, place(lat, lng, city), Languages.of(lang)), Duration.ofSeconds(30));
     }
 
-    /** @param fallbackCity the region\'s fallback market when the customer has no city (null when none is configured) */
-    static Place place(
-            @Nullable Double lat, @Nullable Double lng, @Nullable String city, @Nullable String fallbackCity) {
+    /**
+     * The customer's place, each part optional (S-190: none = every provider, by trust; the region's fallback market is
+     * no longer assumed). A malformed city is refused ({@link PlaceParams}).
+     */
+    static Place place(@Nullable Double lat, @Nullable Double lng, @Nullable String city) {
         if ((lat == null) != (lng == null)) {
             throw RuleViolation.of(lat == null ? "lat" : "lng", "required", POINT_INCOMPLETE);
         }
@@ -73,10 +71,7 @@ class PublicServicesController {
         if (lng != null && (lng < -180 || lng > 180)) {
             throw RuleViolation.of("lng", "range", POINT_RANGE);
         }
-        if (city != null && city.length() > 60) {
-            throw RuleViolation.of("city", "length", CITY_TOO_LONG);
-        }
-        return new Place(lat, lng, city == null || city.isBlank() ? fallbackCity : city.strip());
+        return new Place(lat, lng, PlaceParams.city("city", city));
     }
 
     private static <T> ResponseEntity<T> cached(T body, Duration maxAge) {

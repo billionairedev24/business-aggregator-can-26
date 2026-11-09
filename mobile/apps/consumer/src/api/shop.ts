@@ -13,29 +13,35 @@ import type { TipChoice } from './aftercare';
 export type Day = 'today' | 'tomorrow' | 'later';
 export interface Run { windowId: string; label?: string | null; day: Day; startsAt: string; endsAt: string; orderBy: string; feeCents: number; households: number }
 export interface DepartmentTile { slug: string; name: string; shops: number }
-export interface ShopCard { merchantId: string; name: string; tier: string; departmentSlug: string; departmentName: string; products: number; run?: Run | null; imageUrl?: string | null }
+export interface ShopCard { merchantId: string; name: string; tier: string; departmentSlug: string; departmentName: string; products: number; run?: Run | null; imageUrl?: string | null; city?: string | null }
 export interface ProductCard {
   productId: string; offerId: string; name: string; merchantId: string; shopName: string; unit?: string | null;
   priceCents: number; imageUrl?: string | null; sellers: number; run?: Run | null;
+  /** S-190: the shop's market; false = not available for delivery to the visitor, null = the place isn't known */
+  shipsFrom?: string | null; deliverable?: boolean | null;
 }
-export interface Landing { market: string; served: boolean; run?: Run | null; shopCount: number; departments: DepartmentTile[]; shops: ShopCard[]; popular: ProductCard[] }
+/** S-190: `market` is null when the visitor's place isn't known (every live market together, no run); `nearby` = other markets' products, not deliverable. */
+export interface Landing { market: string | null; served: boolean; run?: Run | null; shopCount: number; departments: DepartmentTile[]; shops: ShopCard[]; popular: ProductCard[]; nearby?: ProductCard[] }
 export interface Department {
-  slug: string; name: string; groupName: string; market: string; served: boolean; run?: Run | null; siblings: DepartmentTile[];
+  slug: string; name: string; groupName: string; market: string | null; served: boolean; run?: Run | null; siblings: DepartmentTile[];
   shopCount: number; onRunCount: number; productCount: number; shops: ShopCard[]; products: ProductCard[];
 }
 export interface TrustedProvider { merchantId: string; name: string; slug?: string | null; tier: string; category?: { id: string; name: string } | null; rating: number; reviews: number }
-export interface HomeSummary { city: string; providers: number; shops: number; kitchensOpen: number; categories: Record<string, number>; trusted: TrustedProvider[] }
+export interface HomeSummary { city: string | null; providers: number; shops: number; kitchensOpen: number; categories: Record<string, number>; trusted: TrustedProvider[] }
 export interface Variant { variantId: string; value: string; priceCents: number; stock: number; images?: string[] }
 export interface Offer {
   offerId: string; merchantId: string; shopName: string; tier: string; rating: number; ratingCount: number; priceCents: number;
   compareAtCents?: number | null; condition?: string | null; stock: number; lowStock: boolean; returnsPolicy?: string | null;
   variantTheme: string; variants: Variant[]; runs: Array<Run & { packBy: string }>; images: string[];
   more: Array<{ productId: string; name: string; priceCents: number }>;
+  shipsFrom?: string | null; deliverable?: boolean | null;
 }
 export interface ProductPage {
   productId: string; name: string; brand?: string | null; description?: string | null; bullets: string[]; unit?: string | null;
-  departmentSlug: string; departmentName: string; market: string; served: boolean; offers: Offer[];
+  departmentSlug: string; departmentName: string; market: string | null; served: boolean; offers: Offer[];
   direct?: { etaMinutes: number; feeCents: number } | null;
+  /** S-190: with a market, other markets' shops selling it (not deliverable to the visitor) */
+  elsewhere?: Offer[];
 }
 /** "Your week" (S-58): the person's next seven days; `href` is a consumer-web path (mapped to app routes). */
 export interface Upcoming { id: string; title: string; subtitle?: string | null; state: string; tone: 'accent' | 'neutral' | 'accent-2'; href: string }
@@ -187,7 +193,8 @@ export function searchPath(s: SearchQuery, after?: string): string {
 
 /** Calls of Journey B; each answers the api's JSON (a 204 or empty body is `null`, handled by the caller). */
 export const shopApi = (api: ApiClient) => ({
-  home: (city: string) => api.get<HomeSummary>(`/public/home?${qs({ city })}`, { auth: 'optional' }),
+  /** S-190: no city = every live market together (never a 422) */
+  home: (city?: string) => api.get<HomeSummary>(`/public/home?${qs({ city })}`, { auth: 'optional' }),
   landing: (market: string | undefined, l: Locale) => api.get<Landing>(`/public/shop?${qs({ market, lang: lang(l) })}`, { auth: 'optional' }),
   department: (slug: string, market: string | undefined, l: Locale) =>
     api.get<Department>(`/public/shop/departments/${id(slug)}?${qs({ market, lang: lang(l) })}`, { auth: 'optional' }),

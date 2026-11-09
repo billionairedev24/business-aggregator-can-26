@@ -122,23 +122,37 @@ class ServicesBrowsingApiTest extends IntegrationTest {
             mvc.perform(get("/api/v1/public/services/mobile-mechanic/providers").param("city", "Okotoks"))
                     .andExpect(jsonPath("$.items[*].merchantId", hasItem(okotoks.merchantId())))
                     .andExpect(jsonPath("$.items[*].merchantId", not(hasItem(beltline.merchantId()))));
-            // nothing at all = the region's fallback market (S-47) when one is configured — the shared test database
-            // may hold the dev-seed markets (V119) or not, so the expectation follows what the api answers
-            String markets = mvc.perform(get("/api/v1/geo/markets"))
-                    .andReturn()
-                    .getResponse()
-                    .getContentAsString();
-            Object fallback = com.jayway.jsonpath.JsonPath.read(markets, "$.fallback");
-            if (fallback == null) {
-                mvc.perform(get("/api/v1/public/services/mobile-mechanic/providers"))
-                        .andExpect(jsonPath("$.area").doesNotExist())
-                        .andExpect(jsonPath("$.items").isEmpty());
-            } else {
-                String fallbackCity = com.jayway.jsonpath.JsonPath.read(markets, "$.fallback.city");
-                mvc.perform(get("/api/v1/public/services/mobile-mechanic/providers"))
-                        .andExpect(jsonPath("$.city").value(fallbackCity))
-                        .andExpect(jsonPath("$.area").doesNotExist());
-            }
+            // S-190: nothing at all = every provider (no fallback market is assumed), master before trusted
+            mvc.perform(get("/api/v1/public/services/mobile-mechanic/providers"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.city").doesNotExist())
+                    .andExpect(jsonPath("$.area").doesNotExist())
+                    .andExpect(jsonPath("$.items[*].merchantId", hasItem(beltline.merchantId())))
+                    .andExpect(jsonPath("$.items[*].merchantId", hasItem(okotoks.merchantId())));
+        }
+
+        /** S-190: no place = every provider by tier, rating, reviews; a point = the nearest first, then trust. */
+        @Test
+        void withoutAPlaceEveryProviderByTier_withAPointTheNearestFirst() throws Exception {
+            var master = fx.provider("Far Master", "master", List.of("Beltline"));
+            var registered = fx.provider("Near Registered", "registered", List.of("Downtown"));
+            fx.service(master.merchantId(), "service.automotive.detailing", "Wash", "fixed", 5000L, 30);
+            fx.service(registered.merchantId(), "service.automotive.detailing", "Wash", "fixed", 5000L, 30);
+
+            mvc.perform(get("/api/v1/public/services/detailing/providers"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.city").doesNotExist())
+                    .andExpect(jsonPath(
+                            "$.items[*].merchantId",
+                            containsInRelativeOrder(master.merchantId(), registered.merchantId())));
+            // a point both zones cover, 0.4 km from Downtown's centre and 0.8 km from Beltline's
+            mvc.perform(get("/api/v1/public/services/detailing/providers")
+                            .param("lat", "51.0455")
+                            .param("lng", "-114.0690"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath(
+                            "$.items[*].merchantId",
+                            containsInRelativeOrder(registered.merchantId(), master.merchantId())));
         }
 
         @Test
@@ -217,6 +231,9 @@ class ServicesBrowsingApiTest extends IntegrationTest {
             mvc.perform(get("/api/v1/public/services/mobile-mechanic/providers").param("city", "x".repeat(61)))
                     .andExpect(status().isUnprocessableContent())
                     .andExpect(jsonPath("$.errors[0].message").value("At most 60 characters."));
+            mvc.perform(get("/api/v1/public/services/mobile-mechanic/providers").param("city", "<b>"))
+                    .andExpect(status().isUnprocessableContent())
+                    .andExpect(jsonPath("$.errors[0].message").value("Enter a city name."));
         }
     }
 }

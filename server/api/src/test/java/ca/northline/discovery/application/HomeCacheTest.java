@@ -13,6 +13,7 @@ import ca.northline.food.api.KitchenAvailability;
 import ca.northline.merchants.api.CategorySource;
 import ca.northline.merchants.api.PublicDirectory;
 import ca.northline.merchants.api.PublicDirectory.PublicBusiness;
+import ca.northline.region.api.Regions;
 import ca.northline.support.MovableClock;
 import ca.northline.trust.api.RatingQuery;
 import java.time.Duration;
@@ -37,7 +38,7 @@ class HomeCacheTest {
     final RatingQuery ratings = mock(RatingQuery.class);
     final CategorySource categories = mock(CategorySource.class);
     final HomeCache cache = new HomeCache(clock, Duration.ofSeconds(30));
-    final HomeService home = new HomeService(directory, kitchens, ratings, categories, cache);
+    final HomeService home = new HomeService(directory, kitchens, ratings, categories, cache, mock(Regions.class));
 
     static PublicBusiness provider(String id) {
         return new PublicBusiness(

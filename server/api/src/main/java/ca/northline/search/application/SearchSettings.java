@@ -12,9 +12,17 @@ import org.jspecify.annotations.Nullable;
  */
 public record SearchSettings(Duration cacheTtl, int rateLimitPerMinute, Markets markets) {
 
-    /** The market searched when a request names none; {@code null} = requests must name one. */
+    /**
+     * The market searched when a request names none: the configured default, else (S-190: a location is never
+     * required) the first served province; {@code null} only when search serves nowhere.
+     */
     public @Nullable String defaultMarket() {
-        return markets.defaultProvince();
+        var configured = markets.defaultProvince();
+        if (configured != null) {
+            return configured;
+        }
+        var served = markets.served();
+        return served.isEmpty() ? null : served.iterator().next();
     }
 
     public boolean serves(String market) {

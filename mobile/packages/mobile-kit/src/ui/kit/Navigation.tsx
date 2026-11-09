@@ -13,7 +13,7 @@ import { CAP, LINE, TYPE, textStyles } from './tokens';
  * to two actions; `large` adds the page title under it, as iOS does) and the bottom tab bar (a Phosphor icon over a
  * short label; the current tab in ink with the filled icon and a 2 pt ink bar on top, like an underline tab turned
  * over; the cart's count in the round commerce badge). `tone="brand"` (S-188, the consumer app): the current tab as the
- * web's current page — a 3 pt violet bar (`nav-active-marker`) and the violet filled icon over the ink label.
+ * web's current page — a 3 pt spruce bar (`nav-active-marker`) and the spruce filled icon over the ink label.
  */
 
 export function AppHeader({
@@ -84,7 +84,7 @@ export function BottomTabBar<K extends string>({
   onSelect: (k: K) => void;
   bottomInset?: number;
   label?: string;
-  /** `ink` (the courier: ink on white in sunlight) or `brand` (the consumer: the violet current-page marker). */
+  /** `ink` (the courier: ink on white in sunlight) or `brand` (the consumer: the spruce current-page marker). */
   tone?: 'ink' | 'brand';
   testID?: string;
 }) {

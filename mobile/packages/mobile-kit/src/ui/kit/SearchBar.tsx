@@ -15,8 +15,8 @@ export interface SearchScope<T extends string = string> {
 
 /**
  * The search bar of the revamp's header (Amazon's pattern): the department scope on the left ("Shop ▾", opening a
- * bottom sheet of scopes), the field, and the violet search button (S-188). 44 pt tall, 3 pt corners, the 3:1 control
- * edge, the 2 pt violet focus edge while typing. `onChrome` (the consumer's violet header): the white field is the
+ * bottom sheet of scopes), the field, and the spruce search button (S-188). 44 pt tall, 3 pt corners, the 3:1 control
+ * edge, the 2 pt spruce focus edge while typing. `onChrome` (the consumer's forest header): the white field is the
  * edge, with a soft drop shadow. Without `onChangeText` it is a button that opens the search screen (`onPress`), as on
  * a tab's top bar.
  */
@@ -43,7 +43,7 @@ export function SearchBar<T extends string>({
   scope?: T;
   onScope?: (s: T) => void;
   autoFocus?: boolean;
-  /** On the violet header: no edge (the white field is the edge), a soft shadow. */
+  /** On the forest header: no edge (the white field is the edge), a soft shadow. */
   onChrome?: boolean;
   testID?: string;
 }) {

@@ -18,7 +18,9 @@ import ca.northline.food.domain.ComboPrice;
 import ca.northline.food.domain.FoodFees;
 import ca.northline.merchants.api.PublicDirectory;
 import ca.northline.merchants.api.PublicDirectory.PublicBusiness;
+import ca.northline.region.api.MarketProfile;
 import ca.northline.region.api.Markets;
+import ca.northline.region.api.Regions;
 import ca.northline.region.api.TaxRates;
 import ca.northline.shared.NotFound;
 import ca.northline.trust.api.RatingQuery;
@@ -69,11 +71,12 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
     private final Markets markets;
     private final TaxRates taxes;
     private final KitchenListCache cityKitchens;
+    private final Regions regions;
 
     /** A cache hit takes no database connection (SUPPORTS: one is bound on the first query of a miss). */
     @Override
     @Transactional(readOnly = true, propagation = Propagation.SUPPORTS)
-    public Kitchens kitchens(String city, @Nullable Double lat, @Nullable Double lng) {
+    public Kitchens kitchens(@Nullable String city, @Nullable Double lat, @Nullable Double lng) {
         var known = cityKitchens.get(city, () -> cityKitchens(city));
         var status = known.status();
         var rows = known.rows();
@@ -93,14 +96,24 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
                             var km = c.distanceKm();
                             return km == null ? Double.MAX_VALUE : km;
                         })
+                        // S-190: no distance (no point, or a kitchen not located yet): the best rated first
+                        .thenComparingDouble(c -> -c.rating())
+                        .thenComparingInt(c -> -c.reviews())
                         .thenComparing(Card::name))
                 .toList();
         return new Kitchens(city, cards);
     }
 
-    /** The list's city-level part (S-119 F5: kept a short while by {@link KitchenListCache}). */
-    private KitchenListCache.CityKitchens cityKitchens(String city) {
-        var kitchens = directory.active(Set.of("kitchen"), city);
+    /**
+     * The list's city-level part (S-119 F5: kept a short while by {@link KitchenListCache}); no city = every live
+     * market's kitchens (S-190).
+     */
+    private KitchenListCache.CityKitchens cityKitchens(@Nullable String city) {
+        var kitchens = city == null
+                ? directory.activeIn(
+                        Set.of("kitchen"),
+                        regions.liveMarkets().stream().map(MarketProfile::city).toList())
+                : directory.active(Set.of("kitchen"), city);
         var ids = kitchens.stream().map(PublicBusiness::merchantId).toList();
         var status = availability.now(
                 kitchens.stream().map(PublicKitchenService::ref).toList());
@@ -244,6 +257,7 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
                 k.merchantId(),
                 k.slug(),
                 k.displayName(),
+                k.city(),
                 k.cuisines(),
                 k.dietary(),
                 FoodFees.priceLevel(row.avgItemCents()),

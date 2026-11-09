@@ -20,7 +20,7 @@ export const Route = createFileRoute('/shop/stores/$merchantId')({
     const t = shopText(match.context.locale);
     const tags = seo(match.context, {
       title: loaderData ? t('storeTitle', { shop: loaderData.shop.name }) : pageTitle(match.context.locale, 'shop'),
-      description: loaderData && t('storeMetaDescription', { shop: loaderData.shop.name, department: loaderData.shop.departmentName, city: loaderData.landing.market }),
+      description: loaderData && t('storeMetaDescription', { shop: loaderData.shop.name, department: loaderData.shop.departmentName, city: loaderData.landing.market ?? loaderData.shop.city ?? '' }),
       path: `/shop/stores/${params.merchantId}`, query: { market: match.search.market },
     });
     return { ...tags, links: [...tags.links, { rel: 'stylesheet', href: shopCss }] };

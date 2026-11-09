@@ -162,6 +162,28 @@ describe('Shop landing (design 06 shop)', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Shop local, delivered together' })).toBeInTheDocument();
   });
 
+  it('S-190: with no location it shows every market — never a 422, a city question or a dialog — and says where things ship from', async () => {
+    api = c => (url(c).pathname === '/api/v1/public/shop'
+      ? { body: { ...LANDING, market: null, run: null, popular: [product('P1', 'Country sourdough', 750, { run: null, shipsFrom: 'Calgary', deliverable: null })], nearby: [] } }
+      : undefined);
+    const { calls } = open('/shop');
+    expect(await screen.findByRole('heading', { level: 2, name: 'Popular on Northline' })).toBeInTheDocument();
+    expect(screen.getByText(/Every city on Northline · choose your location for delivery times/)).toBeInTheDocument();
+    expect(screen.getByText('Ships from Calgary')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(calls.filter(c => url(c).pathname === '/api/v1/public/shop').every(c => !url(c).searchParams.has('market'))).toBe(true);
+  });
+
+  it('S-190: lists what nearby cities sell, labelled not deliverable, without Add to cart — also where Shop doesn’t deliver', async () => {
+    const away = product('P9', 'Edmonton rye', 600, { run: null, shopName: 'North Bakery', shipsFrom: 'Edmonton', deliverable: false });
+    api = () => ({ body: { market: 'Red Deer', served: false, run: null, shopCount: 0, departments: [], shops: [], popular: [], nearby: [away] } });
+    open('/shop?market=Red%20Deer');
+    expect(await screen.findByText('Northline Shop doesn’t deliver to Red Deer yet.')).toBeInTheDocument();
+    const rail = screen.getByRole('region', { name: 'From nearby cities' });
+    expect(within(rail).getByText('From Edmonton · not available for delivery to you')).toBeInTheDocument();
+    expect(within(rail).queryByRole('button', { name: /Add to cart/ })).not.toBeInTheDocument();
+  });
+
   it('has an empty state when no shop delivers yet', async () => {
     api = () => ({ body: { ...LANDING, shopCount: 0, departments: [], shops: [], popular: [] } });
     open('/shop');

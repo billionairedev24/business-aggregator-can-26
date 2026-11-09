@@ -18,6 +18,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.function.Supplier;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -45,8 +46,10 @@ class HomeCache {
         cache = new ShortCache<>(clock, ttl, MAX_ENTRIES);
     }
 
-    HomeSummary get(String city, Locale locale, Supplier<HomeSummary> load) {
-        return cache.get(new Key(city.strip().toLowerCase(Locale.ROOT), locale.getLanguage()), load);
+    /** @param city null = every live market (its own entry, key "") */
+    HomeSummary get(@Nullable String city, Locale locale, Supplier<HomeSummary> load) {
+        var market = city == null ? "" : city.strip().toLowerCase(Locale.ROOT);
+        return cache.get(new Key(market, locale.getLanguage()), load);
     }
 
     void invalidate() {

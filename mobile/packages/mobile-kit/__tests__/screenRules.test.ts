@@ -10,6 +10,7 @@ describe('screen rules', () => {
     ['the display face outside the home hero', 'h: textStyles.displayHero,'],
     ['a fill-only colour as text', "timer: { color: semantic.commerce },"],
     ['a fill-only colour as text', "<Icon name=\"heart\" color={on ? semantic['cart-badge'] : undefined} />"],
+    ['the hero\'s gold accent off the hero band', "price: { color: semantic['hero-accent'] },"],
     ['raw spacing', 'row: { gap: 6 },'],
     ['raw corner radius', 'card: { borderRadius: 12 },'],
     ['an older radius name', 'card: { borderRadius: radius.lg },'],
@@ -31,7 +32,7 @@ describe('screen rules', () => {
     expect(screenRuleHits('src/shop/Home.tsx', 'h: { fontFamily: fonts.display },')).toHaveLength(1);
   });
 
-  it('allows the yellow as a fill (S-188)', () => {
+  it('allows the gold as a fill (S-188)', () => {
     expect(screenRuleHits('x.tsx', "pill: { backgroundColor: semantic.commerce, borderColor: semantic['sticker-edge'] },\ntext: { color: semantic['commerce-on'] },")).toEqual([]);
   });
 

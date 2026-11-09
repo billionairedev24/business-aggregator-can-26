@@ -42,11 +42,17 @@ class DeliverySchedule implements DeliveryRuns {
     @Override
     public Optional<String> market(String city) {
         var wanted = city.strip().toLowerCase(Locale.ROOT);
-        return Stream.concat(
-                        regions.markets().stream().filter(MarketProfile::live).map(MarketProfile::city),
-                        properties.markets().stream())
+        return markets().stream()
                 .filter(m -> m.toLowerCase(Locale.ROOT).equals(wanted))
                 .findFirst();
+    }
+
+    @Override
+    public List<String> markets() {
+        var seen = new java.util.LinkedHashMap<String, String>();
+        Stream.concat(regions.liveMarkets().stream().map(MarketProfile::city), properties.markets().stream())
+                .forEach(m -> seen.putIfAbsent(m.toLowerCase(Locale.ROOT), m));
+        return List.copyOf(seen.values());
     }
 
     /** The market's local time zone (region model; the platform zone for a configured extra market). */
