@@ -23,18 +23,27 @@ is kept for the record). **When a story and these mockups disagree, the mockups 
   deal tiles and rails, all in Plainsight's type, colours and shapes.
 - **Prices:** one format: `$8.50` / `8,50 $`, with unit price as meta.
 
-## Brand layer (owner, 2026-10-24): Plainsight + Chinook
+## Brand layer (owner, 2026-10-24): Plainsight + Chinook, in Northern Pine (owner, 2026-11-09)
 The owner approved `design/revamp/hybrid/index.html` (S-188). Plainsight's pages stay; Chinook's brand layer goes on top.
 **Where the hybrid mockup and the values above disagree, the hybrid wins.**
-- **Consumer chrome:** header `#1D1442`, department strip `#2A1E5C`, footer `#1D1442`; white text, meta `#C3BBE6`;
-  the white search field joins a violet search button. No violet text on violet: links and focus there are white or `#B9A8FF`.
+Northern Pine (owner, 2026-11-09) replaces the violet: the owner deployed the violet look, didn't like the purple and chose
+Northern Pine from four palettes (`design/revamp/palettes/index.html`, S-189; its token diff lists the 52 values changed).
+Only colours changed; **for colour, the Northern Pine section of the palettes page wins over the hybrid mockup.**
+- **Consumer chrome:** header `#0F2A21`, department strip `#173B2E` (hover `#22503F`), footer `#0F2A21`; white text,
+  meta `#B5D2C4`; the white search field (scope on `#EAF2EE`) joins a spruce search button. No spruce text on the forest
+  chrome (2.38:1): links and focus there are white or `#8FDCC4`.
 - **Home:** Chinook's hero band first ("Everything <place> needs, tonight.", trust line, the run card with the cut-off,
-  three department photo tiles straddling the violet edge), then the maker-of-the-week, then the tiles and rails.
-- **Action colour:** violet `#5B34F0` (hover `#4A25D6`, halo `#D6CCFF`) for buttons, links and focus in every app.
-  Studio and Console chrome stays white; the current-page marker and icon are violet.
-- **Deals:** yellow `#FFD23F` with ink text, as tilted stickers with a 1.5 px ink shadow. Yellow is never text on white.
+  three department photo tiles straddling the forest edge), then the maker-of-the-week, then the tiles and rails. The
+  band is forest with a pine glow `#1F7A5E` (peak `#15523F`) and a faint gold glow at the lower left; "tonight." and the
+  trust line's icons are gold `#F7C75A`, the trust line `#D4E7DD`.
+- **Action colour:** spruce `#0E6B58` (hover `#0A5546`, halo `#BFE4D9`) for buttons, links and focus in every app.
+  Studio and Console chrome stays white; the current-page marker and icon are spruce on `#E7F3EE`. Spruce (168°) is not
+  the success green `#137A3A` (142°): success is only ever a tinted tag with an icon, never a solid button.
+- **Deals:** harvest gold `#F5B82E` with ink text (soft surface `#FDEFC9`), as tilted stickers with a 1.5 px ink shadow;
+  "Today's deals" on the strip is `#F7C75A`. Gold is never text on a light surface.
 - **Type:** Archivo expanded 800 (self-hosted) for the hero, department tiles and the maker-of-the-week headline only.
-- **Unchanged:** IBM Plex Sans for UI, selected states in ink, shapes, density, photo wells, status colours, red destructive.
+- **Unchanged:** IBM Plex Sans for UI, selected states in ink `#121418`, shapes, density, layout, photo wells, the hero
+  and the sticker mechanic, status colours, red destructive.
 
 ## Owner inputs
 - **Direction:** reopened, not only re-executed.

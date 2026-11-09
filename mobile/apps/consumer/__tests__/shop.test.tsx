@@ -241,7 +241,7 @@ describe('B2 Search', () => {
 });
 
 describe('B3 Product and B4 Cart', () => {
-  it('shows the cut-off as the ink-on-yellow pill in the buy box (S-188)', async () => {
+  it('shows the cut-off as the ink-on-gold pill in the buy box (S-188)', async () => {
     const now = jest.spyOn(Date, 'now').mockReturnValue(Date.parse(`${new Date().toISOString().slice(0, 10)}T14:31:00Z`));
     await start({ welcomed: true, store: saved(), url: '/product/p-sourdough' });
     const pill = await screen.findByTestId('product-cutoff');

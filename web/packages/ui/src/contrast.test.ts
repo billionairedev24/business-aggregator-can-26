@@ -6,7 +6,7 @@
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { PAIRS, vet } from '../../tokens/lib/contrast.mjs';
+import { CHROME_ONLY, FILL_ONLY, PAIRS, REJECTED, vet, vetRoles } from '../../tokens/lib/contrast.mjs';
 import { resolveTheme } from '../../tokens/lib/theme.mjs';
 import { contrast } from '../../tokens/lib/oklch.mjs';
 import { theme } from '@northline/tokens';
@@ -32,6 +32,30 @@ describe('the contrast gate', () => {
     const p = json(`palettes/${brand.palette}.json`);
     const t = resolveTheme(brand, { ...p, color: { ...p.color, primaryText: '#2A4F86' } }, scale);
     expect(vet(t.color).map(f => `${f.fg}/${f.bg}`)).toContain('action-primary-text/action-primary');
+  });
+  // S-189 Northern Pine: the guards the mockup's table sets stay in force on the new colours
+  it('keeps the rejected pairs failing: gold on white, the spruce action on the forest chrome', () => {
+    const colours: Record<string, string> = theme.color;
+    for (const [fg, bg, min] of REJECTED) expect(contrast(colours[fg]!, colours[bg]!)).toBeLessThan(min);
+    expect(Number(contrast(colours['action-primary']!, colours['header-bg']!).toFixed(2))).toBe(2.38);
+    expect(vetRoles(colours)).toEqual([]);
+  });
+  it('refuses gold (a fill, or the hero accent) as the text of a pair on a light surface', () => {
+    for (const fg of [...FILL_ONLY, ...CHROME_ONLY]) {
+      expect(vetRoles(theme.color as Record<string, string>, [[fg, 'surface', 4.5, 'test']]).map(f => f.fg)).toContain(fg);
+      expect(PAIRS.filter(([f, b]) => f === fg && ['surface', 'canvas', 'well', 'commerce-bg'].includes(b))).toEqual([]);
+    }
+  });
+  it('keeps the action spruce apart from the success green (success is a tinted tag, never a solid button)', () => {
+    const hue = (h: string) => {
+      const [r, g, b] = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255) as [number, number, number];
+      const max = Math.max(r, g, b), d = max - Math.min(r, g, b);
+      const x = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      return (x * 60 + 360) % 360;
+    };
+    // spruce #0E6B58 is 168°, success #137A3A 142°: a different hue, and apart in lightness on a tag
+    expect(Math.abs(hue(theme.color['action-primary']!) - hue(theme.color.success!))).toBeGreaterThanOrEqual(20);
+    expect(theme.color['status-success-bg']).not.toBe(theme.color['action-primary']);
   });
   it('the generated theme is brand.json’s palette, its brand colours as given', () => {
     const p = json(`palettes/${brand.palette}.json`);

@@ -1,6 +1,6 @@
 /* Studio / Console shell (E-15 A · Plainsight, design/revamp/a.html screens 7–9; AppShell.tsx): one white top bar with
    a hairline (logo + portal name · workspace switcher · global search · account), a white sidebar whose groups are caps
-   headings with every item visible, the current item on the violet tint with a 3 px violet marker and a violet icon (S-188); the page on the muted grey.
+   headings with every item visible, the current item on the spruce tint with a 3 px spruce marker and a spruce icon (S-188, S-189); the page on the muted grey.
    A 72px icon rail at 768–1023px, a disclosure menu on phones. Semantic tokens only. */
 .nl-shell { --nl-shell-top: var(--size-touch); min-height: 100vh; display: flex; flex-direction: column; font-family: var(--font-sans); color: var(--color-text); background: var(--color-surface-muted); }
 
@@ -58,8 +58,8 @@
 .nl-side-toggle { width: var(--size-touch); height: var(--size-touch); flex: none; display: grid; place-items: center; border: 0; border-radius: var(--radius-control); cursor: pointer; background: transparent; color: var(--color-text-muted); }
 .nl-side-toggle:hover { background: var(--color-surface-hover); color: var(--color-text); }
 .nl-side-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-/* items: body text, muted until hovered; the current one on the violet tint, bold, its icon filled in violet, a 3 px
-   violet marker on its left (S-188 brand layer; the label stays ink) */
+/* items: body text, muted until hovered; the current one on the spruce tint, bold, its icon filled in spruce, a 3 px
+   spruce marker on its left (S-188 brand layer, S-189 colours; the label stays ink) */
 .nl-side-item { position: relative; display: flex; align-items: center; gap: var(--space-2-5); width: 100%; box-sizing: border-box; font-size: var(--type-body); font-weight: var(--weight-medium); padding: 0 var(--space-2-5); min-height: var(--size-touch); border-radius: var(--radius-control); color: var(--color-text-muted); text-decoration: none; }
 .nl-side-item:hover { background: var(--color-surface-hover); color: var(--color-text); text-decoration: none; }
 .nl-side-item[aria-current='page'] { color: var(--color-nav-active-text); background: var(--color-nav-active-bg); font-weight: var(--weight-bold); }

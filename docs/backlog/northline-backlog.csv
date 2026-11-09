@@ -1192,6 +1192,14 @@ Acceptance criteria:
 - Every pair passes WCAG AA; visual baselines, ui-a11y and ui-hydration green
 
 Refs: docs/design/revamp-epic.md, design/revamp/hybrid/",Highest,5,ui-revamp,design-system,brand,web,Sprint 3,2026-11-02,2026-11-13,Done
+S-189,E-15,Story,"Northern Pine theme: forest chrome, spruce action, harvest-gold deals",,"Owner decision 2026-11-09 (design/revamp/palettes/index.html, Northern Pine of four options): the owner deployed the violet look and doesn't like the purple. Only colours change: consumer header, department strip and footer forest #0F2A21/#173B2E with meta #B5D2C4 and focus #8FDCC4; spruce #0E6B58 (hover #0A5546) is the action, link and focus colour in all apps; deals are ink-on-gold #F5B82E stickers; the hero's accent and the strip's ""Today's deals"" gold #F7C75A; Studio/Console current-page marker spruce. Type, shapes, density, layout, the hero, the sticker mechanic, ink selected states and status colours stay.
+
+Acceptance criteria:
+- The 52-value token diff of the mockup applied to palettes/plainsight.json; email, favicons and both phone apps follow
+- Every pair of the mockup's contrast table passes WCAG AA; gold never text on light surfaces, spruce never text on the chrome (2.38:1)
+- Visual baselines, ui-a11y and ui-hydration green
+
+Refs: docs/design/revamp-epic.md § Brand layer, design/revamp/palettes/, docs/DECISIONS.md (2026-11-09 — S-189)",Highest,3,ui-revamp,design-system,brand,web,Sprint 3,2026-11-09,2026-11-13,Done
 S-191,E-15,Story,Amazon-grade consumer shell: rich footer and a real mobile web layout,,"Owner feedback 2026-11-09 on the deployed consumer site (""does not match amazon in any way"", ""the footer is so dry"", ""bizarre on mobile""). An Amazon parity audit (docs/design/amazon-parity.md, 21 ranked gaps) and fixes for the shell and the worst gaps: a rich footer (Back to top, four link columns, language and region, legal strip; en + fr-CA, every link a real route); the phone header (only the search stays on scroll, a slim Deliver-to bar, department chips); the phone home (compact hero band, card grid then rails, a product on the first screen); sticky Filters/Sort on results; the product page head before the photo and the buy box under the options; one-row cart lines; 16 px phone gutters.
 
 Acceptance criteria:

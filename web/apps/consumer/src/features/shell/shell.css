@@ -10,9 +10,9 @@ body { text-wrap: pretty; }
 .nl-skip { position: absolute; left: 12px; top: -60px; z-index: var(--z-toast); display: inline-flex; align-items: center; min-height: var(--size-touch); padding: 0 var(--space-4); background: var(--color-surface); color: var(--color-link); border-radius: var(--radius-pill); box-shadow: var(--shadow-md); font-weight: var(--weight-bold); }
 .nl-skip:focus { top: 12px; }
 
-/* footer (S-191, after Amazon's footer; E-15 / S-188 brand layer colours): the "Back to top" bar on the strip's violet,
-   four link columns on the footer violet, a row with the logo, the FR/EN switch and the region, then the legal strip
-   under a hairline. White links and headings, the light violet meta (never the action violet: no violet text on violet).
+/* footer (S-191, after Amazon's footer; E-15 / S-188 brand layer, S-189 colours): the "Back to top" bar on the strip's colour,
+   four link columns on the footer colour, a row with the logo, the FR/EN switch and the region, then the legal strip
+   under a hairline. White links and headings, the footer meta colour (never the action colour on the chrome).
    Phones: the columns two by two, the rows stacked and centred. Every link is a 44 px target (the column's width). Footer and strip roles only. */
 .nl-footer { background: var(--color-footer-bg); color: var(--color-footer-muted); font-size: var(--type-label); }
 .nl-footer a { color: var(--color-footer-text); text-decoration: none; }
