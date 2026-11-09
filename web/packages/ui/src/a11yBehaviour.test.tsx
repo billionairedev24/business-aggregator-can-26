@@ -212,7 +212,7 @@ describe('language', () => {
     expect(document.documentElement.style.getPropertyValue('--nl-header-h')).toBe('');
   });
 
-  it('tucks its first row away while scrolling down on a short screen, and back on the way up or on focus', async () => {
+  it('tucks all but the search away while scrolling down on a short screen, and back on the way up or on focus', async () => {
     // a phone: 150px of header on an 800px window, the search's row 60px below the header's top
     const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
       return (this.classList.contains('nl-site-search') ? { top: 60, height: 46 } : { top: 0, height: 150 }) as DOMRect;
@@ -224,7 +224,8 @@ describe('language', () => {
     expect(header.style.getPropertyValue('--nl-header-tuck')).toBe('56px');
     scrollTo(400);
     await waitFor(() => expect(header).toHaveAttribute('data-tucked'));
-    expect(root.getPropertyValue('--nl-header-h')).toBe('94px'); // what is still on screen: the search and the nav row
+    expect(root.getPropertyValue('--nl-header-h')).toBe('54px'); // what is still on screen: the search (S-191: the rows under it are clipped)
+    expect(header.style.getPropertyValue('--nl-header-clip')).toBe('40px');
     scrollTo(300);
     await waitFor(() => expect(header).not.toHaveAttribute('data-tucked'));
     expect(root.getPropertyValue('--nl-header-h')).toBe('150px');

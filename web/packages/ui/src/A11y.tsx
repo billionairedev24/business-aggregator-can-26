@@ -22,8 +22,10 @@ const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayout
  * `tuckTo` (the consumer header, after AfroTransact's): a selector inside the header. On short screens — the header
  * taller than 16% of the window and that element at least a row below the header's top — scrolling down tucks
  * everything above it away past the top edge (the header's `top` goes to `-var(--nl-header-tuck)`) and scrolling up,
- * or focusing into the header, brings it back. The returned flag is true while tucked; the published heights are then
- * what is still on screen. Without `tuckTo` it is always false.
+ * or focusing into the header, brings it back. S-191 (Amazon's phone header): while tucked, the rows under that element
+ * (the place and the department strip) are clipped away too (`--nl-header-clip`, the header's `clip-path`), so only the
+ * search stays at the top of a phone. The returned flag is true while tucked; the published heights are then what is
+ * still on screen. Without `tuckTo` it is always false.
  */
 export function useStickyOffset<E extends HTMLElement>(ref: RefObject<E | null>, onHeight?: (height: number) => void, tuckTo?: string): boolean {
   const listener = useRef(onHeight);
@@ -34,6 +36,7 @@ export function useStickyOffset<E extends HTMLElement>(ref: RefObject<E | null>,
     if (!el) return;
     const root = document.documentElement;
     let tuck = 0;
+    let clip = 0;
     let isTucked = false;
     const publish = () => {
       const box = el.getBoundingClientRect();
@@ -41,8 +44,14 @@ export function useStickyOffset<E extends HTMLElement>(ref: RefObject<E | null>,
       const below = tuckTo ? el.querySelector<HTMLElement>(tuckTo) : null;
       const offset = below ? Math.round(below.getBoundingClientRect().top - box.top) - 4 : 0;
       tuck = offset > 24 && full > window.innerHeight * 0.16 ? offset : 0;
-      if (tuckTo) el.style.setProperty('--nl-header-tuck', `${tuck}px`);
-      const h = full - (isTucked ? tuck : 0);
+      // what sits under the element (4px kept for its shadow): clipped away while tucked
+      const under = below ? below.getBoundingClientRect() : null;
+      clip = tuck && under ? Math.max(0, full - Math.round(under.top + under.height - box.top) - 4) : 0;
+      if (tuckTo) {
+        el.style.setProperty('--nl-header-tuck', `${tuck}px`);
+        el.style.setProperty('--nl-header-clip', `${clip}px`);
+      }
+      const h = full - (isTucked ? tuck + clip : 0);
       listener.current?.(h);
       root.style.setProperty('--nl-sticky-top', `${h + 8}px`);
       // what sticky columns sit under (the checkout summary, the PDP buy box…): the header as drawn, which wraps to
