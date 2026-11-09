@@ -20,7 +20,7 @@ export const useShellT = defineMessages({
     sell: 'Sell on {brand}', offer: 'Offer a service', kitchen: 'Run a kitchen',
     // the footer (S-191): four columns, the language and region row, the legal strip
     backToTop: 'Back to top', homeLink: '{brand} — home', region: 'Canada · CAD $', footerLegal: 'Legal',
-    colKnow: 'Get to know us', howItWorks: 'How {brand} works', shopLocal: 'Shop local', bookPro: 'Book a pro', orderIn: 'Order in',
+    colKnow: 'Get to know us', howItWorks: 'How {brand} works', shopLocal: 'Local shops', bookPro: 'Find a pro', orderIn: 'Order food',
     colEarn: 'Make money with us', waysIn: 'Every way to join',
     colPay: 'Payments and policies', paymentHeld: 'Payment held until delivery', paymentMethods: 'Payment methods', accessibility: 'Accessibility',
     colHelp: 'Let us help you', yourOrders: 'Your orders', yourBookings: 'Your bookings', deliveryPlace: 'Your delivery location',
@@ -57,7 +57,7 @@ export const useShellT = defineMessages({
     privacy: 'Avis de confidentialité', terms: 'Conditions d’utilisation', helpLink: 'Aide', langSwitch: 'English', photoCredits: 'Crédits photo',
     sell: 'Vendre sur {brand}', offer: 'Offrir un service', kitchen: 'Gérer une cuisine',
     backToTop: 'Retour en haut', homeLink: '{brand} — accueil', region: 'Canada · $ CA', footerLegal: 'Mentions légales',
-    colKnow: 'Apprenez à nous connaître', howItWorks: 'Comment fonctionne {brand}', shopLocal: 'Magasiner local', bookPro: 'Réserver un pro', orderIn: 'Commander un repas',
+    colKnow: 'Apprenez à nous connaître', howItWorks: 'Comment fonctionne {brand}', shopLocal: 'Commerces locaux', bookPro: 'Trouver un pro', orderIn: 'Commander un repas',
     colEarn: 'Gagnez de l’argent avec nous', waysIn: 'Toutes les façons de vous joindre à nous',
     colPay: 'Paiements et politiques', paymentHeld: 'Paiement retenu jusqu’à la livraison', paymentMethods: 'Modes de paiement', accessibility: 'Accessibilité',
     colHelp: 'Besoin d’aide ?', yourOrders: 'Vos commandes', yourBookings: 'Vos réservations', deliveryPlace: 'Votre adresse de livraison',

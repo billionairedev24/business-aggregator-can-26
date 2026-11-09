@@ -58,7 +58,7 @@ export interface HomeHeroProps {
  * last words in the light violet, the trust line, the run card with the cut-off on a yellow sticker, then three department
  * photo tiles that straddle the band's lower edge (the photo, a dark scrim, the department in caps, its name in the display
  * face, a line of meta, a white arrow square that turns violet on hover while the tile lifts). Every box has its size
- * from the first render (the run card holds its place while it loads; the headline holds two lines, three on phones), so
+ * from the first render (the run card holds its place while it loads; the headline holds two lines; S-191: a compact band on phones, the tiles three across), so
  * nothing moves when the data and the photos arrive. No violet text on violet: text there is white, `hero-text` or `hero-accent`.
  */
 export function HomeHero({ title, accent, titleId = 'home-hero-band-title', level = 1, trust = [], run, runLabel, loadingLabel, departments, departmentsLabel, className }: HomeHeroProps) {
