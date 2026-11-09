@@ -52,7 +52,7 @@ export const ProviderCard = z.object({
 export type ProviderCard = z.infer<typeof ProviderCard>;
 
 export const Providers = z.object({
-  categorySlug: z.string(), kind: ServiceKind, area: z.string().nullish(), city: z.string(), items: z.array(ProviderCard),
+  categorySlug: z.string(), kind: ServiceKind, area: z.string().nullish(), city: z.string().nullish(), items: z.array(ProviderCard),
 });
 export type Providers = z.infer<typeof Providers>;
 

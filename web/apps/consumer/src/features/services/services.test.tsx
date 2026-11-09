@@ -168,7 +168,7 @@ describe('provider list (design 06 providers; redesign service cards, AT Shop:89
     const calls = mockFetch(api());
     renderApp('/services/mobile-mechanic/providers', { routes, geolocation: geo(51.0385, -114.072) });
     expect(await screen.findByRole('heading', { level: 1, name: 'Mobile mechanics · 2 come to Beltline' })).toBeInTheDocument();
-    expect(screen.getByText('Sorted by trust · tier, on-time rate, dispute rate and re-book rate')).toBeInTheDocument();
+    expect(screen.getByText('Nearest first, then by trust')).toBeInTheDocument();
     const rows = screen.getAllByRole('link', { name: /Prairie Wrench|Bow River/ });
     expect(rows[0]).toHaveAttribute('href', '/providers/prairie-wrench');
     expect(within(rows[0]!).queryByText('Master')).toBeNull(); // § 3.13: stars and the verified seal, not tier tags
