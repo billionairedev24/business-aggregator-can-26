@@ -3,7 +3,7 @@ import { useShellT } from './messages';
 import { useSiteConfig } from '../../lib/config';
 
 /**
- * The footer (E-15, design/revamp/a.html; S-188 violet, design/revamp/hybrid): one compact band — the logo, "©" and the company line (`NL_LEGAL_ENTITY`,
+ * The footer (E-15, design/revamp/a.html; S-188 brand layer in S-189's forest, design/revamp/hybrid): one compact band — the logo, "©" and the company line (`NL_LEGAL_ENTITY`,
  * configuration, S-134; no year: a clock read at render can differ between the server and the browser) on the left,
  * then Help (for everyone, guests included: the same place on every page, WCAG 3.2.6), returns, the businesses' ways
  * in, Privacy and Terms (the verbatim design 09/10 documents, English only, so `hreflang` says so), photo credits and

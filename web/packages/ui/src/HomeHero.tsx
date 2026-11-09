@@ -18,7 +18,7 @@ export interface HomeHeroRun {
   icon?: ReactNode;
   kicker: ReactNode;
   title: ReactNode;
-  /** The time left, on the yellow sticker; absent when there is nothing to count down. */
+  /** The time left, on the gold sticker; absent when there is nothing to count down. */
   left?: ReactNode;
   note?: ReactNode;
 }
@@ -35,7 +35,7 @@ export interface HomeHeroDepartment {
 }
 
 export interface HomeHeroProps {
-  /** The headline's lead ("Everything Kensington needs,") and its light-violet end ("tonight."). */
+  /** The headline's lead ("Everything Kensington needs,") and its gold end ("tonight."). */
   title: ReactNode;
   accent?: ReactNode;
   titleId?: string;
@@ -54,12 +54,12 @@ export interface HomeHeroProps {
 
 /**
  * The consumer home's hero band (S-188 brand layer, Chinook's "tonight" hero on Plainsight; design/revamp/hybrid/index.html
- * screens 1–2): a deep-violet band with a violet glow, the headline in the display face (Archivo, expanded, 800) with its
- * last words in the light violet, the trust line, the run card with the cut-off on a yellow sticker, then three department
+ * screens 1–2; S-189 Northern Pine colours): a deep forest band with a pine glow, the headline in the display face (Archivo,
+ * expanded, 800) with its last words in gold, the trust line, the run card with the cut-off on a gold sticker, then three department
  * photo tiles that straddle the band's lower edge (the photo, a dark scrim, the department in caps, its name in the display
- * face, a line of meta, a white arrow square that turns violet on hover while the tile lifts). Every box has its size
+ * face, a line of meta, a white arrow square that turns spruce on hover while the tile lifts). Every box has its size
  * from the first render (the run card holds its place while it loads; the headline holds two lines, three on phones), so
- * nothing moves when the data and the photos arrive. No violet text on violet: text there is white, `hero-text` or `hero-accent`.
+ * nothing moves when the data and the photos arrive. No action-coloured text on the band: text there is white, `hero-text` or `hero-accent`.
  */
 export function HomeHero({ title, accent, titleId = 'home-hero-band-title', level = 1, trust = [], run, runLabel, loadingLabel, departments, departmentsLabel, className }: HomeHeroProps) {
   const H = `h${level}` as const;

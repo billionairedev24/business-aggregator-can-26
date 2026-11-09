@@ -17,8 +17,8 @@ export const GUTTER = space[4];
  * line) when `title` is given, otherwise `top` (a tab's own top bar — {@link TopBar}) or a thin band; 16 pt side
  * padding; content that scrolls; an offline banner while the phone has no connection. `footer` is the sticky bottom
  * action bar: it stays above the home indicator and rises with the keyboard. `action` puts one more round button on
- * the right of the header. `chrome` (S-188): `top` is the violet consumer chrome ({@link TopBar}), so the status bar's
- * strip is violet too and its text turns light while the screen is in front.
+ * the right of the header. `chrome` (S-188): `top` is the forest consumer chrome ({@link TopBar}), so the status bar's
+ * strip is forest too and its text turns light (S-189: still light on the dark green) while the screen is in front.
  */
 export function Screen({
   title,
@@ -50,7 +50,7 @@ export function Screen({
   refreshControl?: React.ReactElement<RefreshControlProps>;
   /** The content's ScrollView (S-178: a provider's tabs scroll to their section). */
   scrollRef?: Ref<ScrollView>;
-  /** `top` is the violet chrome (Home, Browse). */
+  /** `top` is the forest chrome (Home, Browse). */
   chrome?: boolean;
   testID?: string;
 }) {
@@ -138,11 +138,11 @@ export function Header({ title, back = true, onBack, action }: { title: string; 
 }
 
 /**
- * A tab's top (S-188 Plainsight + Chinook, design/revamp/hybrid's "Consumer home · phone (390)"): the consumer's violet
- * header (`header-*`) — the brand (`lead`, the mark on violet, the white name) and the white icon actions on one row,
- * the white search field joined to the violet search button under it, then "Deliver to <place>" on one line (the
+ * A tab's top (S-188 Plainsight + Chinook, design/revamp/hybrid's "Consumer home · phone (390)"): the consumer's forest
+ * header (`header-*`) — the brand (`lead`, the mark on the forest, the white name) and the white icon actions on one row,
+ * the white search field joined to the spruce search button under it, then "Deliver to <place>" on one line (the
  * muted `header-muted`, the place in white) with an ellipsis — the person's place opens the location sheet — and
- * `below` (Home's violet department strip). No violet text on violet. Never asks for the phone's position (that
+ * `below` (Home's forest department strip). No spruce text on the forest chrome. Never asks for the phone's position (that
  * happens only in the sheet, on "Use my current location").
  */
 export function TopBar({
@@ -200,12 +200,12 @@ export function TopBar({
   );
 }
 
-/** The one search bar of a tab's top (opens the search screen): the kit's SearchBar without a field, on the violet chrome. */
+/** The one search bar of a tab's top (opens the search screen): the kit's SearchBar without a field, on the forest chrome. */
 export function SearchPill({ label, onPress, testID }: { label: string; onPress: () => void; testID?: string }) {
   return <SearchBar placeholder={label} onPress={onPress} onChrome testID={testID} />;
 }
 
-/** The brand on the violet header: the mark (the same violet disc, white glyph, yellow dot as on white) and the white name. */
+/** The brand on the forest header: the mark (the same spruce disc, white glyph, gold dot as on white) and the white name. */
 export function ChromeLogo() {
   return (
     <View accessible accessibilityRole="image" accessibilityLabel={brand.name} style={styles.logo} testID="logo">
@@ -217,7 +217,7 @@ export function ChromeLogo() {
   );
 }
 
-/** A 44 pt icon action on the violet header (the bell): a white icon, the darker violet when pressed. */
+/** A 44 pt icon action on the forest header (the bell): a white icon, the darker green when pressed. */
 export function ChromeButton({ icon, label, onPress, testID }: { icon: IconName; label: string; onPress: () => void; testID?: string }) {
   return <IconButton icon={icon} label={label} onPress={onPress} onChrome testID={testID} />;
 }

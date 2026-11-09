@@ -12063,6 +12063,69 @@ cut-off pills, violet actions, links and focus in both apps, the courier app's s
   strip isn't drawn: the app has no deals destination. The kit's `HomeHero` holds no minimum headline height (no
   server render to shift against).
 
+## 2026-11-09 — S-189 Northern Pine theme
+
+The owner deployed the violet brand layer (S-188) and doesn't like the purple. From four palettes
+(`design/revamp/palettes/index.html`, now in the repo as the reference, with its photos and credits) they chose
+**Northern Pine**. Only colours change: type, shapes, density, layout, the hero, the deal-sticker mechanic, selected
+states in ink #121418 and the status colours are as S-188 left them.
+
+- **Tokens.** The page's token diff against `palettes/plainsight.json`, all 52 values, applied by script from the page's
+  own data (`palettes.py`) and checked to leave no difference: chrome `header-bg` / `footer-bg` / `hero-bg` #0F2A21, strip
+  `subheader-bg` / `header-hover-bg` #173B2E (hover #22503F, line #33604E), meta `header-muted` / `header-ring` /
+  `footer-muted` #B5D2C4, focus on the chrome `header-focus` / `focus-on-dark` / `focus-on-inverse` #8FDCC4, scope
+  #EAF2EE / #173B2E; action, link, focus, `topbar-focus`, `nav-active-marker`, `mark` spruce #0E6B58 (hover #0A5546),
+  halo and selection #BFE4D9, `nav-active-bg` / `surface-brand` / `badge-brand-bg` #E7F3EE (text #173B2E), promo
+  #E8F4EE / #173B2E; commerce, `cart-badge`, `mark-highlight` gold #F5B82E with ink, its tint #FDEFC9; `subheader-deal`
+  and `hero-accent` #F7C75A; hero glow #1F7A5E (peak #15523F), text #D4E7DD, tile meta #E2EEE7, scrim #0B1F17, card
+  line #33604E; and the `color.*` brand values EmailBrand.java copies (primary/link/focus, hovers, accent, accentTint,
+  markHighlight). The derived ramps follow. `theme.json`, the favicons (the four apps and the docs site) regenerated.
+- **Contrast gate.** Every pair of the page's table passes with its ratios: white on spruce 6.44 (hover 8.75), the link
+  on white 6.44 and on the page ground 5.85, the nav marker on its tint 5.66, ink on gold 10.34, the strip's gold 7.80,
+  the hero accent 9.66, the trust line 11.85, the header meta 9.45, white on the strip 12.34 (hover 9.18), tile meta on
+  the scrim 14.41, the scope 10.83, the promo 10.94, focus on the chrome 9.61, the search button 6.44, ink on the gold
+  tint 16.13. Changes to the guards: the hero accent is now gold text, so its pairs are held to 4.5 (they were 3 for the
+  light violet) and it is `CHROME_ONLY` — refused as the text of a pair on any light surface (#F7C75A on white is
+  1.58:1). The rejected pairs now cover gold on white (1.78) and on the page ground, the hero accent and the strip's
+  gold on white, and the spruce on the chrome (2.38) and on the strip; all stay failing (a test checks it, and that
+  spruce on the chrome is 2.38). `lint:tokens` also refuses `var(--color-hero-accent)` outside `hero.css`, and the
+  native screen rules refuse `semantic['hero-accent']` outside the home band (the kit's `HomeHero` draws it).
+- **Hero glow.** The page draws Pine's lower-left glow in the commerce gold at 13 % (the violet drew the action colour
+  at 30 %). The web band and the kit's `HomeHero` do the same with `--color-commerce` / `semantic.commerce` (a fill in a
+  gradient stop, not text), so no new role. The top-right glow is `hero-glow` at 55 % as before. The page's band
+  bottom (#0C241B) and sticker shade (#04120C) are approximated by `hero-scrim` #0B1F17, as S-188 did with the violet.
+- **Spruce and success.** Spruce #0E6B58 is 168°, success #137A3A 142° (a test holds them ≥ 20° apart). In the gallery
+  success is only ever a tinted tag or text with an icon (status tags, "Verified", KPI deltas, the payout card's edge);
+  actions are solid spruce. They read apart, though they are related greens. **Open point for the lead:** the "New" tag
+  (`badge-brand`, #E7F3EE / #173B2E, from the page's diff) now looks close to the success tag (#E4F3E9 / #137A3A); they
+  differ by the status tag's square marker and the text hue. Left as the page draws it.
+- **Email.** `EmailBrand` ACCENT #0E6B58, HIGHLIGHT #F5B82E, HIGHLIGHT_100 #FDEFC9; `./gradlew :email:test` green
+  (180 tests; JDK 25 installed from the Ubuntu archive in this container, it had only 21).
+- **Web.** No raw violet or yellow anywhere outside the tokens (grep of every violet value, the glow and #FFD23F; the
+  lints already forbade them). Comments that named violet / yellow now name the forest chrome, spruce and gold.
+- **Mobile.** Both apps and the kit read `theme.json`, so every colour followed; `gen-brand --check` unchanged (fonts
+  only). The kit's `STICKER` holds no colour (tilt and edge widths; the edges are `sticker-edge` ink and `hero-scrim`),
+  so it is unchanged. The status bar stays light on the forest tabs (`setStatusBarStyle('light')`, the strip
+  `header-bg`). The store icons and splash (`scripts/gen-icons.mjs`, a placeholder from the 2026-10-18 palette, not
+  re-run by S-188) are left as they are: already green and honey.
+- **Visual gate.** Develop's own baselines fail `test:visual` in this container (10 of 16 tests: text anti-aliasing
+  differs, and the shell baseline was stale — an ink current-page marker and the pre-S-188 mark). All 71 changed
+  baselines were retaken here and reviewed by eye against the old ones (section by section, old above new, plus a
+  pixel check that the geometry did not move); the gate then passes 16/16.
+- **Checks.** Tokens build + gate, `lint:tokens`, `lint:brand`, `lint:colors`, web typecheck (all packages) and build (all
+  apps, the docs site included), `./gradlew :email:test`, mobile typecheck, lint and tests (kit 144, consumer 330,
+  courier 79, release) green. Web tests green except the two consumer booking tests below. `test:visual` 16/16 after the
+  re-baseline. `make ui-a11y` (three apps, 1440 + 390, en + fr): 304 passed, 0 axe findings; the two console keyboard
+  checks (the Suspend and Change tier dialogs' textarea / select "shows its focus") fail identically on develop.
+  `make ui-hydration`: 48 passed; sign-in, register and forgot-password raise React #418 (a text mismatch) identically on
+  develop. `make ui-shots` (all routes) and `make mobile-shots` (both apps) taken; the consumer home (1440, 390), the
+  product row, the Studio dashboard and the phone home compared with the palette page's Pine renders by eye: they match.
+  `make mobile-shots` needs `CHROMIUM_PATH=/opt/pw-browsers/chromium-1243/chrome-linux64/chrome` here (the script
+  looks under `chrome-linux/`).
+- **Not done / not verified:** no device or simulator (react-native-web only). The consumer web's two booking tests that assume Halifax
+  is UTC−3 fail since daylight time ended on 1 Nov (real clock; not this story). `docs/design/revamp-walkthrough.md`
+  (the S-180 walkthrough, a record) still says violet.
+
 ## 2026-11-09 — S-190 Location is never required
 
 Owner direction (2026-11-09): "We should not require location to show stuff, but if we discover location, we can

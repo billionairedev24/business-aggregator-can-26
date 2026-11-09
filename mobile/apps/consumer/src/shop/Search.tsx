@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     backgroundColor: semantic.surface,
     overflow: 'hidden',
   },
-  // S-188: the violet focus edge while typing, the violet search button (the action)
+  // S-188: the spruce focus edge while typing, the spruce search button (the action)
   inputFocused: { borderColor: semantic.focus },
   inputText: { ...StyleSheet.flatten(textStyles.sub), fontFamily: textStyles.body.fontFamily, flex: 1, minWidth: 0, minHeight: MIN_TARGET - 2 * LINE.bold, paddingHorizontal: space[3] },
   clearText: { width: MIN_TARGET, minHeight: MIN_TARGET, alignItems: 'center', justifyContent: 'center' },

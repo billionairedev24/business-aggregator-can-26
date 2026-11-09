@@ -13,7 +13,7 @@ export interface TextFieldProps extends Omit<TextInputProps, 'style'> {
 
 /**
  * A labelled text field: the label (13 / 600) above a 44 pt input with the 3:1 control edge and 3 pt corners (16 pt
- * text, so nothing zooms), the 2 pt violet focus edge while typing (S-188: violet is the focus colour), the danger edge
+ * text, so nothing zooms), the 2 pt spruce focus edge while typing (S-188: spruce is the focus colour), the danger edge
  * and the message under it when wrong (announced).
  */
 export const TextField = forwardRef<TextInput, TextFieldProps>(function TextField({ label, error, hint, testID, onFocus, onBlur, ...input }, ref) {

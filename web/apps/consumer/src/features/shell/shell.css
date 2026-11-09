@@ -8,9 +8,9 @@ body { text-wrap: pretty; }
 .nl-skip { position: absolute; left: 12px; top: -60px; z-index: var(--z-toast); display: inline-flex; align-items: center; min-height: var(--size-touch); padding: 0 var(--space-4); background: var(--color-surface); color: var(--color-link); border-radius: var(--radius-pill); box-shadow: var(--shadow-md); font-weight: var(--weight-bold); }
 .nl-skip:focus { top: 12px; }
 
-/* footer (E-15, audit #9; S-188 brand layer): one compact deep-violet band that bookends the page with the header — the
-   logo and the company line in the light violet meta, then the links in white in one wrapping row (never the action
-   violet: no violet text on violet) */
+/* footer (E-15, audit #9; S-188 brand layer, S-189 colours): one compact deep forest band that bookends the page with the
+   header — the logo and the company line in the pale green meta, then the links in white in one wrapping row (never the
+   action colour: no spruce text on the forest) */
 .nl-footer { background: var(--color-footer-bg); color: var(--color-footer-muted); font-size: var(--type-label); }
 .nl-footer-in { max-width: var(--page-max); margin: 0 auto; padding: var(--space-4) var(--page-gutter); box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-5); }
 .nl-footer-legal { margin: 0 auto 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
