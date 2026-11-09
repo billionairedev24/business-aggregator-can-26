@@ -45,6 +45,8 @@ export const services: { [k in keyof typeof en]: string } = {
   'services.providers.onDay': '{day} {time}',
   'services.providers.noOpenings': 'Aucune disponibilité prochainement',
   'services.providers.empty': 'Aucun prestataire vérifié ne dessert encore {area} pour ce service.',
+  'services.providers.notLiveYet': 'Nous ne sommes pas encore offerts près de chez vous. Des prestataires vérifiés s’inscrivent chaque semaine.',
+  'services.providers.countAnywhere': '{n, plural, one {# prestataire} other {# prestataires}} sur {brand} · triés par niveau et note',
   'services.providers.emptyAction': 'Voir tous les services',
   'services.providers.filteredEmpty': 'Aucun prestataire ne correspond à ces filtres.',
   'services.providers.clearFilters': 'Effacer les filtres',

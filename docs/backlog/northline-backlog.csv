@@ -1284,3 +1284,5 @@ Acceptance criteria:
 - CLS below 0.1 at 390 on the home, en and fr
 
 Refs: docs/design/amazon-parity.md (S-191), docs/DECISIONS.md (2026-11-09 — S-191)",High,2,ui-revamp,consumer,performance,web,Sprint 8,2027-01-11,2027-01-22,To Do
+S-190,E-15,Story,"Location is never required: show everything, rank by nearness when known",,"Owner 2026-11-09: no page may require a location. Public home, Shop (landing, department, product) and kitchens answer without a city: every live market of the region model, ranked by popularity, rating and recency; a market or lat/lng ranks markets by distance and lists other markets' products apart, labelled not deliverable (nearby / elsewhere, shipsFrom, deliverable). Malformed city or point stays 422 (validation-rules.md § Location). Consumer web: saved choice → default address → CDN city → nothing; no dialog or geolocation on load; 'Choose your location'; 'Popular on {brand}' / 'near {city}'. Consumer app: no forced location step; fixtures answer like the api.
+Refs: docs/DECISIONS.md 2026-11-09 S-190",Highest,5,location,discovery,ux,api,Sprint 3,2026-11-09,2026-11-13,Done

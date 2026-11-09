@@ -1,5 +1,6 @@
 package ca.northline.catalogue.application;
 
+import ca.northline.catalogue.application.BrowseShop.Place;
 import ca.northline.catalogue.application.ShopCatalogue.Category;
 import ca.northline.catalogue.application.ShopCatalogue.MoreRow;
 import ca.northline.catalogue.application.ShopCatalogue.OfferRow;
@@ -18,6 +19,7 @@ import ca.northline.region.api.AgeClass;
 import ca.northline.region.api.AgeRules;
 import ca.northline.region.api.MarketProfile;
 import ca.northline.region.api.Regions;
+import ca.northline.shared.PlaceParams;
 import ca.northline.trust.api.RatingQuery;
 import java.time.Clock;
 import java.time.Instant;
@@ -67,10 +69,11 @@ class ShopBrowsingService implements BrowseShop {
     private final Clock clock;
 
     @Override
-    public ShopViews.Landing landing(String market, Locale locale) {
-        var ctx = context(market, locale);
+    public ShopViews.Landing landing(Place place, Locale locale) {
+        var ctx = context(place, locale);
+        var nearby = nearby(ctx, null, LANDING_PRODUCTS);
         if (!ctx.served()) {
-            return new ShopViews.Landing(ctx.market(), false, null, 0, List.of(), List.of(), List.of());
+            return new ShopViews.Landing(ctx.market(), false, null, 0, List.of(), List.of(), List.of(), nearby);
         }
         var stats = catalogue.shops(ctx.merchantIds(), null, ctx.excluded());
         var perDepartment =
@@ -85,20 +88,15 @@ class ShopBrowsingService implements BrowseShop {
                         .thenComparing(DepartmentTile::name))
                 .toList();
         var cards = shopCards(ctx, stats);
-        var onRun = cards.stream()
-                .sorted(Comparator.comparing((ShopCard s) ->
-                                s.run() == null ? Instant.MAX : s.run().startsAt())
-                        .thenComparing(ShopCard::name))
-                .limit(LANDING_SHOPS)
-                .toList();
-        var popular =
-                products(ctx, catalogue.popular(ctx.merchantIds(), null, ctx.excluded(), ctx.lang(), LANDING_PRODUCTS));
-        return new ShopViews.Landing(ctx.market(), true, ctx.firstRun(), cards.size(), departments, onRun, popular);
+        var onRun = cards.stream().sorted(shopOrder(ctx)).limit(LANDING_SHOPS).toList();
+        var popular = popular(ctx, null, LANDING_PRODUCTS);
+        return new ShopViews.Landing(
+                ctx.market(), true, ctx.firstRun(), cards.size(), departments, onRun, popular, nearby);
     }
 
     @Override
-    public Optional<ShopViews.Department> department(String slug, String market, Locale locale) {
-        var ctx = context(market, locale);
+    public Optional<ShopViews.Department> department(String slug, Place place, Locale locale) {
+        var ctx = context(place, locale);
         var leaf = ctx.categories().values().stream()
                 .filter(c ->
                         c.leaf() && c.slug().equals(slug) && !ctx.excluded().contains(c.id()))
@@ -106,6 +104,7 @@ class ShopBrowsingService implements BrowseShop {
         return leaf.map(department -> {
             var group = ctx.categories().get(Objects.requireNonNull(department.parentId()));
             var groupName = group == null ? "" : group.name();
+            var nearby = nearby(ctx, department.id(), LANDING_PRODUCTS);
             if (!ctx.served()) {
                 return new ShopViews.Department(
                         department.slug(),
@@ -119,20 +118,14 @@ class ShopBrowsingService implements BrowseShop {
                         0,
                         0,
                         List.of(),
-                        List.of());
+                        List.of(),
+                        nearby);
             }
             var all = catalogue.shops(ctx.merchantIds(), null, ctx.excluded());
             var siblings = siblings(ctx, all, department);
             var stats = catalogue.shops(ctx.merchantIds(), department.id(), ctx.excluded());
-            var shops = shopCards(ctx, stats).stream()
-                    .sorted(Comparator.comparing((ShopCard s) ->
-                                    s.run() == null ? Instant.MAX : s.run().startsAt())
-                            .thenComparing(ShopCard::name))
-                    .toList();
-            var products = products(
-                    ctx,
-                    catalogue.popular(
-                            ctx.merchantIds(), department.id(), ctx.excluded(), ctx.lang(), DEPARTMENT_PRODUCTS));
+            var shops = shopCards(ctx, stats).stream().sorted(shopOrder(ctx)).toList();
+            var products = popular(ctx, department.id(), DEPARTMENT_PRODUCTS);
             var firstRun = ctx.firstRun();
             var onRun = (int) shops.stream()
                     .filter(s -> firstRun != null
@@ -151,22 +144,28 @@ class ShopBrowsingService implements BrowseShop {
                     onRun,
                     catalogue.productCount(ctx.merchantIds(), department.id()),
                     shops,
-                    products);
+                    products,
+                    nearby);
         });
     }
 
     @Override
-    public Optional<ShopViews.ProductPage> product(String productId, String market, Locale locale) {
+    public Optional<ShopViews.ProductPage> product(String productId, Place place, Locale locale) {
         var lang = "fr".equals(locale.getLanguage()) ? "fr" : "en";
         return catalogue
                 .product(productId, lang)
                 .filter(p -> !categories.banned().contains(p.categoryId()))
                 .map(record -> {
-                    var ctx = context(market, locale);
+                    var ctx = context(place, locale);
                     var department = ctx.categories().get(record.categoryId());
-                    var rows = ctx.served()
+                    var own = ctx.served()
                             ? catalogue.offers(record.productId(), ctx.merchantIds())
                             : List.<OfferRow>of();
+                    var away = ctx.market() == null
+                            ? List.<OfferRow>of()
+                            : catalogue.offers(record.productId(), ctx.otherIds());
+                    var rows = new java.util.ArrayList<OfferRow>(own);
+                    rows.addAll(away);
                     var offerIds = rows.stream().map(OfferRow::offerId).toList();
                     var variants = offerIds.isEmpty()
                             ? Map.<String, List<VariantRow>>of()
@@ -181,16 +180,27 @@ class ShopBrowsingService implements BrowseShop {
                     rows.forEach(r -> candidates.addAll(r.imageIds()));
                     variants.values().forEach(vs -> vs.forEach(v -> candidates.addAll(v.imageIds())));
                     var approved = candidates.isEmpty() ? Set.<String>of() : media.approved(candidates);
-                    var offers = rows.stream()
+                    var offers = own.stream()
                             .<ShopViews.Offer>mapMulti((row, sink) -> {
                                 var shop = ctx.shops().get(row.merchantId());
                                 if (shop != null) {
-                                    sink.accept(offer(ctx, shop, row, variants, more, record, approved));
+                                    sink.accept(offer(ctx, shop, row, variants, more, record, approved, true));
                                 }
                             })
-                            .sorted(BEST_FIRST)
+                            .sorted(Comparator.comparingInt((ShopViews.Offer o) -> ctx.rank(o.shipsFrom()))
+                                    .thenComparing(BEST_FIRST))
                             .toList();
-                    var direct = ctx.served() ? deliveryRuns.direct() : null;
+                    var elsewhere = away.stream()
+                            .<ShopViews.Offer>mapMulti((row, sink) -> {
+                                var shop = ctx.shops().get(row.merchantId());
+                                if (shop != null) {
+                                    sink.accept(offer(ctx, shop, row, variants, more, record, approved, false));
+                                }
+                            })
+                            .sorted(Comparator.comparingInt((ShopViews.Offer o) -> ctx.rank(o.shipsFrom()))
+                                    .thenComparing(BEST_FIRST))
+                            .toList();
+                    var direct = ctx.served() && ctx.market() != null ? deliveryRuns.direct() : null;
                     var ageClass = categories
                             .profile(record.categoryId())
                             .map(CategoryProfile::ageClass)
@@ -210,8 +220,81 @@ class ShopBrowsingService implements BrowseShop {
                             direct == null
                                     ? null
                                     : new ShopViews.Direct((int) direct.eta().toMinutes(), direct.feeCents()),
-                            age(ctx, ageClass));
+                            age(ctx, ageClass),
+                            elsewhere);
                 });
+    }
+
+    /**
+     * The page's products. With a market, or with no point: by popularity over every shop of the page (one market, or
+     * all of them). With no market but a point (S-190): market by market, nearest first, each by popularity.
+     */
+    private List<ProductCard> popular(Context ctx, @Nullable String categoryId, int limit) {
+        if (ctx.market() != null || !ctx.hasPoint()) {
+            return products(
+                    ctx,
+                    catalogue.popular(ctx.merchantIds(), categoryId, ctx.excluded(), ctx.lang(), limit),
+                    ctx.deliverable());
+        }
+        return byMarket(ctx, ctx.markets(), categoryId, limit, null);
+    }
+
+    /** S-190: with a market, what the nearest other markets sell (labelled not deliverable); empty otherwise. */
+    private List<ProductCard> nearby(Context ctx, @Nullable String categoryId, int limit) {
+        if (ctx.market() == null) {
+            return List.of();
+        }
+        return byMarket(ctx, ctx.others(), categoryId, limit, false);
+    }
+
+    /** Products market by market, in the given order, each market's by popularity, a product once, up to the limit. */
+    private List<ProductCard> byMarket(
+            Context ctx, List<String> markets, @Nullable String categoryId, int limit, @Nullable Boolean deliverable) {
+        var out = new java.util.ArrayList<ProductCard>();
+        var seen = new HashSet<String>();
+        for (var m : markets) {
+            if (out.size() >= limit) {
+                break;
+            }
+            var ids = ctx.idsIn(m);
+            if (ids.isEmpty()) {
+                continue;
+            }
+            products(ctx, catalogue.popular(ids, categoryId, ctx.excluded(), ctx.lang(), limit), deliverable).stream()
+                    .filter(p -> seen.add(p.productId()))
+                    .limit(limit - out.size())
+                    .forEach(out::add);
+        }
+        return List.copyOf(out);
+    }
+
+    /**
+     * A market's shops by their run (soonest first), then name. Every market together (S-190): the nearest market
+     * first when the point is known, then the higher tier, the better rated, the more products, the name.
+     */
+    private Comparator<ShopCard> shopOrder(Context ctx) {
+        if (ctx.market() != null) {
+            return Comparator.comparing((ShopCard s) ->
+                            s.run() == null ? Instant.MAX : s.run().startsAt())
+                    .thenComparing(ShopCard::name);
+        }
+        var rated = ratings.summaries(ctx.merchantIds());
+        return Comparator.comparingInt((ShopCard s) -> ctx.rank(s.city()))
+                .thenComparingInt(s -> tierRank(s.tier()))
+                .thenComparingDouble(s -> {
+                    var r = rated.get(s.merchantId());
+                    return r == null ? 0 : -r.average();
+                })
+                .thenComparingInt(s -> -s.products())
+                .thenComparing(ShopCard::name);
+    }
+
+    private static int tierRank(String tier) {
+        return switch (tier) {
+            case "master" -> 0;
+            case "trusted" -> 1;
+            default -> 2;
+        };
     }
 
     /** In stock first, then the earliest run, then the lower price, then the higher tier. */
@@ -219,11 +302,7 @@ class ShopBrowsingService implements BrowseShop {
             .thenComparing(
                     o -> o.runs().isEmpty() ? Instant.MAX : o.runs().getFirst().startsAt())
             .thenComparingLong(ShopViews.Offer::priceCents)
-            .thenComparing(o -> switch (o.tier()) {
-                case "master" -> 0;
-                case "trusted" -> 1;
-                default -> 2;
-            })
+            .thenComparingInt(o -> tierRank(o.tier()))
             .thenComparing(ShopViews.Offer::offerId);
 
     private ShopViews.Offer offer(
@@ -233,7 +312,8 @@ class ShopBrowsingService implements BrowseShop {
             Map<String, List<VariantRow>> variants,
             Map<String, List<MoreRow>> more,
             ShopCatalogue.ProductRecord record,
-            Set<String> approved) {
+            Set<String> approved,
+            boolean inMarket) {
         var own = variants.getOrDefault(row.offerId(), List.of()).stream()
                 .map(v -> new ShopViews.Variant(
                         v.variantId(),
@@ -275,11 +355,13 @@ class ShopBrowsingService implements BrowseShop {
                 row.returnsPolicy(),
                 row.variantTheme(),
                 own,
-                ctx.runsFor(row.handlingDays(), 2),
+                inMarket ? ctx.runsFor(row.handlingDays(), 2) : List.of(),
                 images,
                 more.getOrDefault(shop.merchantId(), List.of()).stream()
                         .map(m -> new ShopViews.MoreItem(m.productId(), m.name(), m.priceCents()))
-                        .toList());
+                        .toList(),
+                ctx.marketOf(shop.merchantId()),
+                inMarket ? ctx.deliverable() : Boolean.FALSE);
     }
 
     /** Departments of the same group with shops in the market (this one always), by name. */
@@ -311,15 +393,14 @@ class ShopBrowsingService implements BrowseShop {
                                 dept.name(),
                                 s.products(),
                                 ctx.runFor(s.handlingDays()),
-                                s.imageId() != null && approved.contains(s.imageId())
-                                        ? MEDIA_URL + s.imageId()
-                                        : null));
+                                s.imageId() != null && approved.contains(s.imageId()) ? MEDIA_URL + s.imageId() : null,
+                                ctx.marketOf(shop.merchantId())));
                     }
                 })
                 .toList();
     }
 
-    private List<ProductCard> products(Context ctx, List<ProductRow> rows) {
+    private List<ProductCard> products(Context ctx, List<ProductRow> rows, @Nullable Boolean deliverable) {
         var images =
                 rows.stream().map(ProductRow::imageId).filter(Objects::nonNull).toList();
         var approved = images.isEmpty() ? Set.<String>of() : media.approved(images);
@@ -337,9 +418,11 @@ class ShopBrowsingService implements BrowseShop {
                             r.priceCents(),
                             image != null && approved.contains(image) ? MEDIA_URL + image : null,
                             r.sellers(),
-                            ctx.runFor(r.handlingDays()),
+                            Boolean.FALSE.equals(deliverable) ? null : ctx.runFor(r.handlingDays()),
                             age(ctx, AgeClass.of(r.ageClass()).orElse(null)),
-                            r.categoryId());
+                            r.categoryId(),
+                            ctx.marketOf(r.merchantId()),
+                            deliverable);
                 })
                 .toList();
     }
@@ -355,35 +438,123 @@ class ShopBrowsingService implements BrowseShop {
         return new ShopViews.Age(ageClass.code(), minimum);
     }
 
-    private Context context(String market, Locale locale) {
+    private Context context(Place place, Locale locale) {
         var now = clock.instant();
         var lang = "fr".equals(locale.getLanguage()) ? "fr" : "en";
-        var served = deliveryRuns.market(market);
-        var name = served.orElse(market.strip());
-        var shops = served.map(directory::shopsIn).orElse(List.of()).stream()
-                .collect(Collectors.toMap(Shop::merchantId, Function.identity(), (a, _) -> a));
-        var runs = served.map(m -> deliveryRuns.upcoming(m, now)).orElse(List.of());
         var cats = catalogue.categories(lang).stream()
                 .collect(Collectors.toMap(Category::id, Function.identity(), (a, _) -> a));
+        var asked = place.market();
+        var served = asked == null ? Optional.<String>empty() : deliveryRuns.market(asked);
+        var name = asked == null ? null : served.orElse(asked.strip());
+        var origin = origin(place, name);
+        // every market Northline delivers in, nearest first when there is a point to measure from
+        var markets = deliveryRuns.markets().stream()
+                .sorted(Comparator.comparingDouble(m -> distance(origin, m)))
+                .toList();
+        var shown = name == null ? markets : served.map(List::of).orElse(List.<String>of());
+        var others = name == null
+                ? List.<String>of()
+                : markets.stream().filter(m -> !m.equalsIgnoreCase(name)).toList();
+        var byMarket = new java.util.LinkedHashMap<String, List<String>>();
+        var shops = new java.util.HashMap<String, Shop>();
+        var marketOf = new java.util.HashMap<String, String>();
+        var lists = new java.util.ArrayList<String>(shown);
+        lists.addAll(others);
+        for (var m : lists) {
+            var ids = new java.util.ArrayList<String>();
+            for (var shop : directory.shopsIn(m)) {
+                if (shops.putIfAbsent(shop.merchantId(), shop) == null) {
+                    marketOf.put(shop.merchantId(), m);
+                    ids.add(shop.merchantId());
+                }
+            }
+            byMarket.put(m, List.copyOf(ids));
+        }
+        var own = shown.stream()
+                .flatMap(m -> byMarket.getOrDefault(m, List.of()).stream())
+                .toList();
+        var runs = name == null
+                ? List.<DeliveryRuns.Run>of()
+                : served.map(m -> deliveryRuns.upcoming(m, now)).orElse(List.of());
         return new Context(
                 name,
-                served.isPresent(),
+                name == null ? !markets.isEmpty() : served.isPresent(),
                 lang,
                 shops,
+                Set.copyOf(own),
+                marketOf,
+                byMarket,
+                shown,
+                others,
+                origin != null,
                 cats,
                 new HashSet<>(categories.banned()),
                 runs,
                 now,
-                deliveryRuns.zone(name),
-                regions.market(name, null).map(MarketProfile::province).orElse(null));
+                name == null ? regions.platformZone() : deliveryRuns.zone(name),
+                name == null
+                        ? null
+                        : regions.market(name, null)
+                                .map(MarketProfile::province)
+                                .orElse(null));
     }
 
-    /** One request's market, sellers, taxonomy and runs. */
+    /** The point distances are measured from: the visitor's, else their market's centre (region data), else none. */
+    private @Nullable Point origin(Place place, @Nullable String market) {
+        var lat = place.lat();
+        var lng = place.lng();
+        if (lat != null && lng != null) {
+            return new Point(lat, lng);
+        }
+        return market == null ? null : centre(market).orElse(null);
+    }
+
+    private Optional<Point> centre(String market) {
+        return regions.market(market, null).flatMap(m -> {
+            var lat = m.lat();
+            var lng = m.lng();
+            return lat == null || lng == null ? Optional.empty() : Optional.of(new Point(lat, lng));
+        });
+    }
+
+    /**
+     * Km from the origin to a market's centre. No origin: 0 for all (configuration order stays); a market without a
+     * centre sorts after the measured ones.
+     */
+    private double distance(@Nullable Point origin, String market) {
+        if (origin == null) {
+            return 0;
+        }
+        return centre(market)
+                .map(c -> PlaceParams.km(origin.lat(), origin.lng(), c.lat(), c.lng()))
+                .orElse(Double.MAX_VALUE);
+    }
+
+    private record Point(double lat, double lng) {}
+
+    /**
+     * One request's market (null: every market, S-190), sellers, taxonomy and runs.
+     *
+     * @param shops every shop the page may show: the market's (or all markets'), and the other markets' for
+     *     {@code nearby} / {@code elsewhere}
+     * @param own the shops of the page's market (all markets' with none)
+     * @param marketOf each shop's market, display form
+     * @param byMarket the shops of each market listed
+     * @param markets the markets the page shows, nearest first when measured
+     * @param others with a market, the other markets, nearest first
+     * @param measured distances are known (a point, or the market's centre)
+     */
     private record Context(
-            String market,
+            @Nullable String market,
             boolean served,
             String lang,
             Map<String, Shop> shops,
+            Set<String> own,
+            Map<String, String> marketOf,
+            Map<String, List<String>> byMarket,
+            List<String> markets,
+            List<String> others,
+            boolean measured,
             Map<String, Category> categories,
             Collection<String> excluded,
             List<DeliveryRuns.Run> runs,
@@ -392,7 +563,41 @@ class ShopBrowsingService implements BrowseShop {
             @Nullable String province) {
 
         Collection<String> merchantIds() {
-            return shops.keySet();
+            return own;
+        }
+
+        Collection<String> otherIds() {
+            return others.stream()
+                    .flatMap(m -> byMarket.getOrDefault(m, List.of()).stream())
+                    .toList();
+        }
+
+        Collection<String> idsIn(String market) {
+            return byMarket.getOrDefault(market, List.of());
+        }
+
+        boolean hasPoint() {
+            return measured;
+        }
+
+        /** Delivered to the visitor: true in their market, null when the market isn't known. */
+        @Nullable
+        Boolean deliverable() {
+            return market == null ? null : Boolean.TRUE;
+        }
+
+        String marketOf(String merchantId) {
+            return marketOf.getOrDefault(merchantId, "");
+        }
+
+        /** A market's position in the page's order (nearest first); unknown markets last. */
+        int rank(String market) {
+            var i = markets.indexOf(market);
+            if (i >= 0) {
+                return i;
+            }
+            var j = others.indexOf(market);
+            return j < 0 ? Integer.MAX_VALUE : markets.size() + j;
         }
 
         @Nullable

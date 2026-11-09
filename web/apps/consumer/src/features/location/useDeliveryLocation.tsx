@@ -2,7 +2,6 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { z } from 'zod';
 import { ApiError, http } from '@northline/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { marketsQuery } from './api';
 import { BookAddress, Reverse, resolveLocation, SavedLocation, SAVED_KEY, type DeliveryLocation } from './sources';
 
 export { SAVED_KEY, SavedLocation, type DeliveryLocation } from './sources';
@@ -16,8 +15,9 @@ export const shortPlace = (l: DeliveryLocation): string | undefined =>
 
 /**
  * The location every screen reads (consumer location, rebuilt 2026-10-19; the sources and their order are in
- * sources.ts). Server rendering and the first browser render agree on "locating"; the browser then reads, without
- * prompting anyone, the saved choice, the signed-in person's default address, the CDN's city and the fallback market.
+ * sources.ts). Server rendering and the first browser render agree on "locating" (no hydration mismatch); the browser
+ * then reads, without prompting anyone, the saved choice, the signed-in person's default address and the CDN's city —
+ * else nothing is known (S-190: never a guessed city), and every page shows all markets.
  * `chooser` opens the location dialog (<LocationChooser>, in the layout); `save` is what it calls with the place chosen
  * — every screen reading the location follows at once, without leaving the page.
  */
@@ -55,15 +55,13 @@ export function DeliveryLocationProvider({ ipCity, signedIn, children }: Deliver
   useEffect(() => {
     let cancelled = false;
     const saved = readSaved();
-    if (saved) { setLocation(resolveLocation({ saved, addresses: null, ipCity: null, fallback: null })); return; }
+    if (saved) { setLocation(resolveLocation({ saved, addresses: null, ipCity: null })); return; }
     if (signedIn === undefined) return; // the session is still loading: stay "locating" a moment
     void (async () => {
       const addresses = signedIn
         ? await queryClient.fetchQuery({ queryKey: ['me', 'addresses'], queryFn: async () => (await http('/api/v1/me/addresses', {}, z.object({ items: z.array(BookAddress) }))).items, staleTime: 60_000 }).catch(() => null)
         : null;
-      const needFallback = !(addresses?.length) && !ipCity;
-      const fallback = needFallback ? await queryClient.fetchQuery(marketsQuery).then(r => r.fallback ?? null, () => null) : null;
-      if (!cancelled) setLocation(resolveLocation({ saved: null, addresses, ipCity, fallback }));
+      if (!cancelled) setLocation(resolveLocation({ saved: null, addresses, ipCity }));
     })();
     return () => { cancelled = true; };
   }, [ipCity, signedIn, queryClient, version]);

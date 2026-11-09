@@ -168,7 +168,7 @@ describe('provider list (design 06 providers; redesign service cards, AT Shop:89
     const calls = mockFetch(api());
     renderApp('/services/mobile-mechanic/providers', { routes, geolocation: geo(51.0385, -114.072) });
     expect(await screen.findByRole('heading', { level: 1, name: 'Mobile mechanics · 2 come to Beltline' })).toBeInTheDocument();
-    expect(screen.getByText('Sorted by trust · tier, on-time rate, dispute rate and re-book rate')).toBeInTheDocument();
+    expect(screen.getByText('Nearest first, then by trust')).toBeInTheDocument();
     const rows = screen.getAllByRole('link', { name: /Prairie Wrench|Bow River/ });
     expect(rows[0]).toHaveAttribute('href', '/providers/prairie-wrench');
     expect(within(rows[0]!).queryByText('Master')).toBeNull(); // § 3.13: stars and the verified seal, not tier tags
@@ -202,13 +202,27 @@ describe('provider list (design 06 providers; redesign service cards, AT Shop:89
     expect(applyFilters([card({ nextAvailable: null })], new Set(['today']))).toHaveLength(0);
   });
 
-  it('with only the api’s fallback market, asks by its city (never its centre) and says so', async () => {
+  it('with no place known (S-190: no fallback market is guessed), leaves the place to the api and shows what it answers', async () => {
     const calls = mockFetch(api({ '/api/v1/public/services/mobile-mechanic/providers': { ...list, area: null, city: 'Red Deer' } }));
     renderApp('/services/mobile-mechanic/providers', { routes, geolocation: denied });
     expect(await screen.findByRole('heading', { level: 1, name: 'Mobile mechanics · 2 come to Red Deer' })).toBeInTheDocument();
     const url = calls.find(c => c.url.startsWith('/api/v1/public/services/mobile-mechanic/providers'))!.url;
-    expect(url).toBe('/api/v1/public/services/mobile-mechanic/providers?lang=en&city=Red+Deer');
-    expect(placeOf({ status: 'fallback', city: 'Red Deer', lat: 52.27, lng: -113.81, source: 'default' })).toEqual({ city: 'Red Deer' });
+    expect(url).toBe('/api/v1/public/services/mobile-mechanic/providers?lang=en');
+    // a city the CDN named is asked by its city, never a centre
+    expect(placeOf({ status: 'detected', city: 'Red Deer', lat: 52.27, lng: -113.81, source: 'ip' })).toEqual({ city: 'Red Deer' });
+  });
+
+  it('S-190: with no place, every provider by tier — and a friendly state when nothing is live yet', async () => {
+    const first = mockFetch(api({ '/api/v1/public/services/mobile-mechanic/providers': { ...list, area: null, city: null } }));
+    const view = renderApp('/services/mobile-mechanic/providers', { routes, geolocation: denied });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Mobile mechanics on Northline · 2' })).toBeInTheDocument();
+    expect(screen.getByText(/Sorted by tier, rating and reviews/)).toBeInTheDocument();
+    expect(first.find(c => c.url.startsWith('/api/v1/public/services/mobile-mechanic/providers'))!.url).toBe('/api/v1/public/services/mobile-mechanic/providers?lang=en');
+    view.unmount();
+    mockFetch(api({ '/api/v1/public/services/mobile-mechanic/providers': { ...list, area: null, city: null, items: [] } }));
+    renderApp('/services/mobile-mechanic/providers', { routes, geolocation: denied });
+    expect(await screen.findByText('We’re not live near you yet.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Choose your location' })).toBeInTheDocument();
   });
 
   it('outside every market and without a fallback market, leaves the place to the api', async () => {

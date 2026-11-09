@@ -178,6 +178,13 @@ describe('C1 Browse services', () => {
 });
 
 describe('C2 Providers', () => {
+  it('S-190: with no place, lists every provider (no city asked, none assumed)', async () => {
+    const { server } = await start({ welcomed: true, url: '/services/mobile-mechanic' });
+    expect(await screen.findByText('4 providers on Northline · sorted by tier and rating')).toBeTruthy();
+    const call = server.calls.find((c) => c.path === '/public/services/mobile-mechanic/providers')!;
+    expect(call).toBeTruthy();
+  });
+
   it('lists who covers the saved address, filters as the design does, shows times in the business’s zone', async () => {
     const { server, view } = await start({ welcomed: true, url: '/services/mobile-mechanic', store: SAVED });
     expect(await screen.findByText('Mobile mechanic')).toBeTruthy();

@@ -25,6 +25,12 @@ public interface DeliveryRuns {
     Optional<String> market(String city);
 
     /**
+     * Every market Northline delivers in, display form, in region order (the live markets of the region model, then
+     * any configured extra market): what the Shop shows when the visitor's place isn't known (S-190).
+     */
+    List<String> markets();
+
+    /**
      * Runs a customer in {@code market} can still order for at {@code now} — today's and the next two days' — soonest
      * first. Empty for a city that isn't a market.
      */

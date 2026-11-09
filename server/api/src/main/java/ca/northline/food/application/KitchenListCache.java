@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Supplier;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -64,8 +65,9 @@ class KitchenListCache {
         cache = new ShortCache<>(clock, ttl, MAX_ENTRIES);
     }
 
-    CityKitchens get(String city, Supplier<CityKitchens> load) {
-        return cache.get(city.strip().toLowerCase(Locale.ROOT), load);
+    /** @param city null = every live market (its own entry, key "") */
+    CityKitchens get(@Nullable String city, Supplier<CityKitchens> load) {
+        return cache.get(city == null ? "" : city.strip().toLowerCase(Locale.ROOT), load);
     }
 
     void invalidate() {

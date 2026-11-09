@@ -10024,6 +10024,18 @@ paths:
         schema:
           type: string
       - in: query
+        name: lat
+        required: false
+        schema:
+          type: number
+          format: double
+      - in: query
+        name: lng
+        required: false
+        schema:
+          type: number
+          format: double
+      - in: query
         name: lang
         required: false
         schema:
@@ -10052,6 +10064,18 @@ paths:
         required: false
         schema:
           type: string
+      - in: query
+        name: lat
+        required: false
+        schema:
+          type: number
+          format: double
+      - in: query
+        name: lng
+        required: false
+        schema:
+          type: number
+          format: double
       - in: query
         name: lang
         required: false
@@ -10095,6 +10119,18 @@ paths:
         required: false
         schema:
           type: string
+      - in: query
+        name: lat
+        required: false
+        schema:
+          type: number
+          format: double
+      - in: query
+        name: lng
+        required: false
+        schema:
+          type: number
+          format: double
       - in: query
         name: lang
         required: false
@@ -12133,6 +12169,10 @@ components:
           type: string
         name:
           type: string
+        nearby:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductCard"
         onRunCount:
           type: integer
           format: int32
@@ -13000,6 +13040,10 @@ components:
             $ref: "#/components/schemas/DepartmentTile"
         market:
           type: string
+        nearby:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductCard"
         popular:
           type: array
           items:
@@ -13464,6 +13508,8 @@ components:
           description: Cents of Canadian dollars (CAD).
         condition:
           type: string
+        deliverable:
+          type: boolean
         images:
           type: array
           items:
@@ -13494,6 +13540,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Run"
+        shipsFrom:
+          type: string
         shopName:
           type: string
         stock:
@@ -14157,6 +14205,8 @@ components:
           $ref: "#/components/schemas/Age"
         categoryId:
           type: string
+        deliverable:
+          type: boolean
         imageUrl:
           type: string
         merchantId:
@@ -14176,6 +14226,8 @@ components:
         sellers:
           type: integer
           format: int32
+        shipsFrom:
+          type: string
         shopName:
           type: string
         unit:
@@ -14199,6 +14251,10 @@ components:
           type: string
         direct:
           $ref: "#/components/schemas/Direct"
+        elsewhere:
+          type: array
+          items:
+            $ref: "#/components/schemas/Offer"
         market:
           type: string
         name:
@@ -15514,6 +15570,8 @@ components:
     ShopCard:
       type: object
       properties:
+        city:
+          type: string
         departmentName:
           type: string
         departmentSlug:

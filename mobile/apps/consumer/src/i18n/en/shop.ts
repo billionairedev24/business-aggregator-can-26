@@ -29,7 +29,7 @@ export const shop = {
   'shop.home.allServices': 'All 60+',
   'shop.home.trusted': 'Trusted near you',
   'shop.home.week': 'Your week',
-  'shop.home.noShops': 'No shops deliver here yet.',
+  'shop.home.noShops': 'We’re not live near you yet. Local shops are joining every week.',
   'shop.svc.mechanic': 'Mechanic',
   'shop.svc.cleaning': 'Cleaning',
   'shop.svc.plumber': 'Plumber',

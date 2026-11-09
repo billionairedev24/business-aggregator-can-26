@@ -21,14 +21,18 @@ export const Offer = z.object({
   lowStock: z.boolean(), returnsPolicy: z.string().nullish(), variantTheme: z.string(), variants: z.array(Variant),
   runs: z.array(Run.extend({ packBy: z.string() })), images: z.array(z.string()),
   more: z.array(z.object({ productId: z.string(), name: z.string(), priceCents: z.number().int() })),
+  // S-190: the shop's market, and whether it delivers to the visitor (false: another market; null: place unknown)
+  shipsFrom: z.string().nullish(), deliverable: z.boolean().nullish(),
 });
 export type Offer = z.infer<typeof Offer>;
 
 export const ProductPage = z.object({
   productId: z.string(), name: z.string(), brand: z.string().nullish(), description: z.string().nullish(), bullets: z.array(z.string()),
-  unit: z.string().nullish(), departmentSlug: z.string(), departmentName: z.string(), market: z.string(), served: z.boolean(),
+  unit: z.string().nullish(), departmentSlug: z.string(), departmentName: z.string(), market: z.string().nullish(), served: z.boolean(),
   offers: z.array(Offer), direct: z.object({ etaMinutes: z.number().int(), feeCents: z.number().int() }).nullish(),
   age: AgeNotice.nullish(),
+  // S-190: with a market, the shops of the nearest other markets selling it (not deliverable to the visitor)
+  elsewhere: z.array(Offer).default([]),
 });
 export type ProductPage = z.infer<typeof ProductPage>;
 

@@ -3,7 +3,7 @@ import type { light as en } from '../en/light';
 /** La direction claire, axée sur les photos (2026-10-19) : les mots du site web (dialogue d'adresse, accueil). */
 export const light: { [k in keyof typeof en]: string } = {
   'lt.near': 'Près de',
-  'lt.setPlace': 'Choisir votre adresse',
+  'lt.setPlace': 'Choisissez votre adresse',
 
   'lt.home.heroTitle': 'Tout le local, par des gens de confiance',
   'lt.home.heroSub': 'Réservez des pros vérifiés, magasinez dans les commerces du quartier et recevez tout en une seule livraison — vous payez seulement une fois le travail terminé.',
@@ -24,7 +24,7 @@ export const light: { [k in keyof typeof en]: string } = {
 
   'lt.loc.title': 'Choisissez votre adresse',
   'lt.loc.close': 'Fermer',
-  'lt.loc.currentNone': 'Indiquez où vous êtes pour voir ce qui est offert près de chez vous.',
+  'lt.loc.currentNone': 'Vous voyez tout {brand}. Indiquez où vous êtes pour voir d’abord ce qui est près de chez vous.',
   'lt.loc.currentSaved': 'Vous voyez ce qui est offert près de {place}.',
   'lt.loc.currentAddress': 'Vous voyez ce qui est offert près de votre adresse par défaut, {place}.',
   'lt.loc.currentDefault': 'Vous voyez {place} en attendant que vous choisissiez votre adresse.',

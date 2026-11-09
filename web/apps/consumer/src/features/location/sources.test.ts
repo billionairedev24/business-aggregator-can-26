@@ -1,20 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fromAddress, fromMarket, locateDevice, resolveLocation, type BookAddress, type Reverse } from './sources';
+import { fromAddress, fromMarket, knowsPlace, locateDevice, resolveLocation, type BookAddress, type Reverse } from './sources';
 
 // Test data only: places come from the api's region configuration, never from code.
-const FALLBACK = { id: 'mkt-a', city: 'Fallback City', province: 'AB', stage: 'live', lat: 51.04, lng: -114.07 };
 const HOME: BookAddress = { id: 'A1', label: null, street: '1204 17 Ave SW', unit: 'Apt 804', city: 'Market City', province: 'AB', postal: 'T2T 0B8', isDefault: true };
 const OTHER: BookAddress = { id: 'A2', label: 'Mum', street: '44 Varsity Cir NW', unit: null, city: 'Market City', province: 'AB', postal: null, isDefault: false };
 const SAVED = { label: 'Saved Street, Market City', city: 'Market City' };
-const none = { saved: null, addresses: null, ipCity: null, fallback: null };
+const none = { saved: null, addresses: null, ipCity: null };
 
-describe('where the visitor is: saved → default address → IP city → fallback market', () => {
+describe('where the visitor is: saved → default address → CDN city → nothing (S-190: never a guessed city)', () => {
   it('prefers the saved choice over everything', () => {
-    expect(resolveLocation({ saved: SAVED, addresses: [HOME], ipCity: 'Ip City', fallback: FALLBACK })).toEqual({ status: 'saved', source: 'saved', ...SAVED });
+    expect(resolveLocation({ saved: SAVED, addresses: [HOME], ipCity: 'Ip City' })).toEqual({ status: 'saved', source: 'saved', ...SAVED });
   });
 
   it('then the signed-in person’s default address, with its parts', () => {
-    expect(resolveLocation({ ...none, addresses: [OTHER, HOME], ipCity: 'Ip City', fallback: FALLBACK })).toEqual({
+    expect(resolveLocation({ ...none, addresses: [OTHER, HOME], ipCity: 'Ip City' })).toEqual({
       status: 'address', source: 'address', label: '1204 17 Ave SW, Market City', city: 'Market City', street: '1204 17 Ave SW',
       unit: 'Apt 804', province: 'AB', postalCode: 'T2T 0B8',
     });
@@ -25,17 +24,14 @@ describe('where the visitor is: saved → default address → IP city → fallba
   });
 
   it('then the CDN’s city', () => {
-    expect(resolveLocation({ ...none, addresses: [], ipCity: 'Ip City', fallback: FALLBACK })).toEqual({ status: 'detected', source: 'ip', label: 'Ip City', city: 'Ip City' });
+    expect(resolveLocation({ ...none, addresses: [], ipCity: 'Ip City' })).toEqual({ status: 'detected', source: 'ip', label: 'Ip City', city: 'Ip City' });
   });
 
-  it('then the configured fallback market', () => {
-    expect(resolveLocation({ ...none, fallback: FALLBACK })).toEqual({
-      status: 'fallback', source: 'default', label: 'Fallback City', city: 'Fallback City', province: 'AB', marketId: 'mkt-a', lat: 51.04, lng: -114.07,
-    });
-  });
-
-  it('knows nothing when no fallback market is configured', () => {
+  it('otherwise knows nothing — no fallback market is guessed, and nothing waits for a place', () => {
     expect(resolveLocation(none)).toEqual({ status: 'denied' });
+    expect(knowsPlace(resolveLocation(none))).toBe(false);
+    expect(knowsPlace({ status: 'locating' })).toBe(false);
+    expect(knowsPlace(resolveLocation({ ...none, ipCity: 'Ip City' }))).toBe(true);
   });
 
   it('turns a market and an address into a place to save', () => {

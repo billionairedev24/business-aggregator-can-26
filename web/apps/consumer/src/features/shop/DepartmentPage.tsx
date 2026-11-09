@@ -15,6 +15,7 @@ import { storeHref } from './store';
 /**
  * A department (S-49, design 06 `category`): breadcrumb, counts, the department's siblings in its group (the chips —
  * the taxonomy has no finer aisles, DECISIONS S-49), its shops and its popular products. Server-rendered for SEO.
+ * S-190: no market = every market, never a wait for a location; with one, nearby cities' products listed apart.
  */
 export function DepartmentPage({ slug, market: explicit }: { slug: string; market?: string }) {
   const { locale } = useLocale();
@@ -26,7 +27,8 @@ export function DepartmentPage({ slug, market: explicit }: { slug: string; marke
   const run = data.run;
   const when = run ? runWhen(run, zone) : null;
   const counts = { shops: data.shopCount, city: data.market, onRun: data.onRunCount, items: data.productCount };
-  const sub = run && when ? t(`deptSub_${when}`, { ...counts, weekday: weekday(run.startsAt, locale, zone) }) : t('deptSubNoRun', counts);
+  const sub = !data.market ? t('deptSubAnywhere', counts)
+    : run && when ? t(`deptSub_${when}`, { ...counts, weekday: weekday(run.startsAt, locale, zone) }) : t('deptSubNoRun', counts);
 
   return (
     <div className="nl-page shop-page">
@@ -34,7 +36,7 @@ export function DepartmentPage({ slug, market: explicit }: { slug: string; marke
       <header className="nl-band shop-band">
         <div className="nl-band-copy">
           <h1 className="nl-band-title">{data.name}</h1>
-          <div className="nl-band-lede">{data.served ? sub : data.market}</div>
+          <div className="nl-band-lede">{data.served ? sub : data.market ?? ''}</div>
         </div>
         <span className="nl-band-pic" aria-hidden><Scene slot={[departmentSlot(data.slug), 'banner/shop']} subject={data.slug} fit="contain" sizes="(min-width: 960px) 45vw, 100vw" priority /></span>
       </header>
@@ -47,9 +49,9 @@ export function DepartmentPage({ slug, market: explicit }: { slug: string; marke
       ) : null}
 
       {!data.served ? (
-        <div className="nl-section"><EmptyState action={<PlaceButton>{t('changeLocation')}</PlaceButton>}>{t('notServed', { city: data.market })}</EmptyState></div>
+        <div className="nl-section"><EmptyState action={<PlaceButton>{t(data.market ? 'changeLocation' : 'chooseLocation')}</PlaceButton>}>{data.market ? t('notServed', { city: data.market }) : t('emptyAnywhere')}</EmptyState></div>
       ) : data.shops.length === 0 ? (
-        <div className="nl-section"><EmptyState action={<SiteLink href={link('/shop')} className="btn btn-primary">{t('backToShop')}</SiteLink>}>{t('emptyDept', { name: data.name, city: data.market })}</EmptyState></div>
+        <div className="nl-section"><EmptyState action={<SiteLink href={link('/shop')} className="btn btn-primary">{t('backToShop')}</SiteLink>}>{data.market ? t('emptyDept', { name: data.name, city: data.market }) : t('emptyAnywhere')}</EmptyState></div>
       ) : (
         <>
           <section className="nl-section" aria-labelledby="dept-shops">
@@ -60,7 +62,7 @@ export function DepartmentPage({ slug, market: explicit }: { slug: string; marke
           </section>
           <section className="nl-section" aria-labelledby="dept-products">
             <div className="nl-section-head">
-              <h2 id="dept-products" className="nl-section-title">{t('popularIn', { name: data.name })}</h2>
+              <h2 id="dept-products" className="nl-section-title">{data.market ? t('popularIn', { name: data.name }) : t('popularAnywhere')}</h2>
               <span className="nl-section-lede">{t('sortedBy')} <strong>{t('sortPopular')}</strong></span>
             </div>
             <ul className="nl-card-grid nl-card-grid-results" aria-labelledby="dept-products">
@@ -69,6 +71,17 @@ export function DepartmentPage({ slug, market: explicit }: { slug: string; marke
           </section>
         </>
       )}
+      {data.nearby.length > 0 ? (
+        <section className="nl-section" aria-labelledby="dept-nearby">
+          <div className="nl-section-head">
+            <h2 id="dept-nearby" className="nl-section-title">{t('nearbyTitle')}</h2>
+            <span className="nl-section-lede">{t('nearbyNote')}</span>
+          </div>
+          <ul className="nl-card-grid nl-card-grid-results" aria-labelledby="dept-nearby">
+            {data.nearby.map(p => <li key={p.productId}><ProductCardTile product={p} withMarket={link} /></li>)}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }

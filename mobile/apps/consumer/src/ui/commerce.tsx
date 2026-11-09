@@ -86,7 +86,10 @@ export function ShopProductCard({ p, eta: etaText, low, testID }: { p: ProductCa
   const add = useAddToCart();
   const change = useChangeCartLine();
   const line = cart.data?.groups.flatMap((g) => g.items).find((l) => l.offerId === p.offerId && !l.variantId);
-  const eta = etaText !== undefined ? etaText : when(p.run);
+  // S-190: where it ships from when the place isn't known; another market's product says it can't come to you
+  const away = p.deliverable === false;
+  const from = away ? t('rv.card.notDeliverable', { place: p.shipsFrom ?? '' }) : p.deliverable == null && p.shipsFrom ? t('rv.card.shipsFrom', { place: p.shipsFrom }) : null;
+  const eta = etaText !== undefined ? etaText : (when(p.run) || from);
   const f = useShopFormat();
   return (
     <KitProductCard
@@ -94,14 +97,14 @@ export function ShopProductCard({ p, eta: etaText, low, testID }: { p: ProductCa
       seller={p.shopName}
       priceCents={p.priceCents}
       unit={unitOf(p.priceCents, p.unit)}
-      eta={eta ? (etaText !== undefined ? eta : t('rv.card.eta', { when: eta })) : undefined}
+      eta={eta ? (etaText !== undefined || eta === from ? eta : t('rv.card.eta', { when: eta })) : undefined}
       low={low ?? undefined}
-      label={[p.name, p.shopName, f.money(p.priceCents), eta && etaText === undefined ? t('rv.card.eta', { when: eta }) : eta, low].filter(Boolean).join(', ')}
+      label={[p.name, p.shopName, f.money(p.priceCents), eta && etaText === undefined && eta !== from ? t('rv.card.eta', { when: eta }) : eta, low].filter(Boolean).join(', ')}
       source={photoSource(p.imageUrl)}
       icon={iconFor('product')}
       onPress={() => router.push({ pathname: '/product/[id]', params: { id: p.productId, offer: p.offerId } })}
       addLabel={t('rv.card.add')}
-      onAdd={() => (line ? change.mutate({ itemId: line.itemId, qty: line.qty + 1 }) : add.mutate({ offerId: p.offerId, qty: 1 }))}
+      onAdd={away ? undefined : () => (line ? change.mutate({ itemId: line.itemId, qty: line.qty + 1 }) : add.mutate({ offerId: p.offerId, qty: 1 }))}
       inCart={line?.qty ?? 0}
       onLess={line ? () => change.mutate({ itemId: line.itemId, qty: line.qty - 1 }) : undefined}
       testID={testID ?? `product-card-${p.offerId}`}

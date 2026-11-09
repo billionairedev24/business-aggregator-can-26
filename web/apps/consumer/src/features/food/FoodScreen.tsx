@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Chip, EmptyState, FilterChip, ErrorState, Segmented, ServiceCard, Skeleton, useFormatters, useLocale } from '@northline/ui';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
+import { knowsPlace } from '../location/sources';
 import { useKitchens, type Card } from './api';
 import { cuisineSlot } from '@northline/media';
 import { PhotoWell } from '../art/PhotoWell';
@@ -27,8 +28,9 @@ const passes = (k: Card, f: Filter, pickup: boolean) => {
 
 /**
  * Food landing (design 06 `food`, S-57): the kitchens of the visitor's city — open now first, then by distance —
- * with Deliver / Pickup, schedule for later, filters and cuisines. Loaded in the browser once the location is known
- * (the server doesn't know where the visitor is).
+ * with Deliver / Pickup, schedule for later, filters and cuisines. Loaded in the browser once the location's sources
+ * are read (the server doesn't know where the visitor is). S-190: with no place known, every live market's kitchens,
+ * best rated first, "Popular kitchens on {brand}" — nothing waits for a location.
  */
 export function FoodScreen({ cuisine: initialCuisine }: { cuisine?: string }) {
   const t = useFoodT();
@@ -40,7 +42,8 @@ export function FoodScreen({ cuisine: initialCuisine }: { cuisine?: string }) {
   const [sched, setSched] = useState(false);
   const [filters, setFilters] = useState<Set<Filter>>(new Set());
   const [cuisine, setCuisine] = useState(initialCuisine ?? 'all');
-  const kitchens = useKitchens(location.city, location.lat, location.lng);
+  const known = knowsPlace(location);
+  const kitchens = useKitchens(known ? location.city : undefined, location.lat, location.lng, location.status !== 'locating');
   const pickup = mode === 'pickup';
   const area = location.zone ?? location.label?.split(',')[0] ?? location.city ?? '';
 
@@ -70,7 +73,9 @@ export function FoodScreen({ cuisine: initialCuisine }: { cuisine?: string }) {
         <div className="nl-band-copy">
           <h1 className="nl-band-title">{t('title')}</h1>
           <p className="nl-band-lede" aria-live="polite">
-            {kitchens.data ? t(pickup ? 'subPickup' : 'sub', { count: open.length, area, eta: t('etaRange', { from: etaFrom, to: etaTo }) }) : <Skeleton width={320} height={14} />}
+            {kitchens.data
+              ? (known ? t(pickup ? 'subPickup' : 'sub', { count: open.length, area, eta: t('etaRange', { from: etaFrom, to: etaTo }) }) : t('subAny', { count: open.length }))
+              : <Skeleton width={320} height={14} />}
           </p>
           <div className="nl-band-actions nl-food-actions">
           <Segmented name="food-mode" aria-label={t('modeLabel')} value={mode} onChange={changeMode}
@@ -95,17 +100,17 @@ export function FoodScreen({ cuisine: initialCuisine }: { cuisine?: string }) {
       ) : !kitchens.data ? (
         <ul className="nl-card-grid nl-card-grid-results nl-food-grid" aria-busy="true">{Array.from({ length: 5 }, (_, i) => <li key={i} className="nl-food-skel"><span className="nl-food-skel-pic" /><Skeleton width="60%" height={16} /></li>)}</ul>
       ) : reachable.length === 0 ? (
-        <div className="nl-food-block"><EmptyState action={<PlaceButton>{t('changeLocation')}</PlaceButton>}>{t('empty', { area })}</EmptyState></div>
+        <div className="nl-food-block"><EmptyState action={<PlaceButton>{t(known ? 'changeLocation' : 'chooseLocation')}</PlaceButton>}>{known ? t('empty', { area }) : t('emptyAny')}</EmptyState></div>
       ) : (
         <>
           <h2 className="nl-food-heading">
             {cuisine === 'all'
-              ? t(pickup ? 'headingPickup' : 'heading', { count: shown.length, area })
+              ? (known ? t(pickup ? 'headingPickup' : 'heading', { count: shown.length, area }) : t('headingAny'))
               : t('headingCuisine', { cuisine: cuisineName(cuisine), count: shown.length })}
           </h2>
           {shown.length === 0
             ? <EmptyState action={<button type="button" className="btn btn-secondary" onClick={() => { setFilters(new Set()); setCuisine('all'); }}>{t('clearFilters')}</button>}>{t('emptyFiltered')}</EmptyState>
-            : <ul className="nl-card-grid nl-card-grid-results nl-food-grid">{shown.map(k => <li key={k.merchantId}><KitchenCard t={t} k={k} pickup={pickup} cuisineName={cuisineName} /></li>)}</ul>}
+            : <ul className="nl-card-grid nl-card-grid-results nl-food-grid">{shown.map(k => <li key={k.merchantId}><KitchenCard t={t} k={k} pickup={pickup} cuisineName={cuisineName} known={known} /></li>)}</ul>}
         </>
       )}
 
@@ -120,11 +125,13 @@ export function FoodScreen({ cuisine: initialCuisine }: { cuisine?: string }) {
 
 /** A kitchen as the site's service card (E-15: one card system): its cuisine photo, the cuisines, name, rating, the
  * time and fee, and when it opens if it is closed. */
-function KitchenCard({ t, k, pickup, cuisineName }: { t: T; k: Card; pickup: boolean; cuisineName: (c: string) => string }) {
+function KitchenCard({ t, k, pickup, cuisineName, known }: { t: T; k: Card; pickup: boolean; cuisineName: (c: string) => string; known: boolean }) {
   const { money, date } = useFormatters();
   const { locale } = useLocale();
   const eta = pickup ? t('readyIn', { from: k.pickupFromMin, to: k.pickupToMin }) : t('etaRange', { from: k.etaFromMin, to: k.etaToMin });
   const place = [
+    // S-190: with no place known the card says where the kitchen cooks
+    !known && k.city ? t('cooksIn', { city: k.city }) : null,
     eta,
     k.priceLevel,
     k.distanceKm != null ? t('km', { km: k.distanceKm.toLocaleString(locale === 'fr' ? 'fr-CA' : 'en-CA') }) : null,

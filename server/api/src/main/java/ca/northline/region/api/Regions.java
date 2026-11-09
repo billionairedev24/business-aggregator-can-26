@@ -25,6 +25,14 @@ public interface Regions {
     /** Every market, by province then sort. */
     List<MarketProfile> markets();
 
+    /**
+     * The markets open to visitors ({@code live}), by province then sort: what the consumer site's public reads show
+     * when the visitor's place isn't known (S-190).
+     */
+    default List<MarketProfile> liveMarkets() {
+        return markets().stream().filter(MarketProfile::live).toList();
+    }
+
     /** The market of a city (case-insensitive), within the province when one is given. */
     Optional<MarketProfile> market(@Nullable String city, @Nullable String province);
 

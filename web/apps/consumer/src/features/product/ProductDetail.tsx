@@ -47,10 +47,13 @@ export function ProductDetail({ productId, market: explicit, offerId }: { produc
         {crumbs}
         <h1 className="product-title">{data.name}</h1>
         <div className="product-empty">
-          {data.served
-            ? <EmptyState action={<SiteLink href={link('/shop')} className="btn btn-primary">{t('backToShop')}</SiteLink>}>{t('unavailable', { city: data.market })}</EmptyState>
-            : <EmptyState action={<PlaceButton>{t('changeLocation')}</PlaceButton>}>{t('notServed', { city: data.market })}</EmptyState>}
+          {!data.market
+            ? <EmptyState action={<SiteLink href={link('/shop')} className="btn btn-primary">{t('backToShop')}</SiteLink>}>{t('unavailableAnywhere')}</EmptyState>
+            : data.served
+              ? <EmptyState action={<SiteLink href={link('/shop')} className="btn btn-primary">{t('backToShop')}</SiteLink>}>{t('unavailable', { city: data.market })}</EmptyState>
+              : <EmptyState action={<PlaceButton>{t('changeLocation')}</PlaceButton>}>{t('notServed', { city: data.market })}</EmptyState>}
         </div>
+        <Elsewhere offers={data.elsewhere} />
       </div>
     );
   }
@@ -167,6 +170,7 @@ function OfferView({ data, offer, link, market }: { data: ProductPage; offer: Of
                 </>
               ) : <strong>{t('notOnRun')}</strong>}
             {stock > 0 && data.direct ? <span className="product-buy-meta">{t('direct', { eta: data.direct.etaMinutes, fee: money(data.direct.feeCents) })}</span> : null}
+            {offer.deliverable == null && offer.shipsFrom ? <span className="product-buy-meta">{t('shipsFrom', { city: offer.shipsFrom })}</span> : null}
           </div>
         </div>
         {stock <= 0 ? <span className="product-stock product-stock-out">{t('outOfStock')}</span>
@@ -296,5 +300,26 @@ export function ProductSkeleton() {
         <Skeleton height={320} radius="var(--radius-panel)" />
       </div>
     </div>
+  );
+}
+
+/**
+ * S-190: the shops of other markets selling the product (the api's `elsewhere`, nearest first) — listed, labelled "not
+ * available for delivery to you", instead of a dead end.
+ */
+function Elsewhere({ offers }: { offers: readonly Offer[] }) {
+  const t = useProductT();
+  const { money } = useFormatters();
+  if (offers.length === 0) return null;
+  return (
+    <section className="nl-section" aria-labelledby="product-elsewhere">
+      <div className="nl-section-head">
+        <h2 id="product-elsewhere" className="nl-section-title">{t('elsewhereTitle')}</h2>
+        <span className="nl-section-lede">{t('elsewhereNote')}</span>
+      </div>
+      <ul className="product-elsewhere">
+        {offers.map(o => <li key={o.offerId}>{t('elsewhereLine', { shop: o.shopName, city: o.shipsFrom ?? '', price: money(o.priceCents) })}</li>)}
+      </ul>
+    </section>
   );
 }

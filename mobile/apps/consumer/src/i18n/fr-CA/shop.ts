@@ -26,7 +26,7 @@ export const shop: { [k in keyof typeof en]: string } = {
   'shop.home.allServices': 'Les 60+',
   'shop.home.trusted': 'De confiance, près de chez vous',
   'shop.home.week': 'Votre semaine',
-  'shop.home.noShops': 'Aucun commerce ne livre ici pour le moment.',
+  'shop.home.noShops': 'Nous ne sommes pas encore offerts près de chez vous. Des commerces locaux s’inscrivent chaque semaine.',
   'shop.svc.mechanic': 'Mécanicien',
   'shop.svc.cleaning': 'Ménage',
   'shop.svc.plumber': 'Plombier',

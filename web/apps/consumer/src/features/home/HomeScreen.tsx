@@ -12,6 +12,7 @@ import { activityQuery } from '../account/api';
 import { useKitchens, type Card as Kitchen } from '../food/api';
 import { CUISINE_NAMES } from '../food/messages';
 import { shortPlace, useDeliveryLocation } from '../location/useDeliveryLocation';
+import { knowsPlace } from '../location/sources';
 import { useZone } from '../location/regions';
 import { rememberInvite } from '../loyalty/api';
 import { RewardsNearYou } from '../loyalty/RewardsNearYou';
@@ -54,7 +55,7 @@ export function HomeScreen() {
   const { landing } = useNextRun();
   const products = useQuery({ ...railQuery('product', place ?? {}, locale), enabled: place !== null });
   const services = useQuery({ ...railQuery('service', place ?? {}, locale, 'rating'), enabled: place !== null });
-  const kitchens = useKitchens(place ? location.city : undefined, location.lat, location.lng);
+  const kitchens = useKitchens(knowsPlace(location) ? location.city : undefined, location.lat, location.lng, place !== null);
   const activity = useQuery({ ...activityQuery, enabled: !!user });
   const city = shortPlace(location);
   const empty = products.data?.items.length === 0 && services.data?.items.length === 0;
@@ -127,7 +128,7 @@ function DealTile({ t, landing }: { t: T; landing: Landing | undefined }) {
   const { locale } = useLocale();
   const zone = useZone(landing?.market);
   const candidates = (landing?.popular ?? []).slice(0, 3);
-  const pages = useQueries({ queries: candidates.map(p => ({ ...productQuery(p.productId, landing?.market, locale), enabled: !!landing })) });
+  const pages = useQueries({ queries: candidates.map(p => ({ ...productQuery(p.productId, landing?.market ?? undefined, locale), enabled: !!landing })) });
   const settled = pages.every(q => !q.isPending);
   const dealIndex = pages.findIndex(q => q.data?.offers.some(o => o.compareAtCents != null && o.compareAtCents > o.priceCents));
   const deal = dealIndex >= 0 ? candidates[dealIndex] : undefined;

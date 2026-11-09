@@ -245,7 +245,10 @@ export function servicesFixtures(ctx: FixtureContext, state: ServicesFixtureStat
     }
     if (req.method === 'GET' && (r = m(/^\/public\/services\/([^/]+)\/providers$/))) {
       const items = r[1] === 'mobile-mechanic' ? PROVIDERS.map(card) : [];
-      return ctx.answer(200, { categorySlug: r[1], kind: 'visit', area: items.length ? 'Old Town' : null, city: req.url.searchParams.get('city') ?? 'Sampleville', items });
+      // S-190: no place = every provider, city null (no fallback market is assumed)
+      const q = req.url.searchParams;
+      const placed = !!q.get('city') || (!!q.get('lat') && !!q.get('lng'));
+      return ctx.answer(200, { categorySlug: r[1], kind: 'visit', area: placed && items.length ? 'Old Town' : null, city: q.get('city') ?? null, items });
     }
     if (req.method === 'GET' && (r = m(/^\/public\/providers\/([^/]+)$/))) {
       const found = bySlug(decodeURIComponent(r[1]!));

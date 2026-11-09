@@ -100,7 +100,8 @@ export function Home() {
 
   const refresh = () => void Promise.all([landing.refetch(), signedIn ? week.refetch() : null]);
   // a city, not the person's street ("Popular near Sampleville", "Tonight's pooled run to Sampleville")
-  const place = market.city ?? landing.data?.market;
+  // S-190: no place known = every live market ("Popular on {brand}"), never a guessed city
+  const place = market.city ?? landing.data?.market ?? undefined;
   const active = week.data?.items.map((w) => ({ w, to: appRoute(w.href) })).find((x) => !!x.to);
   const departments = landing.data?.departments ?? [];
 
@@ -165,7 +166,7 @@ export function Home() {
               <ErrorState error={landing.error} onRetry={() => void landing.refetch()} />
             </View>
           ) : null}
-          {landing.data && !landing.data.served ? (
+          {landing.data && !landing.data.served && landing.data.market ? (
             <View style={styles.pad}>
               <Body tone="muted">{t('shop.home.notServed', { place: landing.data.market })}</Body>
             </View>

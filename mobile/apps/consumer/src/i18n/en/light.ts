@@ -5,7 +5,7 @@
  */
 export const light = {
   'lt.near': 'Near',
-  'lt.setPlace': 'Set your location',
+  'lt.setPlace': 'Choose your location',
 
   'lt.home.heroTitle': 'Everything local, from people you can trust',
   'lt.home.heroSub': 'Book verified pros, shop neighbourhood stores and get it all delivered together — you pay only when it’s done.',
@@ -26,7 +26,7 @@ export const light = {
 
   'lt.loc.title': 'Choose your location',
   'lt.loc.close': 'Close',
-  'lt.loc.currentNone': 'Choose where you are to see what’s available near you.',
+  'lt.loc.currentNone': 'Showing everything on {brand}. Choose where you are to see what’s near you first.',
   'lt.loc.currentSaved': 'Showing what’s available near {place}.',
   'lt.loc.currentAddress': 'Showing what’s available near your default address, {place}.',
   'lt.loc.currentDefault': 'Showing {place} until you choose your location.',

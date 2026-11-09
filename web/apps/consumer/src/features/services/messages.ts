@@ -98,6 +98,9 @@ export const useServicesT = defineMessages({
     f_master: 'Master tier', f_instant: 'Instant book', f_today: 'Available today', f_under80: 'Under $80',
     headingCome: '{noun} · {count} come to {area}', headingNear: '{noun} near {area} · {count}', headingServing: '{noun} serving {area} · {count}',
     sortNote: 'Sorted by trust · tier, on-time rate, dispute rate and re-book rate',
+    // S-190: no place known (every provider) / a point (nearest first)
+    headingAnywhere: '{noun} on {brand} · {count}', sortNoteAnywhere: 'Sorted by tier, rating and reviews · choose your location to see who comes to you',
+    sortNoteNearest: 'Nearest first, then by trust', notLiveYet: 'We’re not live near you yet.', chooseLocation: 'Choose your location', notLiveHint: 'Verified providers are joining every week. Choose another location, or look around.',
     rating: '★ {rating} ({count})', onTime: '{pct} on time', newProvider: 'New on {brand}',
     availToday: 'Today {time}', availTomorrow: 'Tomorrow {time}', availDay: '{day} {time}', noOpenings: 'No openings in the next 2 weeks',
     tier_master: 'Master', tier_trusted: 'Trusted', tier_registered: 'Registered',
@@ -194,6 +197,8 @@ export const useServicesT = defineMessages({
     f_master: 'Niveau Maître', f_instant: 'Réservation instantanée', f_today: 'Disponible aujourd’hui', f_under80: 'Moins de 80 $',
     headingCome: '{noun} · {count} se déplacent à {area}', headingNear: '{noun} près de {area} · {count}', headingServing: '{noun} desservant {area} · {count}',
     sortNote: 'Triés par confiance · niveau, ponctualité, taux de litiges et taux de nouvelles réservations',
+    headingAnywhere: '{noun} sur {brand} · {count}', sortNoteAnywhere: 'Triés par niveau, note et avis · choisissez votre adresse pour voir qui se déplace chez vous',
+    sortNoteNearest: 'Les plus proches d’abord, puis par confiance', notLiveYet: 'Nous ne sommes pas encore offerts près de chez vous.', chooseLocation: 'Choisissez votre adresse', notLiveHint: 'Des prestataires vérifiés s’inscrivent chaque semaine. Choisissez un autre lieu, ou explorez.',
     rating: '★ {rating} ({count})', onTime: '{pct} à l’heure', newProvider: 'Nouveau sur {brand}',
     availToday: 'Aujourd’hui {time}', availTomorrow: 'Demain {time}', availDay: '{day} {time}', noOpenings: 'Aucune plage libre dans les 2 prochaines semaines',
     tier_master: 'Maître', tier_trusted: 'Fiable', tier_registered: 'Inscrit',

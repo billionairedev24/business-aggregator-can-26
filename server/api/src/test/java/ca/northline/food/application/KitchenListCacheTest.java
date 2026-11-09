@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import ca.northline.food.api.KitchenAvailability;
 import ca.northline.merchants.api.PublicDirectory;
 import ca.northline.region.api.Markets;
+import ca.northline.region.api.Regions;
 import ca.northline.region.api.TaxRates;
 import ca.northline.support.MovableClock;
 import ca.northline.trust.api.RatingQuery;
@@ -40,7 +41,8 @@ class KitchenListCacheTest {
             clock,
             mock(Markets.class),
             mock(TaxRates.class),
-            cache);
+            cache,
+            mock(Regions.class));
 
     @Test
     void theCityIsReadOncePerTtl_forEveryLocation_andAgainWhenAKitchenPauses() {

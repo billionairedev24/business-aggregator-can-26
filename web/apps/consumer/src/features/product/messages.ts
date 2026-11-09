@@ -20,6 +20,10 @@ const PRODUCT = {
     returns_standard_14: 'Returns within 14 days', returns_final_sale: 'Final sale',
     unavailable: 'No shop in {city} sells this right now.', notServed: '{brand} Shop doesn’t deliver to {city} yet.',
     backToShop: 'Back to Shop', changeLocation: 'Change location',
+    // S-190: no place known (every market) and other markets' shops, labelled instead of hidden
+    shipsFrom: 'Ships from {city} · choose your location to see delivery times', chooseLocation: 'Choose your location',
+    unavailableAnywhere: 'No shop sells this right now.', elsewhereTitle: 'Sold in other cities',
+    elsewhereNote: 'Not available for delivery to you', elsewhereLine: '{shop} · {city} · {price}',
     gallery: 'Photos', showImage: 'Show photo {n}',
     title: '{name} · {shop} · {brand}', titleNoShop: '{name} · {brand}', loading: 'Loading the product…',
     // redesign § 1.3 PDP
@@ -59,6 +63,9 @@ const PRODUCT = {
     returns_standard_14: 'Retours sous 14 jours', returns_final_sale: 'Vente finale',
     unavailable: 'Aucun commerce de {city} ne vend ce produit pour le moment.', notServed: 'La Boutique {brand} ne livre pas encore à {city}.',
     backToShop: 'Retour à la Boutique', changeLocation: 'Changer de lieu',
+    shipsFrom: 'Expédié de {city} · choisissez votre adresse pour voir les délais de livraison', chooseLocation: 'Choisissez votre adresse',
+    unavailableAnywhere: 'Aucun commerce ne vend ce produit pour le moment.', elsewhereTitle: 'Vendu dans d’autres villes',
+    elsewhereNote: 'Pas encore livrable chez vous', elsewhereLine: '{shop} · {city} · {price}',
     gallery: 'Photos', showImage: 'Afficher la photo {n}',
     title: '{name} · {shop} · {brand}', titleNoShop: '{name} · {brand}', loading: 'Chargement du produit…',
     visitStore: 'Visiter {shop}', inStock: 'En stock', addToCart: 'Ajouter au panier', buyNow: 'Acheter maintenant', buyBox: 'Acheter',

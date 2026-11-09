@@ -47,8 +47,9 @@ function Maker({ shop, landing }: { shop: ShopCard; landing: Landing }) {
   const t = useHomeT();
   const { locale } = useLocale();
   const zone = useZone(landing.market);
-  // the market's name (a city), not the visitor's street: "one of Calgary's Master shops"
-  const area = landing.market;
+  // the market's name (a city), not the visitor's street: "one of Calgary's Master shops"; with no place known
+  // (S-190: every market) the shop's own city
+  const area = landing.market ?? shop.city ?? '';
   const run = landing.run && shop.run?.windowId === landing.run.windowId ? landing.run : null;
   const when = run ? runWhen(run, zone) : null;
   const tier = t(`tier_${shop.tier === 'master' || shop.tier === 'trusted' ? shop.tier : 'registered'}`);
