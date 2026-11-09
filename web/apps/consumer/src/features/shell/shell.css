@@ -10,6 +10,12 @@ body { text-wrap: pretty; }
 .nl-skip { position: absolute; left: 12px; top: -60px; z-index: var(--z-toast); display: inline-flex; align-items: center; min-height: var(--size-touch); padding: 0 var(--space-4); background: var(--color-surface); color: var(--color-link); border-radius: var(--radius-pill); box-shadow: var(--shadow-md); font-weight: var(--weight-bold); }
 .nl-skip:focus { top: 12px; }
 
+/* S-191 (WCAG 2.4.11): where a phone page keeps an action bar stuck to the bottom (the product's and provider's buy
+   bar, the checkout total, the quote and booking wizards), the browser scrolls a focused control clear of it */
+@media (max-width: 999.98px) {
+  html:has(.nl-stickybar, .co-bar, .nl-qt-actions, .nl-bk-actions) { scroll-padding-bottom: calc(var(--size-control-lg) + var(--space-10)); }
+}
+
 /* footer (S-191, after Amazon's footer; E-15 / S-188 brand layer, S-189 colours): the "Back to top" bar on the strip's colour,
    four link columns on the footer colour, a row with the logo, the FR/EN switch and the region, then the legal strip
    under a hairline. White links and headings, the footer meta colour (never the action colour on the chrome).
