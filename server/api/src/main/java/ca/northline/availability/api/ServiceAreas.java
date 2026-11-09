@@ -15,8 +15,8 @@ import org.jspecify.annotations.Nullable;
 public interface ServiceAreas {
 
     /**
-     * A customer's location: coordinates when the device gave them, else the city of the location pill (the region's
-     * fallback market when the customer has none — never a city chosen here); neither = nobody is covered.
+     * A customer's location: coordinates when the device gave them, else the city of the location pill; neither = the
+     * place isn't known (S-190: the providers list then shows every provider; {@link #covering} answers nobody).
      */
     record Place(
             @Nullable Double lat,
@@ -33,6 +33,12 @@ public interface ServiceAreas {
 
     /** Those of {@code merchantIds} whose service area covers {@code place}. */
     Set<String> covering(Collection<String> merchantIds, Place place);
+
+    /**
+     * S-190: km from the point to the nearest centre of each business's zones (one decimal); businesses without zones,
+     * or a place without a point, are absent.
+     */
+    Map<String, Double> distanceKm(Collection<String> merchantIds, Place place);
 
     /** The zone the point lies in (a neighbourhood), the one whose centre is nearest when zones overlap; empty without a point or outside. */
     Optional<String> zoneAt(Place place);

@@ -91,6 +91,28 @@ class ServiceAreaQueries implements ServiceAreas, MarketZones {
     }
 
     @Override
+    public Map<String, Double> distanceKm(Collection<String> merchantIds, Place place) {
+        var result = new LinkedHashMap<String, Double>();
+        if (merchantIds.isEmpty() || !place.hasPoint()) {
+            return result;
+        }
+        jdbc.sql("""
+                        select a.merchant_id, min(ST_Distance(z.centre, %s)) / 1000.0 as km
+                          from availability.service_areas a
+                          join availability.service_zones z on z.name = a.zone
+                         where a.merchant_id in (:ids)
+                         group by a.merchant_id
+                        """.formatted(POINT))
+                .param("lat", place.lat())
+                .param("lng", place.lng())
+                .param("ids", List.copyOf(merchantIds))
+                .query((rs, _) -> Map.entry(rs.getString("merchant_id"), Math.round(rs.getDouble("km") * 10) / 10.0))
+                .list()
+                .forEach(e -> result.put(e.getKey(), e.getValue()));
+        return result;
+    }
+
+    @Override
     public Optional<String> zoneAt(Place place) {
         if (!place.hasPoint()) {
             return Optional.empty();
