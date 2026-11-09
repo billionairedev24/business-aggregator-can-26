@@ -15,6 +15,7 @@ import ca.northline.shared.Ids;
 import ca.northline.shared.JdbcTimes;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;
+import ca.northline.support.TestMarkets;
 import ca.northline.tools.CategorySeeder;
 import com.jayway.jsonpath.JsonPath;
 import java.time.Duration;
@@ -214,9 +215,16 @@ class HomeApiTest extends IntegrationTest {
     /** S-190: a location is never required — no city counts every live market together. */
     @Test
     void withoutACityEveryLiveMarketIsCounted() throws Exception {
-        var live = regions.liveMarkets().stream().findFirst();
-        assumeThat(live).as("a live market in the region data").isPresent();
-        city = live.orElseThrow().city();
+        var markets = new TestMarkets(jdbc, regions);
+        city = markets.open("Homeville", 61.0, -101.0);
+        try {
+            countsEveryLiveMarket();
+        } finally {
+            markets.close();
+        }
+    }
+
+    private void countsEveryLiveMarket() throws Exception {
         var tag = Ids.next().substring(18);
         var provider = business(
                 "provider", "Anywhere Cleaners " + tag, "master", "service.cleaning-and-property.house-cleaning");

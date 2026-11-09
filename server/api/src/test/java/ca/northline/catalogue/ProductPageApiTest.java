@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ca.northline.shared.Ids;
 import ca.northline.support.IntegrationTest;
+import ca.northline.support.TestMarkets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -35,6 +36,17 @@ class ProductPageApiTest extends IntegrationTest {
     @Autowired
     JdbcClient jdbc;
 
+    @Autowired
+    ca.northline.region.api.Regions regions;
+
+    Runnable cleanup = () -> {};
+
+    @org.junit.jupiter.api.AfterEach
+    void closeMarkets() {
+        cleanup.run();
+        cleanup = () -> {};
+    }
+
     @BeforeEach
     void freshMarket() {
         shopFixtures.categories();
@@ -55,7 +67,11 @@ class ProductPageApiTest extends IntegrationTest {
         shopFixtures.offer(soldOut, sourdough.productId(), "Sourdough", 600, 0, "approved", "live", "same_day", 0);
         var pending = shopFixtures.shop(MARKET, "Pending " + tag, "master");
         shopFixtures.offer(pending, sourdough.productId(), "Sourdough", 500, 9, "pending", "hidden", "same_day", 0);
-        var elsewhere = shopFixtures.shop("Edmonton", "Elsewhere " + tag, "master");
+        // S-190: another live market's shop (a made-up market: the shared database's own aren't live)
+        var markets = new TestMarkets(jdbc, regions);
+        var otherville = markets.open("Otherville", 62.0, -102.0);
+        cleanup = markets::close;
+        var elsewhere = shopFixtures.shop(otherville, "Elsewhere " + tag, "master");
         shopFixtures.offer(elsewhere, sourdough.productId(), "Sourdough", 400, 9, "approved", "live", "same_day", 0);
 
         var page = json(mvc.perform(get("/api/v1/public/shop/products/{id}", sourdough.productId())

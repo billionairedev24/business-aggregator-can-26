@@ -19,6 +19,7 @@ import ca.northline.shared.JdbcTimes;
 import ca.northline.shared.security.MerchantRole;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;
+import ca.northline.support.TestMarkets;
 import com.jayway.jsonpath.JsonPath;
 import java.time.Duration;
 import java.time.Instant;
@@ -243,9 +244,16 @@ class FoodOrderingApiTest extends IntegrationTest {
     /** S-190: no city = every live market's kitchens, nearest first when the point is known, each saying its city. */
     @Test
     void withoutACityEveryLiveMarketsKitchensAreListed_nearestFirst() throws Exception {
-        var live = regions.liveMarkets().stream().findFirst();
-        assumeThat(live).as("a live market in the region data").isPresent();
-        var market = live.orElseThrow().city();
+        var markets = new TestMarkets(jdbc, regions);
+        var market = markets.open("Kitchenville", 50.0, -100.0);
+        try {
+            listsEveryLiveMarket(market);
+        } finally {
+            markets.close();
+        }
+    }
+
+    private void listsEveryLiveMarket(String market) throws Exception {
         jdbc.sql("update merchants.merchants set city = ? where id = ?")
                 .params(market, k.merchantId())
                 .update();

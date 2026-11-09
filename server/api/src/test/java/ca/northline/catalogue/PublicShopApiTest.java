@@ -6,7 +6,6 @@ import static ca.northline.support.ShopFixtures.CLOTHING;
 import static ca.northline.support.ShopFixtures.PRODUCE;
 import static ca.northline.support.ShopFixtures.TOBACCO;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -16,6 +15,7 @@ import ca.northline.region.api.Regions;
 import ca.northline.shared.Ids;
 import ca.northline.shared.PlaceParams;
 import ca.northline.support.IntegrationTest;
+import ca.northline.support.TestMarkets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,8 +43,16 @@ class PublicShopApiTest extends IntegrationTest {
     @Autowired
     Regions regions;
 
+    TestMarkets markets;
+
+    @org.junit.jupiter.api.AfterEach
+    void closeMarkets() {
+        markets.close();
+    }
+
     @BeforeEach
     void freshMarket() {
+        markets = new TestMarkets(jdbc, regions);
         shopFixtures.categories();
         shopFixtures.closeMarket(MARKET); // the shared database keeps earlier runs' sellers
     }
@@ -341,24 +349,22 @@ class PublicShopApiTest extends IntegrationTest {
      */
     @Test
     void nearerMarketsComeFirst_andOtherMarketsAreLabelledNotHidden() throws Exception {
-        var located = regions.liveMarkets().stream()
-                .filter(m -> m.lat() != null && m.lng() != null)
-                .toList();
-        assumeThat(located.size())
-                .as("two live markets with a centre in the region data")
-                .isGreaterThanOrEqualTo(2);
-        var near = located.getFirst();
+        // two made-up live markets 56 km apart (the shared database's own are pilot / waitlist since V345)
+        markets.open("Nearville", 60.0, -100.0);
+        markets.open("Midville", 60.5, -100.0);
+        var near = regions.market("Nearville", null).orElseThrow();
         var nearLat = java.util.Objects.requireNonNull(near.lat());
         var nearLng = java.util.Objects.requireNonNull(near.lng());
         // the other live market nearest to it
-        var far = located.stream()
-                .skip(1)
+        var far = regions.liveMarkets().stream()
+                .filter(m -> m.lat() != null && m.lng() != null && !m.city().equals(near.city()))
                 .min(java.util.Comparator.comparingDouble(m -> PlaceParams.km(
                         nearLat,
                         nearLng,
                         java.util.Objects.requireNonNull(m.lat()),
                         java.util.Objects.requireNonNull(m.lng()))))
                 .orElseThrow();
+        assertThat(far.city()).isEqualTo("Midville");
         var tag = Ids.next().substring(18);
         var nearShop = shopFixtures.shop(near.city(), "Near Deli " + tag, "registered");
         var nearHam = shopFixtures.listing(nearShop, BUTCHER, "Near ham " + tag, 1200, 5);
