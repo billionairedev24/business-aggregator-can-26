@@ -11,6 +11,7 @@ public final class PublicKitchenViews {
     /**
      * A kitchen on the food landing (design 06 {@code food}): open now or when it opens, how long, how far, the fee.
      *
+     * @param city the kitchen's city (S-190: the card says where it cooks when the visitor's place isn't known)
      * @param delivers the visitor's point is inside the kitchen's delivery radius; null when a point is unknown
      * @param deliveryFeeCents the direct courier's fee to the visitor ($2.99 while the distance isn't known)
      */
@@ -18,6 +19,7 @@ public final class PublicKitchenViews {
             String merchantId,
             @Nullable String slug,
             String name,
+            @Nullable String city,
             List<String> cuisines,
             List<String> dietary,
             String priceLevel,
@@ -44,7 +46,8 @@ public final class PublicKitchenViews {
         }
     }
 
-    public record Kitchens(String city, List<Card> items) {
+    /** @param city the city listed, or null for every live market (S-190: the visitor's place isn't known) */
+    public record Kitchens(@Nullable String city, List<Card> items) {
         public Kitchens {
             items = List.copyOf(items);
         }

@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ca.northline.food.KitchenFixtures.Kitchen;
 import ca.northline.orders.api.OrderPlaced;
 import ca.northline.region.api.Markets;
+import ca.northline.region.api.Regions;
 import ca.northline.shared.Ids;
 import ca.northline.shared.JdbcTimes;
 import ca.northline.shared.security.MerchantRole;
@@ -60,6 +61,9 @@ class FoodOrderingApiTest extends IntegrationTest {
 
     @Autowired
     Markets markets;
+
+    @Autowired
+    Regions regions;
 
     @Autowired
     ca.northline.payments.api.CourierTips courierTips;
@@ -216,12 +220,51 @@ class FoodOrderingApiTest extends IntegrationTest {
         mvc.perform(get("/api/v1/public/kitchens").param("city", city))
                 .andExpect(jsonPath("$.items[0].open").value(false))
                 .andExpect(jsonPath("$.items[0].paused").value(true));
+        // S-190: a blank city is no city (every live market), but a malformed one is still refused
         mvc.perform(get("/api/v1/public/kitchens").param("city", " "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.city").doesNotExist());
+        mvc.perform(get("/api/v1/public/kitchens").param("city", "x".repeat(61)))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.errors[0].message").value("Choose a city."));
+                .andExpect(jsonPath("$.errors[0].field").value("city"))
+                .andExpect(jsonPath("$.errors[0].message").value("At most 60 characters."));
+        mvc.perform(get("/api/v1/public/kitchens").param("city", "<b>town</b>"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].message").value("Enter a city name."));
         mvc.perform(get("/api/v1/public/kitchens").param("city", city).param("lat", "91"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.errors[0].message").value("Latitude must be between -90 and 90."));
+        mvc.perform(get("/api/v1/public/kitchens").param("lat", String.valueOf(NEAR_LAT)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].field").value("lng"))
+                .andExpect(jsonPath("$.errors[0].message").value("Send both lat and lng, or neither."));
+    }
+
+    /** S-190: no city = every live market's kitchens, nearest first when the point is known, each saying its city. */
+    @Test
+    void withoutACityEveryLiveMarketsKitchensAreListed_nearestFirst() throws Exception {
+        var live = regions.liveMarkets().stream().findFirst();
+        assumeThat(live).as("a live market in the region data").isPresent();
+        var market = live.orElseThrow().city();
+        jdbc.sql("update merchants.merchants set city = ? where id = ?")
+                .params(market, k.merchantId())
+                .update();
+
+        mvc.perform(get("/api/v1/public/kitchens"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.city").doesNotExist())
+                .andExpect(jsonPath("$.items[?(@.slug == '%s')].city".formatted(slug))
+                        .value(market));
+        // the visitor's point: this kitchen, 1.3 km away, before every other open one
+        mvc.perform(get("/api/v1/public/kitchens")
+                        .param("lat", String.valueOf(NEAR_LAT))
+                        .param("lng", String.valueOf(KITCHEN_LNG)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].slug").value(slug))
+                .andExpect(jsonPath("$.items[0].distanceKm").value(1.3))
+                .andExpect(jsonPath("$.items[0].delivers").value(true));
+        // a city keeps its filter: this kitchen isn't in the old one any more
+        mvc.perform(get("/api/v1/public/kitchens").param("city", city)).andExpect(jsonPath("$.items", hasSize(0)));
     }
 
     @Test

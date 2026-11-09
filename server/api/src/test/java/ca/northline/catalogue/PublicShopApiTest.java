@@ -6,12 +6,15 @@ import static ca.northline.support.ShopFixtures.CLOTHING;
 import static ca.northline.support.ShopFixtures.PRODUCE;
 import static ca.northline.support.ShopFixtures.TOBACCO;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ca.northline.region.api.Regions;
 import ca.northline.shared.Ids;
+import ca.northline.shared.PlaceParams;
 import ca.northline.support.IntegrationTest;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -36,6 +39,9 @@ class PublicShopApiTest extends IntegrationTest {
 
     @Autowired
     JdbcClient jdbc;
+
+    @Autowired
+    Regions regions;
 
     @BeforeEach
     void freshMarket() {
@@ -265,14 +271,141 @@ class PublicShopApiTest extends IntegrationTest {
     }
 
     @Test
-    void marketIsValidated() throws Exception {
-        mvc.perform(get("/api/v1/public/shop").param("market", " "))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.errors[0].field").value("market"))
-                .andExpect(jsonPath("$.errors[0].message").value("Choose a city."));
+    void aMalformedMarketOrPointIsRefused() throws Exception {
         mvc.perform(get("/api/v1/public/shop").param("market", "x".repeat(61)))
                 .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.errors[0].message").value("Choose a city."));
+                .andExpect(jsonPath("$.errors[0].field").value("market"))
+                .andExpect(jsonPath("$.errors[0].message").value("At most 60 characters."));
+        mvc.perform(get("/api/v1/public/shop/departments/bakery").param("market", "<script>"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.errors[0].field").value("market"))
+                .andExpect(jsonPath("$.errors[0].message").value("Enter a city name."));
+        mvc.perform(get("/api/v1/public/shop").param("lat", "53.5"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.errors[0].message").value("Send both lat and lng, or neither."));
+        mvc.perform(get("/api/v1/public/shop").param("lat", "95").param("lng", "-113"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.errors[0].message").value("Latitude must be between -90 and 90."));
+    }
+
+    /** S-190: a location is never required — no market shows every market Northline delivers in, by popularity. */
+    @Test
+    void withoutAMarketEveryMarketIsShown_andNothingClaimsARun() throws Exception {
+        var tag = Ids.next().substring(18);
+        var here = shopFixtures.shop(MARKET, "Here Butcher " + tag, "master");
+        var steak = shopFixtures.listing(here, BUTCHER, "Here steak " + tag, 1900, 5);
+        var there = shopFixtures.shop("Productville", "There Butcher " + tag, "trusted");
+        var sausage = shopFixtures.listing(there, BUTCHER, "There sausage " + tag, 900, 5);
+
+        // no market, and a blank one (a page that never learnt the place): the same answer
+        for (var request :
+                List.of(get("/api/v1/public/shop"), get("/api/v1/public/shop").param("market", " "))) {
+            mvc.perform(request)
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Cache-Control", "max-age=60, public"))
+                    .andExpect(jsonPath("$.market").doesNotExist())
+                    .andExpect(jsonPath("$.served").value(true))
+                    .andExpect(jsonPath("$.run").doesNotExist())
+                    .andExpect(jsonPath("$.nearby").isEmpty());
+        }
+        var page =
+                json(mvc.perform(get("/api/v1/public/shop/departments/butcher")).andExpect(status().isOk()));
+        assertThat(page.path("market").isNull()).isTrue();
+        var products = page.path("products");
+        var mine = find(products, "productId", steak.productId());
+        assertThat(mine.path("shipsFrom").asString()).isEqualTo(MARKET);
+        assertThat(mine.path("deliverable").isNull()).isTrue();
+        assertThat(mine.path("run").isNull()).isTrue();
+        assertThat(find(products, "productId", sausage.productId())
+                        .path("shipsFrom")
+                        .asString())
+                .isEqualTo("Productville");
+        assertThat(texts(page.path("shops"), "name")).contains("Here Butcher " + tag, "There Butcher " + tag);
+        assertThat(find(page.path("shops"), "merchantId", there).path("city").asString())
+                .isEqualTo("Productville");
+
+        // a product page with no market: every market's offers, none on a run, no courier promise
+        var product = json(mvc.perform(get("/api/v1/public/shop/products/{id}", sausage.productId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.market").doesNotExist())
+                .andExpect(jsonPath("$.direct").doesNotExist())
+                .andExpect(jsonPath("$.elsewhere").isEmpty()));
+        var offer = find(product.path("offers"), "merchantId", there);
+        assertThat(offer.path("shipsFrom").asString()).isEqualTo("Productville");
+        assertThat(offer.path("runs").isEmpty()).isTrue();
+    }
+
+    /**
+     * S-190: with a point, every market's products come nearest market first; with a market, the other markets' are
+     * listed apart, nearest first, labelled not deliverable — never mixed into the market's own lists.
+     */
+    @Test
+    void nearerMarketsComeFirst_andOtherMarketsAreLabelledNotHidden() throws Exception {
+        var located = regions.liveMarkets().stream()
+                .filter(m -> m.lat() != null && m.lng() != null)
+                .toList();
+        assumeThat(located.size())
+                .as("two live markets with a centre in the region data")
+                .isGreaterThanOrEqualTo(2);
+        var near = located.getFirst();
+        var nearLat = java.util.Objects.requireNonNull(near.lat());
+        var nearLng = java.util.Objects.requireNonNull(near.lng());
+        // the other live market nearest to it
+        var far = located.stream()
+                .skip(1)
+                .min(java.util.Comparator.comparingDouble(m -> PlaceParams.km(
+                        nearLat,
+                        nearLng,
+                        java.util.Objects.requireNonNull(m.lat()),
+                        java.util.Objects.requireNonNull(m.lng()))))
+                .orElseThrow();
+        var tag = Ids.next().substring(18);
+        var nearShop = shopFixtures.shop(near.city(), "Near Deli " + tag, "registered");
+        var nearHam = shopFixtures.listing(nearShop, BUTCHER, "Near ham " + tag, 1200, 5);
+        var farShop = shopFixtures.shop(far.city(), "Far Deli " + tag, "master");
+        var farHam = shopFixtures.listing(farShop, BUTCHER, "Far ham " + tag, 1100, 5);
+
+        // a point at the near market's centre: its products before the far one's
+        var everywhere = json(mvc.perform(get("/api/v1/public/shop/departments/butcher")
+                        .param("lat", String.valueOf(nearLat))
+                        .param("lng", String.valueOf(nearLng)))
+                .andExpect(status().isOk()));
+        var ids = texts(everywhere.path("products"), "productId");
+        assertThat(ids).contains(nearHam.productId(), farHam.productId());
+        assertThat(ids.indexOf(nearHam.productId())).isLessThan(ids.indexOf(farHam.productId()));
+        var shipsFrom = texts(everywhere.path("products"), "shipsFrom");
+        assertThat(shipsFrom.indexOf(far.city())).isGreaterThan(shipsFrom.lastIndexOf(near.city()));
+
+        // the near market: its own products deliverable, the far market's apart and labelled
+        var market =
+                json(mvc.perform(get("/api/v1/public/shop/departments/butcher").param("market", near.city()))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.market").value(near.city())));
+        assertThat(texts(market.path("products"), "productId"))
+                .contains(nearHam.productId())
+                .doesNotContain(farHam.productId());
+        assertThat(find(market.path("products"), "productId", nearHam.productId())
+                        .path("deliverable")
+                        .asBoolean())
+                .isTrue();
+        var nearby = market.path("nearby");
+        assertThat(nearby.isEmpty()).isFalse();
+        assertThat(nearby.get(0).path("shipsFrom").asString()).isEqualTo(far.city());
+        nearby.forEach(card -> {
+            assertThat(card.path("deliverable").asBoolean(true)).isFalse();
+            assertThat(card.path("shipsFrom").asString()).isNotEqualToIgnoringCase(near.city());
+            assertThat(card.path("run").isNull()).isTrue();
+        });
+
+        // the far product's page from the near market: not offered there, its shop listed under elsewhere
+        var product = json(mvc.perform(get("/api/v1/public/shop/products/{id}", farHam.productId())
+                        .param("market", near.city()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.offers").isEmpty()));
+        var away = find(product.path("elsewhere"), "merchantId", farShop);
+        assertThat(away.path("deliverable").asBoolean(true)).isFalse();
+        assertThat(away.path("shipsFrom").asString()).isEqualTo(far.city());
+        assertThat(away.path("runs").isEmpty()).isTrue();
     }
 
     static JsonNode json(org.springframework.test.web.servlet.ResultActions result) throws Exception {

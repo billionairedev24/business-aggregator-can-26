@@ -3,7 +3,7 @@ package ca.northline.food.web;
 import ca.northline.food.application.PublicKitchenUseCases;
 import ca.northline.food.application.PublicKitchenViews.Kitchens;
 import ca.northline.food.application.PublicKitchenViews.Restaurant;
-import ca.northline.shared.RuleViolation;
+import ca.northline.shared.PlaceParams;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <pre>
  * GET /api/v1/public/kitchens?city=&amp;lat=&amp;lng=   the city's kitchens: open now / opens at, times, distance, fees
+ *                                               (no city: every live market's — S-190, a location is never required)
  * GET /api/v1/public/kitchens/{slug}?lat=&amp;lng=     one kitchen and its orderable menu, combos and scheduled windows
  * </pre>
  *
@@ -37,14 +38,8 @@ class PublicKitchenController {
             @RequestParam(required = false) @Nullable String city,
             @RequestParam(required = false) @Nullable Double lat,
             @RequestParam(required = false) @Nullable Double lng) {
-        var name = city == null ? "" : city.strip();
-        if (name.isEmpty()) {
-            throw RuleViolation.of("city", "required", "Choose a city.");
-        }
-        if (name.length() > 60) {
-            throw RuleViolation.of("city", "length", "At most 60 characters.");
-        }
-        checkPoint(lat, lng);
+        var name = PlaceParams.city("city", city);
+        PlaceParams.point(lat, lng);
         return cached(kitchens.kitchens(name, lat, lng));
     }
 
@@ -53,7 +48,7 @@ class PublicKitchenController {
             @PathVariable String slug,
             @RequestParam(required = false) @Nullable Double lat,
             @RequestParam(required = false) @Nullable Double lng) {
-        checkPoint(lat, lng);
+        PlaceParams.point(lat, lng);
         return cached(kitchens.restaurant(slug, lat, lng));
     }
 
@@ -61,14 +56,5 @@ class PublicKitchenController {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.maxAge(Duration.ofSeconds(30)).cachePublic())
                 .body(body);
-    }
-
-    private static void checkPoint(@Nullable Double lat, @Nullable Double lng) {
-        if (lat != null && (lat < -90 || lat > 90)) {
-            throw RuleViolation.of("lat", "range", "Latitude must be between -90 and 90.");
-        }
-        if (lng != null && (lng < -180 || lng > 180)) {
-            throw RuleViolation.of("lng", "range", "Longitude must be between -180 and 180.");
-        }
     }
 }

@@ -9,35 +9,43 @@ public final class ShopViews {
     private ShopViews() {}
 
     /**
-     * @param served Northline delivers goods in this market (otherwise every list is empty)
-     * @param run the next pooled run customers can still order for
+     * @param market the visitor's market, or null when the place isn't known: every market Northline delivers in (S-190)
+     * @param served Northline delivers goods in this market (otherwise the market's lists are empty); with no market,
+     *     whether any market is live
+     * @param run the next pooled run customers can still order for (only for a market)
+     * @param nearby S-190: with a market, what the nearest other markets sell, nearest first, each labelled
+     *     {@code deliverable: false}; empty without a market
      */
     public record Landing(
-            String market,
+            @Nullable String market,
             boolean served,
             @Nullable Run run,
             int shopCount,
             List<DepartmentTile> departments,
             List<ShopCard> shops,
-            List<ProductCard> popular) {
+            List<ProductCard> popular,
+            List<ProductCard> nearby) {
 
         public Landing {
             departments = List.copyOf(departments);
             shops = List.copyOf(shops);
             popular = List.copyOf(popular);
+            nearby = List.copyOf(nearby);
         }
     }
 
     /**
      * @param siblings the other departments of the same group that have shops in the market, this one included, in
      *     name order
+     * @param market as in {@link Landing}
      * @param onRunCount shops with something on the next run
+     * @param nearby as in {@link Landing}, in this department
      */
     public record Department(
             String slug,
             String name,
             String groupName,
-            String market,
+            @Nullable String market,
             boolean served,
             @Nullable Run run,
             List<DepartmentTile> siblings,
@@ -45,12 +53,14 @@ public final class ShopViews {
             int onRunCount,
             int productCount,
             List<ShopCard> shops,
-            List<ProductCard> products) {
+            List<ProductCard> products,
+            List<ProductCard> nearby) {
 
         public Department {
             siblings = List.copyOf(siblings);
             shops = List.copyOf(shops);
             products = List.copyOf(products);
+            nearby = List.copyOf(nearby);
         }
     }
 
@@ -60,6 +70,7 @@ public final class ShopViews {
      * @param tier {@code registered} | {@code trusted} | {@code master}
      * @param run the earliest pooled run the shop has something in stock for; null when none of the upcoming ones
      * @param imageUrl the shop's photo: its best-selling product's approved image, or null
+     * @param city the market the shop delivers from (S-190: "Ships from {city}")
      */
     public record ShopCard(
             String merchantId,
@@ -69,7 +80,8 @@ public final class ShopViews {
             String departmentName,
             int products,
             @Nullable Run run,
-            @Nullable String imageUrl) {}
+            @Nullable String imageUrl,
+            String city) {}
 
     /**
      * The best (cheapest) offer of a catalogue product in the market.
@@ -79,6 +91,9 @@ public final class ShopViews {
      * @param sellers how many shops of the market sell it
      * @param age set when the product is age-restricted (the card says so before checkout)
      * @param categoryId the catalogue category (the pages show its library photo when there is no image)
+     * @param shipsFrom S-190: the market of the shop whose offer is shown ("Ships from {city}")
+     * @param deliverable S-190: true = delivered to the visitor's market, false = not available for delivery there
+     *     (listed from a nearby market), null = the visitor's place isn't known
      */
     public record ProductCard(
             String productId,
@@ -92,7 +107,9 @@ public final class ShopViews {
             int sellers,
             @Nullable Run run,
             @Nullable Age age,
-            @Nullable String categoryId) {}
+            @Nullable String categoryId,
+            String shipsFrom,
+            @Nullable Boolean deliverable) {}
 
     /**
      * An age-restricted product (demo rehearsal 2026-10-19: the page said nothing about the ID check until checkout).
@@ -126,6 +143,9 @@ public final class ShopViews {
      *
      * @param unit the record's size / volume attribute ("900 g")
      * @param age set when the product is age-restricted: buying it needs a photo-ID check
+     * @param market as in {@link Landing}; with none, {@code offers} are every market's, with no runs
+     * @param elsewhere S-190: with a market, the offers of shops in the nearest other markets, nearest first, labelled
+     *     {@code deliverable: false}
      */
     public record ProductPage(
             String productId,
@@ -136,15 +156,17 @@ public final class ShopViews {
             @Nullable String unit,
             String departmentSlug,
             String departmentName,
-            String market,
+            @Nullable String market,
             boolean served,
             List<Offer> offers,
             @Nullable Direct direct,
-            @Nullable Age age) {
+            @Nullable Age age,
+            List<Offer> elsewhere) {
 
         public ProductPage {
             bullets = List.copyOf(bullets);
             offers = List.copyOf(offers);
+            elsewhere = List.copyOf(elsewhere);
         }
     }
 
@@ -158,6 +180,8 @@ public final class ShopViews {
      * @param runs the next two pooled runs it can go on (empty when out of stock or not delivered pooled)
      * @param images approved images, main first
      * @param more other products of the same shop ("Also from Glenmore")
+     * @param shipsFrom S-190: the shop's market
+     * @param deliverable S-190: as in {@link ProductCard}
      */
     public record Offer(
             String offerId,
@@ -176,7 +200,9 @@ public final class ShopViews {
             List<Variant> variants,
             List<Run> runs,
             List<String> images,
-            List<MoreItem> more) {
+            List<MoreItem> more,
+            String shipsFrom,
+            @Nullable Boolean deliverable) {
 
         public Offer {
             variants = List.copyOf(variants);

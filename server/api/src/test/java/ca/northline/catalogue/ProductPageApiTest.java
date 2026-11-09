@@ -82,6 +82,15 @@ class ProductPageApiTest extends IntegrationTest {
         assertThat(first.path("runs").size()).isEqualTo(2);
         assertThat(offers.get(2).path("stock").asInt()).isZero();
         assertThat(offers.get(2).path("runs").isEmpty()).isTrue();
+        assertThat(first.path("shipsFrom").asString()).isEqualTo(MARKET);
+        assertThat(first.path("deliverable").asBoolean()).isTrue();
+        // S-190: the other market's shop isn't hidden: listed apart, labelled, on no run of this market
+        var away = page.path("elsewhere");
+        assertThat(texts(away, "shopName")).contains("Elsewhere " + tag);
+        away.forEach(o -> {
+            assertThat(o.path("deliverable").asBoolean(true)).isFalse();
+            assertThat(o.path("runs").isEmpty()).isTrue();
+        });
     }
 
     @Test

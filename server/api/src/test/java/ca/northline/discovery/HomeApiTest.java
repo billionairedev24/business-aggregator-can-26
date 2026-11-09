@@ -10,11 +10,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ca.northline.region.api.Regions;
 import ca.northline.shared.Ids;
 import ca.northline.shared.JdbcTimes;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;
 import ca.northline.tools.CategorySeeder;
+import com.jayway.jsonpath.JsonPath;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
@@ -39,6 +41,9 @@ class HomeApiTest extends IntegrationTest {
 
     @Autowired
     DataSource dataSource;
+
+    @Autowired
+    Regions regions;
 
     @BeforeEach
     void city() {
@@ -206,14 +211,44 @@ class HomeApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.trusted", hasSize(0)));
     }
 
+    /** S-190: a location is never required — no city counts every live market together. */
     @Test
-    void aCityIsRequired() throws Exception {
+    void withoutACityEveryLiveMarketIsCounted() throws Exception {
+        var live = regions.liveMarkets().stream().findFirst();
+        assumeThat(live).as("a live market in the region data").isPresent();
+        city = live.orElseThrow().city();
+        var tag = Ids.next().substring(18);
+        var provider = business(
+                "provider", "Anywhere Cleaners " + tag, "master", "service.cleaning-and-property.house-cleaning");
+        review(provider, 5);
+        var inCity = JsonPath.<Integer>read(
+                mvc.perform(get("/api/v1/public/home").param("city", city))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString(),
+                "$.providers");
+
         mvc.perform(get("/api/v1/public/home"))
-                .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.errors[0].field").value("city"))
-                .andExpect(jsonPath("$.errors[0].message").value("Choose a city."));
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "max-age=60, public"))
+                .andExpect(jsonPath("$.city").value(nullValue()))
+                .andExpect(jsonPath("$.providers").value(org.hamcrest.Matchers.greaterThanOrEqualTo(inCity)));
+        // a business outside every live market isn't counted without a city
+        mvc.perform(get("/api/v1/public/home").param("city", " "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.city").value(nullValue()));
+    }
+
+    @Test
+    void aMalformedCityIsRefused() throws Exception {
         mvc.perform(get("/api/v1/public/home").param("city", "x".repeat(61)))
                 .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].field").value("city"))
                 .andExpect(jsonPath("$.errors[0].message").value("At most 60 characters."));
+        mvc.perform(get("/api/v1/public/home").param("city", "Town; drop table"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors[0].rule").value("format"))
+                .andExpect(jsonPath("$.errors[0].message").value("Enter a city name."));
     }
 }

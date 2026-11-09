@@ -17,6 +17,12 @@ public interface PublicDirectory {
      */
     List<PublicBusiness> active(Collection<String> types, String city);
 
+    /**
+     * Active businesses of these types in any of {@code cities} (case-insensitive), in no particular order: the
+     * consumer pages when the visitor's place isn't known — every live market (S-190). No cities, no businesses.
+     */
+    List<PublicBusiness> activeIn(Collection<String> types, Collection<String> cities);
+
     /** An active business by its storefront slug. */
     Optional<PublicBusiness> bySlug(String slug);
 
