@@ -12177,7 +12177,9 @@ palette to Northern Pine; nothing here names a colour).
 - **Focus under the bottom bars (WCAG 2.4.11).** After the 16 px gutters, `ui-a11y` found focused controls on the
   checkout and the quote wizard sitting under their sticky bottom bars (nothing gave the browser a bottom
   scroll-padding). Under 1000 px, a page with `.nl-stickybar`, `.co-bar`, `.nl-qt-actions` or `.nl-bk-actions` now
-  sets `scroll-padding-bottom` (the bar's height plus room).
+  sets `scroll-padding-bottom` (the bar's height plus room). On the desktop product page the rails and reviews moved
+  out of `.product-grid`: a sticky item's limit is its grid container, so the sticky buy box could slide over "Visit
+  the store" in the rail below (`ui-a11y` 1440).
 - **Visual gate.** After merging S-189 (Northern Pine), develop's baselines pass in this container. Only `site` and
   `hero` changed at 390, and every 390 section under them moved by a fraction of a pixel. Those 33 phone baselines were
   re-shot on the Northern Pine tokens and reviewed by eye (the header's slim place bar and chips, the compact hero). The

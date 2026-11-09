@@ -109,6 +109,7 @@ function OfferView({ data, offer, link, market }: { data: ProductPage; offer: Of
   ];
 
   return (
+    <>
     <div className="product-grid">
       {/* S-191 (Amazon's product page on a phone): the store, title and rating come before the photo there */}
       <div className="product-head">
@@ -228,6 +229,9 @@ function OfferView({ data, offer, link, market }: { data: ProductPage; offer: Of
           <tbody>{specs.map(([k, v]) => <tr key={k}><th scope="row">{k}</th><td>{v}</td></tr>)}</tbody>
         </table>
       </div>
+    </div>
+
+    {/* the wide rows and the phone bar sit outside the grid, so the sticky photo and buy box stop at the grid's end (S-191) */}
 
       {offer.more.length > 0 ? (
         <div className="product-wide">
@@ -260,7 +264,7 @@ function OfferView({ data, offer, link, market }: { data: ProductPage; offer: Of
         <span className="nl-stickybar-sum"><strong>{money(price)}</strong>{run ? <span>{windowText(run)}</span> : null}</span>
         <button type="button" className="btn btn-primary btn-lg" disabled={disabled} onClick={onAdd}>{t('addToCart')}</button>
       </div>
-    </div>
+    </>
   );
 }
 

@@ -2,7 +2,7 @@
    well | the details | a 300 px bordered buy box, then the wide rows (more from the shop, the reviews). Under 1100 px the
    details go under the photo; under 760 px one column, and the buy box's action is a sticky bottom bar. Tokens only. */
 .product-page { min-width: 0; }
-.product-grid { --product-thumb: 58px; display: grid; grid-template-columns: var(--product-thumb) minmax(0, 5fr) minmax(0, 5.6fr) 300px; grid-template-rows: auto auto 1fr; grid-template-areas: 'thumbs media head buy' 'thumbs media info buy' 'thumbs media details buy' 'wide wide wide wide'; gap: var(--space-2) var(--space-6); align-items: start; margin-top: var(--space-3); }
+.product-grid { --product-thumb: 58px; display: grid; grid-template-columns: var(--product-thumb) minmax(0, 5fr) minmax(0, 5.6fr) 300px; grid-template-rows: auto auto 1fr; grid-template-areas: 'thumbs media head buy' 'thumbs media info buy' 'thumbs media details buy'; gap: var(--space-2) var(--space-6); align-items: start; margin-top: var(--space-3); }
 .product-thumbs { grid-area: thumbs; display: flex; flex-direction: column; gap: var(--space-2); }
 .product-media { grid-area: media; position: sticky; top: calc(var(--nl-header-h, var(--size-header)) + var(--space-4)); min-width: 0; }
 /* S-191: the store, title and rating (head), the price and options (info), the description and facts (details) — one
@@ -83,15 +83,15 @@
 .product-main-skeleton { width: 100%; }
 
 @media (max-width: 1099.98px) {
-  .product-grid { grid-template-columns: var(--product-thumb) minmax(0, 1fr) 300px; grid-template-rows: auto; grid-template-areas: 'thumbs media buy' '. head buy' '. info buy' '. details buy' 'wide wide wide'; }
+  .product-grid { grid-template-columns: var(--product-thumb) minmax(0, 1fr) 300px; grid-template-rows: auto; grid-template-areas: 'thumbs media buy' '. head buy' '. info buy' '. details buy'; }
 }
 @media (max-width: 759.98px) {
-  .product-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: 'head' 'media' 'thumbs' 'info' 'buy' 'details' 'wide'; gap: var(--space-3); margin-top: var(--space-2); }
+  .product-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: 'head' 'media' 'thumbs' 'info' 'buy' 'details'; gap: var(--space-3); margin-top: var(--space-2); }
   .product-head { gap: var(--space-1-5); }
   .product-info .product-rule { display: none; }
   /* the buy box right under the price and options (Amazon's phone page): its price is the one just above */
   .product-buy > .nl-price:first-child { display: none; }
-  .product-wide { margin-top: 0; }
+  .product-wide { margin-top: var(--space-3); }
   /* the photo full-bleed with its count ("1 / 5"), the thumbnails a row under it */
   .product-media { position: static; margin-inline: calc(-1 * var(--page-gutter)); }
   .product-main { border-radius: 0; }
