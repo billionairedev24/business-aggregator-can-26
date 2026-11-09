@@ -14,7 +14,7 @@ import { useMinutesLeft, useShopFormat } from './common';
  * The home's "tonight" hero band (S-188 brand layer, design/revamp/hybrid "Consumer home · phone (390)"; the web's
  * `HomeBand`): "Everything <place> needs, tonight." — the place is the market's city (a message parameter, never
  * written in; "Everything you need, tonight." until it is known) — the trust line, the run card (it replaces the
- * cut-off strip on the home: the next pooled run, its closing time and the time left on the yellow sticker, counting
+ * cut-off strip on the home: the next pooled run, its closing time and the time left on the gold sticker, counting
  * down from the first render and then every minute), then the three department photo tiles (Services, Shop, and Food
  * as the group order: the app has no kitchen list).
  */

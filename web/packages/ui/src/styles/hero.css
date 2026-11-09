@@ -1,5 +1,6 @@
-/* The consumer home's hero band (HomeHero.tsx; S-188 brand layer, design/revamp/hybrid/index.html screens 1–2): the deep
-   violet band with its glow and dot grain, the display headline, the trust line, the run card, then three department
+/* The consumer home's hero band (HomeHero.tsx; S-188 brand layer, design/revamp/hybrid/index.html screens 1–2, in
+   S-189's Northern Pine colours, design/revamp/palettes/index.html): the deep forest band with its pine glow at the top
+   right, a faint gold glow at the lower left, and dot grain, the display headline, the trust line, the run card, then three department
    photo tiles straddling the band's lower edge. The band's colour reaches both window edges (a spread shadow clipped to
    the band's height, so nothing is wider than the page). Every box is sized from the first render (no layout shift).
    Display line heights are rounded to whole pixels (no fractional offsets for everything below). Widths in the
@@ -10,7 +11,7 @@
 .nl-hhero::before {
   background:
     radial-gradient(46% 120% at 86% -10%, color-mix(in srgb, var(--color-hero-glow) 55%, transparent), transparent 70%),
-    radial-gradient(38% 90% at 4% 110%, color-mix(in srgb, var(--color-hero-glow) 30%, transparent), transparent 70%),
+    radial-gradient(38% 90% at 4% 110%, color-mix(in srgb, var(--color-commerce) 13%, transparent), transparent 70%),
     linear-gradient(180deg, var(--color-hero-bg), var(--color-hero-scrim));
   box-shadow: 0 0 0 100vmax var(--color-hero-bg);
   clip-path: inset(0 -100vmax);
@@ -30,7 +31,7 @@
 .nl-hhero-trust { list-style: none; margin: var(--space-5) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); font-size: var(--type-body); color: var(--color-hero-text); }
 .nl-hhero-trust > li { display: flex; gap: var(--space-2); align-items: center; }
 .nl-hhero-trust-icon { display: inline-flex; color: var(--color-hero-accent); }
-/* the run card: a frosted panel on the band — the run in caps, the closing time, the yellow sticker, the fee */
+/* the run card: a frosted panel on the band — the run in caps, the closing time, the gold sticker, the fee */
 .nl-hhero-run {
   position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-1) var(--space-3); min-height: 124px; box-sizing: border-box; align-content: center;
   padding: var(--space-4) var(--space-4); margin-bottom: var(--space-1-5); border-radius: var(--radius-panel);

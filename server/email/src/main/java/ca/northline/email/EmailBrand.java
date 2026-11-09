@@ -12,17 +12,17 @@ import java.util.Map;
  */
 public final class EmailBrand {
 
-    // palette color.* (brand.json "palette": plainsight, E-15 A · Plainsight with the S-188 brand layer: violet action,
-    // yellow commerce with ink text — yellow is a fill, never text on white).
-    public static final String ACCENT = "#5B34F0"; // primary (the action colour: the button, links; violet)
-    public static final String ACCENT_2 = "#121418"; // accentInk (text on the commerce yellow)
-    public static final String HIGHLIGHT = "#FFD23F"; // accent (commerce yellow: a fill only, never a button, a status or text)
+    // palette color.* (brand.json "palette": plainsight, E-15 A · Plainsight with the S-188 brand layer in the S-189
+    // Northern Pine colours: spruce action, harvest-gold commerce with ink text — gold is a fill, never text on white).
+    public static final String ACCENT = "#0E6B58"; // primary (the action colour: the button, links; spruce)
+    public static final String ACCENT_2 = "#121418"; // accentInk (text on the commerce gold)
+    public static final String HIGHLIGHT = "#F5B82E"; // accent (commerce gold: a fill only, never a button, a status or text)
     public static final String BG = "#F3F4F6"; // ground (the well)
     public static final String TEXT = "#121418"; // ink
     public static final String SURFACE = "#FFFFFF"; // surface
     public static final String DIVIDER = "#E4E7EB"; // border
     public static final String MUTED = "#434A55"; // textMuted
-    public static final String HIGHLIGHT_100 = "#FFF3C4"; // accentTint
+    public static final String HIGHLIGHT_100 = "#FDEFC9"; // accentTint
     public static final String ON_ACCENT = "#FFFFFF"; // primaryText
     public static final String WARNING = "#8F5600"; // warning
 

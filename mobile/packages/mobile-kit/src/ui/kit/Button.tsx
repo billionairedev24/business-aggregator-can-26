@@ -5,13 +5,13 @@ import { Icon, type IconName } from '../Icon';
 import { CAP, LINE, SIZE, TYPE, slopFor, textStyles } from './tokens';
 
 /**
- * The four actions of Plainsight (revamp-epic § Locked direction, with S-188's violet action) and two more:
- * - `primary`: the action violet, solid (Add to cart, Book, Place order: the one main action of a screen);
+ * The four actions of Plainsight (revamp-epic § Locked direction, with S-188's spruce action) and two more:
+ * - `primary`: the action spruce, solid (Add to cart, Book, Place order: the one main action of a screen);
  * - `secondary`: white with the 3:1-ish neutral edge (Buy now, Edit);
  * - `tertiary`: the link colour, no box (See details, Call me instead);
  * - `destructive`: the danger red, solid (Cancel order, Delete, Refuse; every action that cannot be undone);
  * - `dark`: solid ink, rare (a bar over a photo);
- * - `plain`: a tertiary in ink (S-188: the courier app, whose only violet is its primary action).
+ * - `plain`: a tertiary in ink (S-188: the courier app, whose only spruce is its primary action).
  * 3 pt corners (`radius.control`), never a pill: buttons, tabs, segments and chips must never look alike. Sizes: `sm`
  * drawn 32 pt with a hit slop to 44, `md` 44, `lg` 46 (a sticky bottom bar's action). The label wraps under large
  * Dynamic Type instead of being cut.
@@ -62,7 +62,7 @@ export function Button({ label, onPress, variant = 'primary', size = 'md', icon,
 /**
  * A 44 pt square icon button (Back, Share, Close, the bell): no box at rest, the hover grey when pressed; `boxed`
  * draws the control edge (over a busy background), `onPhoto` a white square with a shadow so it reads on any picture,
- * `onChrome` (S-188) a white icon on the consumer's violet header, its darker violet when pressed.
+ * `onChrome` (S-188) a white icon on the consumer's forest header, its darker green when pressed.
  */
 export function IconButton({
   icon,

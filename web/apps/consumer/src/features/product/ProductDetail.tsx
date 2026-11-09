@@ -259,7 +259,7 @@ function OfferView({ data, offer, link, market }: { data: ProductPage; offer: Of
 }
 
 /**
- * "Order within 2 h 48 min" — the time left before the run closes, an ink-on-yellow pill (S-188). The server and the browser's first render say "Order
+ * "Order within 2 h 48 min" — the time left before the run closes, an ink-on-gold pill (S-188). The server and the browser's first render say "Order
  * by 5:20 p.m." (a clock read at render would differ between them); the browser then counts down.
  */
 function OrderWithin({ orderBy, by }: { orderBy: string; by: string }) {

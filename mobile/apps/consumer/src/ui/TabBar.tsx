@@ -16,8 +16,8 @@ const ICONS: Record<string, IconName> = {
 
 /**
  * The tab bar: the kit's BottomTabBar (S-169) — Home · Browse · Activity · Cart · Account, a Phosphor icon over a
- * short label; S-188: white, the current tab as the web's current page (the violet bar and filled icon, the ink
- * label), the cart's count in the round yellow badge with ink; the home indicator's room below.
+ * short label; S-188: white, the current tab as the web's current page (the spruce bar and filled icon, the ink
+ * label), the cart's count in the round gold badge with ink; the home indicator's room below.
  */
 export function TabBar({ state, navigation, cartCount = 0 }: Pick<BottomTabBarProps, 'state' | 'navigation'> & { cartCount?: number }) {
   const { t } = useI18n();

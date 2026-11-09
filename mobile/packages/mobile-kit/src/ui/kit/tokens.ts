@@ -52,6 +52,7 @@ export const textStyles = StyleSheet.create({
 /**
  * S-188: the deal sticker's tilt and hard ink edge (the web's `--sticker-tilt` −2.5°, `--shadow-sticker` 1.5 px and
  * `--shadow-sticker-sm` 1 px in `sticker-edge`); the hero's countdown sticker leans half a degree more on a 2 pt edge.
+ * No colour lives here (the edges are `sticker-edge` ink and the hero's `hero-scrim`), so S-189's Northern Pine keeps it.
  */
 export const STICKER = { tilt: '-2.5deg', heroTilt: '-3deg', edge: LINE.box, edgeSm: LINE.hair, heroEdge: LINE.bold } as const;
 

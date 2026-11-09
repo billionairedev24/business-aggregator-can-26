@@ -15,7 +15,7 @@ const PICTURE_SIZES = '(min-width: 768px) 32vw, 100vw';
  * The home's "tonight" hero band (S-188 brand layer, design/revamp/hybrid/index.html): "Everything <place> needs,
  * tonight." — the place is the visitor's neighbourhood or city (a message parameter, never written in; "Everything you
  * need, tonight." until it is known) — the trust line, the run card (it replaces the cut-off strip on the home: the next
- * pooled run, its closing time and the time left on the yellow sticker), then the three department photo tiles. The
+ * pooled run, its closing time and the time left on the gold sticker), then the three department photo tiles. The
  * countdown starts from the render clock (lib/renderClock: the server's render and the browser's first render agree)
  * and then ticks in the browser.
  */
