@@ -53,6 +53,10 @@ trade dress (the navy-and-orange chrome, the smile arrow, Amazon wording or asse
 | Detail | Gallery · details · a **buy box** (price, delivery or booking estimate, Add to cart, Buy now) that stays reachable on phone |
 | Home | Category and deal tiles, then rails ("Near you", "Order again", "Popular kitchens") |
 | Back office | Seller Central-style dashboard of actionable cards; dense tables with bulk actions |
+| Footer (S-191) | "Back to top", four link columns, language and region, a legal strip; stacked on phones |
+
+The page-by-page parity audit against these patterns (desktop and phone), with what is fixed and what is open, is
+`amazon-parity.md` (S-191, 2026-11-09).
 
 ## Order and gates
 1. **S-165 Audit (done, `audit-2026-10.md`).** Deploy is fine; the problem is direction and content first, then the
