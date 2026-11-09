@@ -36,8 +36,8 @@ export function SecondFactor() {
   const [copied, setCopied] = useState(false);
 
   const afterSignIn = useAfterSignIn();
-  // a new account asks where to deliver (A5); a sign-in lands where it always does
-  const done = () => (flow.mode === 'register' ? router.replace('/location?step=address') : afterSignIn());
+  // S-190: a new account lands on Home too — where to deliver is asked only from the place bar or at checkout
+  const done = () => afterSignIn();
 
   const fail = (e: unknown) => {
     // the account exists and the auth session is signed in, but the tokens didn't arrive: offer to finish

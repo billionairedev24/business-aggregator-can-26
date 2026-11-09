@@ -75,6 +75,22 @@ const beforeCutoff = () => jest.spyOn(Date, 'now').mockReturnValue(Date.parse(`$
 describe('B1 Home', () => {
   afterEach(() => jest.restoreAllMocks());
 
+  it('S-190: browses with no location — no forced step, no 422 — every market together, popular first', async () => {
+    const { server, services } = await start({ welcomed: true });
+    expect(await screen.findByRole('button', { name: 'Set your delivery address' })).toBeTruthy();
+    expect(screen.getByText('Choose your location')).toBeTruthy();
+    expect(await screen.findByRole('header', { name: 'Popular on Northline' })).toBeTruthy();
+    const landing = server.calls.find((c) => c.path === '/public/shop')!;
+    expect(landing).toBeTruthy();
+    // no city in the request, and the fixture answers like the api: market null, no run claimed, where it ships from
+    const res = await services.api.get<{ market: string | null; run: unknown; popular: Array<{ shipsFrom: string; deliverable: boolean | null }> }>('/public/shop?lang=en', { auth: 'optional' });
+    expect(res).toMatchObject({ market: null, run: null });
+    expect(res?.popular[0]).toMatchObject({ shipsFrom: 'Sampleville', deliverable: null });
+    expect(await services.api.get<{ city: string | null }>('/public/home', { auth: 'optional' })).toMatchObject({ city: null });
+    // a malformed city is still refused, with the api's message
+    await expect(services.api.get('/public/home?city=%3Cb%3E', { auth: 'optional' })).rejects.toMatchObject({ status: 422 });
+  });
+
   it('shows where you deliver, the search bar, the department strip, the hero band, the maker of the week, the tiles and the rails — to a guest', async () => {
     beforeCutoff();
     const { server, view } = await start({ welcomed: true, store: saved() });

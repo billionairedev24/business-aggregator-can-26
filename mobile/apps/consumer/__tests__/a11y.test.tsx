@@ -99,7 +99,7 @@ const SCREENS: { name: string; url: string; signedIn?: boolean; ready: RegExp }[
 
 describe('roles, names and 44 pt touch targets on the key screens (S-109)', () => {
   it('names the home screen\'s "Deliver to" line without a glyph and gives it a 44 pt touch area', async () => {
-    await start({ signedIn: true, welcomed: true, url: '/home' });
+    await start({ signedIn: true, welcomed: true, url: '/home', store: { 'nl.location': JSON.stringify({ label: 'Sampleville', city: 'Sampleville' }) } });
     const place = await screen.findByTestId('home-place');
     expect(place.props.accessibilityLabel).toMatch(/^Delivery address: [^▾]+$/);
     expect(targetHeight(place)).toBeGreaterThanOrEqual(44);

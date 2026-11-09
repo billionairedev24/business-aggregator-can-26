@@ -204,7 +204,7 @@ export function Product() {
                       <Icon name="truck" size={TYPE.price} color={semantic.text} />
                       <View style={styles.flex}>
                         <Text style={textStyles.bodyStrong}>{t('rv.product.delivery', { when: f.window(next, 'shop.when') })}</Text>
-                        <Text style={textStyles.meta}>{t('rv.product.deliveryTo', { place: market.label ?? p.market, fee: f.fee(next.feeCents) })}</Text>
+                        <Text style={textStyles.meta}>{t('rv.product.deliveryTo', { place: market.label ?? p.market ?? '', fee: f.fee(next.feeCents) })}</Text>
                         {left !== null && left > 0 ? (
                           <View style={styles.orderWithin}>
                             <CutoffPill label={left >= 60 ? t('rv.product.withinHours', { h: Math.floor(left / 60), m: left % 60 }) : t('rv.product.withinMinutes', { m: left })} testID="product-cutoff" />
