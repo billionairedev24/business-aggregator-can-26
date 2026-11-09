@@ -20,7 +20,7 @@ export const TrustedProvider = z.object({
 export type TrustedProvider = z.infer<typeof TrustedProvider>;
 
 export const HomeSummary = z.object({
-  city: z.string(),
+  city: z.string().nullish(),
   providers: z.number().int(),
   shops: z.number().int(),
   kitchensOpen: z.number().int(),
@@ -30,13 +30,15 @@ export const HomeSummary = z.object({
 });
 export type HomeSummary = z.infer<typeof HomeSummary>;
 
-export const homeQuery = (city: string) => queryOptions({
-  queryKey: ['public', 'home', city.toLowerCase()],
-  queryFn: () => http(`/api/v1/public/home?city=${encodeURIComponent(city)}`, {}, HomeSummary),
+/** `city` undefined = the visitor's place isn't known: every live market together (S-190; the answer's `city` is null). */
+export const homeQuery = (city: string | undefined) => queryOptions({
+  queryKey: ['public', 'home', city?.toLowerCase() ?? ''],
+  queryFn: () => http(`/api/v1/public/home${city ? `?city=${encodeURIComponent(city)}` : ''}`, {}, HomeSummary),
   staleTime: 60_000,
 });
 
-export const useHomeSummary = (city: string | undefined) => useQuery({ ...homeQuery(city ?? ''), enabled: !!city });
+/** `ready` = the location's sources have been read (with or without a city). */
+export const useHomeSummary = (city: string | undefined, ready: boolean) => useQuery({ ...homeQuery(city), enabled: ready });
 
 /**
  * "Your week" (design 06): the signed-in person's orders, bookings and quotes for the next seven days. Contract for

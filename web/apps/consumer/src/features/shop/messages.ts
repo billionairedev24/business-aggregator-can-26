@@ -8,6 +8,14 @@ import { defineMessages, messagesFor, type Locale } from '@northline/ui';
 const SHOP = {
   en: {
     kicker: 'Shop · groceries & goods',
+    // S-190 (a location is never required): no place known → every city together; other cities labelled, not hidden
+    popularAnywhere: 'Popular on {brand}', ledeAnywhere: 'Every city on {brand} · choose your location for delivery times',
+    deptSubAnywhere: '{shops, plural, one {# shop} other {# shops}} on {brand} · {items, plural, one {# product} other {# products}}',
+    shipsFrom: 'Ships from {city}', notDeliverable: 'From {city} · not available for delivery to you',
+    nearbyTitle: 'From nearby cities', nearbyNote: 'Not available for delivery to you yet',
+    chooseLocation: 'Choose your location', emptyAnywhere: 'No shops on {brand} yet.',
+    metaDescriptionAnywhere: 'Groceries and goods from local shops, delivered together on one pooled run. Every seller vetted, every order paid into escrow.',
+    deptMetaDescriptionAnywhere: '{name} from local shops, delivered on {brand}’s pooled run. Every seller vetted, paid only after delivery.',
     title_tonight: 'Tonight’s pooled run leaves {time}',
     title_today: 'Today’s pooled run leaves {time}',
     title_tomorrow: 'Tomorrow’s pooled run leaves {time}',
@@ -74,6 +82,13 @@ const SHOP = {
   },
   fr: {
     kicker: 'Boutique · épicerie et produits',
+    popularAnywhere: 'Populaire sur {brand}', ledeAnywhere: 'Toutes les villes de {brand} · choisissez votre adresse pour les délais de livraison',
+    deptSubAnywhere: '{shops, plural, one {# commerce} other {# commerces}} sur {brand} · {items, plural, one {# produit} other {# produits}}',
+    shipsFrom: 'Expédié de {city}', notDeliverable: 'De {city} · pas encore livrable chez vous',
+    nearbyTitle: 'Des villes voisines', nearbyNote: 'Pas encore livrable à votre adresse',
+    chooseLocation: 'Choisissez votre adresse', emptyAnywhere: 'Aucun commerce sur {brand} pour l’instant.',
+    metaDescriptionAnywhere: 'L’épicerie et les produits des commerces locaux, livrés ensemble sur une tournée groupée. Chaque vendeur vérifié, chaque commande payée en fiducie.',
+    deptMetaDescriptionAnywhere: '{name} des commerces locaux, livré sur la tournée groupée de {brand}. Chaque vendeur vérifié, payé seulement après la livraison.',
     title_tonight: 'La tournée groupée de ce soir part à {time}',
     title_today: 'La tournée groupée d’aujourd’hui part à {time}',
     title_tomorrow: 'La tournée groupée de demain part à {time}',

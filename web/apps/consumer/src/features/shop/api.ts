@@ -28,6 +28,8 @@ export const ShopCard = z.object({
   products: z.number().int(), run: Run.nullish(),
   // the shop's own photo (its best-selling listing's approved image), when it has one
   imageUrl: z.string().nullish(),
+  // S-190: the market it delivers from ("Ships from {city}")
+  city: z.string().nullish(),
 });
 export type ShopCard = z.infer<typeof ShopCard>;
 
@@ -44,25 +46,33 @@ export const ProductCard = z.object({
   age: AgeNotice.nullish(),
   // the catalogue category: its library photo stands in when the product has no approved image
   categoryId: z.string().nullish(),
+  // S-190: the shop's market, and whether it delivers to the visitor (false = listed from a nearby market; null =
+  // the visitor's place isn't known)
+  shipsFrom: z.string().nullish(), deliverable: z.boolean().nullish(),
 });
 export type ProductCard = z.infer<typeof ProductCard>;
 
+/**
+ * `market` is null when the visitor's place isn't known (S-190): every market together, popular first, no run.
+ * `nearby` (with a market): what the nearest other markets sell, labelled not deliverable.
+ */
 export const Landing = z.object({
-  market: z.string(), served: z.boolean(), run: Run.nullish(), shopCount: z.number().int(),
+  market: z.string().nullish(), served: z.boolean(), run: Run.nullish(), shopCount: z.number().int(),
   departments: z.array(DepartmentTile), shops: z.array(ShopCard), popular: z.array(ProductCard),
+  nearby: z.array(ProductCard).default([]),
 });
 export type Landing = z.infer<typeof Landing>;
 
 export const Department = z.object({
-  slug: z.string(), name: z.string(), groupName: z.string(), market: z.string(), served: z.boolean(), run: Run.nullish(),
+  slug: z.string(), name: z.string(), groupName: z.string(), market: z.string().nullish(), served: z.boolean(), run: Run.nullish(),
   siblings: z.array(DepartmentTile), shopCount: z.number().int(), onRunCount: z.number().int(), productCount: z.number().int(),
-  shops: z.array(ShopCard), products: z.array(ProductCard),
+  shops: z.array(ShopCard), products: z.array(ProductCard), nearby: z.array(ProductCard).default([]),
 });
 export type Department = z.infer<typeof Department>;
 
 /**
- * `market` = a city; undefined = nobody chose one, and the api renders its fallback market (the default province's
- * first live market — region configuration, never a city in this app; the response names it in `market`).
+ * `market` = a city; undefined = the visitor's place isn't known, and the api shows every market (S-190: a location is
+ * never required; the response's `market` is null).
  */
 export const marketParams = (market: string | undefined, locale: Locale) =>
   `${market ? `market=${encodeURIComponent(market)}&` : ''}lang=${locale}`;
@@ -81,6 +91,6 @@ export const departmentQuery = (slug: string, market: string | undefined, locale
   staleTime: 60_000,
 });
 
-/** `?market=` of the Shop routes: absent means the default market. */
+/** `?market=` of the Shop routes: absent means every market (S-190). */
 export const MarketSearch = z.object({ market: z.string().max(60).optional().catch(undefined) });
 export type MarketSearch = z.infer<typeof MarketSearch>;

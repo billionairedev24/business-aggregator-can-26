@@ -62,21 +62,18 @@ beforeEach(() => { localStorage.clear(); sessionStorage.clear(); window.location
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('the location control (never prompts on load)', () => {
-  it('shows the fallback market without asking the browser for its position', async () => {
+  it('S-190: with nothing known it never guesses a city, never asks the browser, and offers a quiet "Choose your location"', async () => {
     const geo = fakeGeo({ lat: 51.04, lng: -114.07 });
     const calls = mockFetch(api());
     renderApp('/', { geolocation: geo });
-    expect(await screen.findByText('Calgary')).toBeInTheDocument();
+    expect(await screen.findByText('Choose your location')).toBeInTheDocument();
     expect(control()).toHaveTextContent('Deliver to');
     expect(control()).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument(); // no dialog on load
     expect(geo.getCurrentPosition).not.toHaveBeenCalled();
     expect(calls.some(c => c.url.startsWith('/api/v1/geo/reverse'))).toBe(false);
-  });
-
-  it('asks to set a location when nothing is known and no fallback market is configured', async () => {
-    mockFetch(api({ fallback: null }));
-    renderApp('/');
-    expect(await screen.findByText('Set your location')).toBeInTheDocument();
+    // the api's fallback market is no longer a source: the header doesn't name it
+    expect(screen.queryByText('Calgary')).not.toBeInTheDocument();
   });
 
   it('shows the CDN’s city', async () => {
@@ -99,7 +96,7 @@ describe('the location control (never prompts on load)', () => {
   });
 
   it('says "Near" on the services pages', async () => {
-    mockFetch(api());
+    mockFetch(api({ ipCity: 'Calgary' }));
     renderApp('/services');
     await screen.findByText('Calgary');
     expect(control()).toHaveTextContent('Near');
@@ -118,9 +115,9 @@ describe('the location dialog', () => {
   it('says what it shows now, offers the live markets, and passes axe', async () => {
     mockFetch(api());
     renderApp('/');
-    await screen.findByText('Calgary');
+    await screen.findByText('Choose your location');
     const dialog = await openDialog();
-    expect(within(dialog).getByText('Showing Calgary until you choose your location.')).toBeInTheDocument();
+    expect(within(dialog).getByText('Showing everything on Northline. Choose where you are to see what’s near you first.')).toBeInTheDocument();
     const markets = within(dialog).getByRole('region', { name: 'Where Northline is live' });
     expect(within(markets).getAllByRole('button').map(b => b.textContent)).toEqual(['CalgaryAlberta', 'EdmontonAlberta']);
     await expectNoAxeViolations(document.body);
@@ -130,7 +127,7 @@ describe('the location dialog', () => {
     const geo = fakeGeo({ lat: 51.038, lng: -114.089 });
     const calls = mockFetch(api());
     renderApp('/', { geolocation: geo });
-    await screen.findByText('Calgary');
+    await screen.findByText('Choose your location');
     const dialog = await openDialog();
     expect(geo.getCurrentPosition).not.toHaveBeenCalled();
     await user().click(within(dialog).getByRole('button', { name: 'Use my current location' }));
@@ -144,7 +141,7 @@ describe('the location dialog', () => {
   it('explains a refusal', async () => {
     mockFetch(api());
     renderApp('/', { geolocation: fakeGeo('denied') });
-    await screen.findByText('Calgary');
+    await screen.findByText('Choose your location');
     const dialog = await openDialog();
     await user().click(within(dialog).getByRole('button', { name: 'Use my current location' }));
     expect(await within(dialog).findByText(/Location access is off for this site/)).toBeInTheDocument();
@@ -154,7 +151,7 @@ describe('the location dialog', () => {
   it('explains a place outside every market', async () => {
     mockFetch(api({ reverse: { body: { label: 'Parkdale, Toronto', city: 'Toronto', province: 'ON', market: null, zone: null } } }));
     renderApp('/', { geolocation: fakeGeo({ lat: 43.64, lng: -79.43 }) });
-    await screen.findByText('Calgary');
+    await screen.findByText('Choose your location');
     const dialog = await openDialog();
     await user().click(within(dialog).getByRole('button', { name: 'Use my current location' }));
     expect(await within(dialog).findByText('Northline isn’t available in Toronto yet. Choose one of our markets below.')).toBeInTheDocument();
@@ -163,7 +160,7 @@ describe('the location dialog', () => {
   it('explains a browser without geolocation', async () => {
     mockFetch(api());
     renderApp('/');
-    await screen.findByText('Calgary');
+    await screen.findByText('Choose your location');
     const dialog = await openDialog();
     await user().click(within(dialog).getByRole('button', { name: 'Use my current location' }));
     expect(await within(dialog).findByText(/Your browser couldn’t find your position/)).toBeInTheDocument();
@@ -172,7 +169,7 @@ describe('the location dialog', () => {
   it('finds an address or postal code, resolves it and saves it', async () => {
     const calls = mockFetch(api());
     renderApp('/');
-    await screen.findByText('Calgary');
+    await screen.findByText('Choose your location');
     const dialog = await openDialog();
     const u = user();
     await u.type(within(dialog).getByRole('combobox', { name: 'Address or postal code' }), '1204 17 ave');
@@ -191,7 +188,7 @@ describe('the location dialog', () => {
   it('picks a suggestion with the keyboard', async () => {
     mockFetch(api());
     renderApp('/');
-    await screen.findByText('Calgary');
+    await screen.findByText('Choose your location');
     const dialog = await openDialog();
     const u = user();
     const box = within(dialog).getByRole('combobox', { name: 'Address or postal code' });
@@ -206,7 +203,7 @@ describe('the location dialog', () => {
   it('offers the waitlist outside a live market — guests leave an email', async () => {
     const calls = mockFetch(api());
     renderApp('/');
-    await screen.findByText('Calgary');
+    await screen.findByText('Choose your location');
     const dialog = await openDialog();
     const u = user();
     await u.type(within(dialog).getByRole('combobox', { name: 'Address or postal code' }), '910 4 ave');
@@ -227,7 +224,7 @@ describe('the location dialog', () => {
   it('says when addresses can’t be looked up, or there are too many lookups', async () => {
     mockFetch(api({ autocomplete: { status: 429, body: { code: 'rate_limited' } } }));
     renderApp('/');
-    await screen.findByText('Calgary');
+    await screen.findByText('Choose your location');
     const dialog = await openDialog();
     await user().type(within(dialog).getByRole('combobox', { name: 'Address or postal code' }), 'T2T 0B8');
     expect(await within(dialog).findByText(/Too many address lookups/)).toBeInTheDocument();
@@ -247,7 +244,7 @@ describe('the location dialog', () => {
   it('chooses a market, and every screen follows without leaving the page', async () => {
     mockFetch(api());
     const { router } = renderApp('/cart');
-    await screen.findByText('Calgary');
+    await screen.findByText('Choose your location');
     const dialog = await openDialog();
     await user().click(within(dialog).getByRole('button', { name: /Edmonton/ }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -259,7 +256,7 @@ describe('the location dialog', () => {
   it('closes with Escape, back to the control', async () => {
     mockFetch(api());
     renderApp('/');
-    await screen.findByText('Calgary');
+    await screen.findByText('Choose your location');
     await openDialog();
     await user().keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

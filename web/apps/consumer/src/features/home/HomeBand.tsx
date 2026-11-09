@@ -33,7 +33,7 @@ export function HomeBand({ place, landing, services, kitchens }: { place: string
     { key: 'refund', icon: <ArrowsClockwise size={18} />, label: t('trustRefund') },
   ];
   if (landing?.served && landing.shopCount > 0) {
-    trust.push({ key: 'shops', icon: <Storefront size={18} />, label: t('trustShops', { count: landing.shopCount, area: landing.market }), wide: true });
+    trust.push({ key: 'shops', icon: <Storefront size={18} />, label: landing.market ? t('trustShops', { count: landing.shopCount, area: landing.market }) : t('trustShopsAnywhere', { count: landing.shopCount }), wide: true });
   }
 
   const r = landing?.served ? landing.run : null;

@@ -15,7 +15,7 @@ export const Route = createFileRoute('/shop/')({
   head: ({ match, loaderData }) => {
     const tags = seo(match.context, {
       title: pageTitle(match.context.locale, 'shop'), path: '/shop', query: { market: match.search.market },
-      description: shopText(match.context.locale)('metaDescription', { city: loaderData?.market ?? '' }),
+      description: loaderData?.market ? shopText(match.context.locale)('metaDescription', { city: loaderData.market }) : shopText(match.context.locale)('metaDescriptionAnywhere'),
     });
     return { ...tags, links: [...tags.links, { rel: 'stylesheet', href: shopCss }] };
   },

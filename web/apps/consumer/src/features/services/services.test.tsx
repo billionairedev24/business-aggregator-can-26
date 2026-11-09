@@ -202,13 +202,14 @@ describe('provider list (design 06 providers; redesign service cards, AT Shop:89
     expect(applyFilters([card({ nextAvailable: null })], new Set(['today']))).toHaveLength(0);
   });
 
-  it('with only the api’s fallback market, asks by its city (never its centre) and says so', async () => {
+  it('with no place known (S-190: no fallback market is guessed), leaves the place to the api and shows what it answers', async () => {
     const calls = mockFetch(api({ '/api/v1/public/services/mobile-mechanic/providers': { ...list, area: null, city: 'Red Deer' } }));
     renderApp('/services/mobile-mechanic/providers', { routes, geolocation: denied });
     expect(await screen.findByRole('heading', { level: 1, name: 'Mobile mechanics · 2 come to Red Deer' })).toBeInTheDocument();
     const url = calls.find(c => c.url.startsWith('/api/v1/public/services/mobile-mechanic/providers'))!.url;
-    expect(url).toBe('/api/v1/public/services/mobile-mechanic/providers?lang=en&city=Red+Deer');
-    expect(placeOf({ status: 'fallback', city: 'Red Deer', lat: 52.27, lng: -113.81, source: 'default' })).toEqual({ city: 'Red Deer' });
+    expect(url).toBe('/api/v1/public/services/mobile-mechanic/providers?lang=en');
+    // a city the CDN named is asked by its city, never a centre
+    expect(placeOf({ status: 'detected', city: 'Red Deer', lat: 52.27, lng: -113.81, source: 'ip' })).toEqual({ city: 'Red Deer' });
   });
 
   it('outside every market and without a fallback market, leaves the place to the api', async () => {

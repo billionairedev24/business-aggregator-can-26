@@ -15,8 +15,9 @@ import { storeHref } from './store';
 
 /**
  * Shop landing (S-49, design 06 `shop`): a landing page, not results — the next pooled run, departments, the shops on
- * the run and what's popular. Server-rendered for the market in the URL (none = the api's fallback market); the visitor's own market
- * follows once the browser knows where they are.
+ * the run and what's popular. Server-rendered for the market in the URL (S-190: none = every market, "Popular on
+ * {brand}", never a wait for a location); the visitor's own market follows once the browser knows where they are. With
+ * a market, what nearby cities sell is listed apart, labelled not deliverable (also when the city isn't served).
  */
 export function ShopLanding({ market: explicit }: { market?: string }) {
   const { locale } = useLocale();
@@ -41,16 +42,16 @@ export function ShopLanding({ market: explicit }: { market?: string }) {
         <div className="nl-band-copy">
           <div className="nl-band-kicker">{t('kicker')}</div>
           <h1 className="nl-band-title">{title}</h1>
-          <div className="nl-band-lede">{data.served ? `${sub} · ${area}` : area}</div>
+          <div className="nl-band-lede">{!area ? `${sub} · ${t('ledeAnywhere')}` : data.served ? `${sub} · ${area}` : area}</div>
           {data.served && run ? <div className="nl-band-actions"><Tag tone="success">{t('pooledTag', { area })}</Tag></div> : null}
         </div>
         <span className="nl-band-pic" aria-hidden><Scene slot="banner/shop" subject="groceries" tone="ember" fit="contain" sizes="(min-width: 960px) 45vw, 100vw" priority /></span>
       </header>
 
       {!data.served ? (
-        <div className="nl-section"><EmptyState action={<PlaceButton>{t('changeLocation')}</PlaceButton>}>{t('notServed', { city: data.market })}</EmptyState></div>
+        <div className="nl-section"><EmptyState action={<PlaceButton>{t(data.market ? 'changeLocation' : 'chooseLocation')}</PlaceButton>}>{data.market ? t('notServed', { city: data.market }) : t('emptyAnywhere')}</EmptyState></div>
       ) : data.shopCount === 0 ? (
-        <div className="nl-section"><EmptyState action={<PlaceButton>{t('changeLocation')}</PlaceButton>}>{t('emptyShop', { city: data.market })}</EmptyState></div>
+        <div className="nl-section"><EmptyState action={<PlaceButton>{t(data.market ? 'changeLocation' : 'chooseLocation')}</PlaceButton>}>{data.market ? t('emptyShop', { city: data.market }) : t('emptyAnywhere')}</EmptyState></div>
       ) : (
         <>
           <section className="nl-section" aria-labelledby="shop-depts">
@@ -70,13 +71,20 @@ export function ShopLanding({ market: explicit }: { market?: string }) {
             </TileGrid>
           </section>
 
-          <RailSection id="shop-popular" title={t('popular')} more={{ href: '/search?scope=shop', label: t('searchAll') }}>
+          <RailSection id="shop-popular" title={data.market ? t('popular') : t('popularAnywhere')} more={{ href: '/search?scope=shop', label: t('searchAll') }}>
             <RailTrack size="product">
               {data.popular.map(p => <li key={p.productId}><ProductCardTile product={p} withMarket={link} next={run} /></li>)}
             </RailTrack>
           </RailSection>
         </>
       )}
+      {data.nearby.length > 0 ? (
+        <RailSection id="shop-nearby" title={t('nearbyTitle')} lede={t('nearbyNote')}>
+          <RailTrack size="product">
+            {data.nearby.map(p => <li key={p.productId}><ProductCardTile product={p} withMarket={link} /></li>)}
+          </RailTrack>
+        </RailSection>
+      ) : null}
     </div>
   );
 }

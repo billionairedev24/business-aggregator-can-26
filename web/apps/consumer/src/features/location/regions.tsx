@@ -128,9 +128,9 @@ export function VisitorPlace({ children }: { children: ReactNode }) {
   const regions = useRegions();
   const { location } = useDeliveryLocation();
   const t = useLawT();
-  // the visitor's own place: one they saved or we detected — not the api's fallback market (the default province's)
-  const own = location.status !== 'locating' && location.status !== 'fallback' ? location.province : undefined;
-  const code = own ?? (location.status === 'fallback' ? location.province : undefined) ?? regions?.defaultProvince;
+  // the visitor's own place: one they saved or we detected (S-190: never a guessed fallback market)
+  const own = location.status !== 'locating' ? location.province : undefined;
+  const code = own ?? regions?.defaultProvince;
   const p = code ? regions?.provinces.find(r => r.code === code) : undefined;
   const known = !!own && p?.code === own;
   const values = useMemo(() => {

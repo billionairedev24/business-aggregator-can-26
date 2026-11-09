@@ -5,18 +5,19 @@ import { SiteLink } from './SiteLink';
 /**
  * Where the consumer header thinks the person is, and how it knows (consumer location, 2026-10-19):
  * saved (chosen in the location dialog) · address (the signed-in person's default address) · detected (the device,
- * when they asked for it, or the CDN's city) · fallback (the configured fallback market) · locating (before the browser
- * has read its sources) · denied (nothing known: asks to set a place).
+ * when they asked for it, or the CDN's city) · fallback (kept for callers; S-190 stopped guessing a fallback market) ·
+ * locating (before the browser has read its sources: a stable placeholder, the same on the server) · denied (nothing
+ * known: a quiet "Choose your location" — S-190, a location is never required, so nothing waits for it).
  */
 export type LocationStatus = 'locating' | 'detected' | 'address' | 'fallback' | 'saved' | 'denied';
 
 const useT = defineMessages({
   en: {
-    deliverTo: 'Deliver to', near: 'Near', deliverToName: 'Deliver to {name}', nearName: 'Near {name}', locating: 'Finding your area…', setLocation: 'Set your location',
+    deliverTo: 'Deliver to', near: 'Near', deliverToName: 'Deliver to {name}', nearName: 'Near {name}', locating: 'Finding your area…', setLocation: 'Choose your location',
     change: '{kicker} {place}. Change location',
   },
   fr: {
-    deliverTo: 'Livrer à', near: 'Près de', deliverToName: 'Livrer à {name}', nearName: 'Près de {name}', locating: 'Recherche de votre secteur…', setLocation: 'Indiquez votre adresse',
+    deliverTo: 'Livrer à', near: 'Près de', deliverToName: 'Livrer à {name}', nearName: 'Près de {name}', locating: 'Recherche de votre secteur…', setLocation: 'Choisissez votre adresse',
     change: '{kicker} {place}. Changer d’adresse',
   },
 });
