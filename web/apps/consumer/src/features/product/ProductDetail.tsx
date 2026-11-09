@@ -109,7 +109,21 @@ function OfferView({ data, offer, link, market }: { data: ProductPage; offer: Of
   ];
 
   return (
+    <>
     <div className="product-grid">
+      {/* S-191 (Amazon's product page on a phone): the store, title and rating come before the photo there */}
+      <div className="product-head">
+        <SiteLink href={store} className="product-store"><Storefront size={16} aria-hidden />{t('visitStore', { shop: offer.shopName })}</SiteLink>
+        <h1 className="product-title">{data.name}</h1>
+        {offer.ratingCount > 0 ? <Stars rating={offer.rating} reviewCount={offer.ratingCount} showValue /> : null}
+        {(run && when) || plus ? (
+          <div className="product-badges">
+            {run && when ? <span className="tag tag-neutral product-run">{t(`tag_${when}`, { weekday: weekday(run.startsAt, locale, zone) })}</span> : null}
+            {plus ? <span className="tag tag-accent product-plus">{plus}</span> : null}
+          </div>
+        ) : null}
+      </div>
+
       <div className="product-thumbs" role="group" aria-label={t('gallery')}>
         {images.length > 1
           ? images.slice(0, 6).map((src, i) => (
@@ -124,15 +138,6 @@ function OfferView({ data, offer, link, market }: { data: ProductPage; offer: Of
       </div>
 
       <div className="product-info">
-        <SiteLink href={store} className="product-store"><Storefront size={16} aria-hidden />{t('visitStore', { shop: offer.shopName })}</SiteLink>
-        <h1 className="product-title">{data.name}</h1>
-        {offer.ratingCount > 0 ? <Stars rating={offer.rating} reviewCount={offer.ratingCount} showValue /> : null}
-        {(run && when) || plus ? (
-          <div className="product-badges">
-            {run && when ? <span className="tag tag-neutral product-run">{t(`tag_${when}`, { weekday: weekday(run.startsAt, locale, zone) })}</span> : null}
-            {plus ? <span className="tag tag-accent product-plus">{plus}</span> : null}
-          </div>
-        ) : null}
         <hr className="product-rule" />
         <div className="product-price">
           <Price cents={price} compareAtCents={offer.compareAtCents} unit={unit} size="xl" />
@@ -146,18 +151,6 @@ function OfferView({ data, offer, link, market }: { data: ProductPage; offer: Of
               options={offer.variants.map(v => ({ value: v.variantId, label: v.stock > 0 ? t('variantOption', { value: v.value, price: money(v.priceCents) }) : t('variantSoldOut', { value: v.value }) }))} />
           </div>
         ) : null}
-
-        {data.description || data.bullets.length > 0 ? (
-          <section aria-labelledby="product-about" className="product-about">
-            <h2 id="product-about" className="product-h2">{t('about')}</h2>
-            {data.description ? <p className="product-desc">{data.description}</p> : null}
-            {data.bullets.length > 0 ? <ul className="product-bullets">{data.bullets.map(b => <li key={b}>{b}</li>)}</ul> : null}
-          </section>
-        ) : null}
-        <table className="product-specs">
-          <caption className="nl-sr-only">{t('specs')}</caption>
-          <tbody>{specs.map(([k, v]) => <tr key={k}><th scope="row">{k}</th><td>{v}</td></tr>)}</tbody>
-        </table>
       </div>
 
       <aside className="product-buy" aria-label={t('buyBox')}>
@@ -223,6 +216,23 @@ function OfferView({ data, offer, link, market }: { data: ProductPage; offer: Of
         ) : null}
       </aside>
 
+      <div className="product-details">
+        {data.description || data.bullets.length > 0 ? (
+          <section aria-labelledby="product-about" className="product-about">
+            <h2 id="product-about" className="product-h2">{t('about')}</h2>
+            {data.description ? <p className="product-desc">{data.description}</p> : null}
+            {data.bullets.length > 0 ? <ul className="product-bullets">{data.bullets.map(b => <li key={b}>{b}</li>)}</ul> : null}
+          </section>
+        ) : null}
+        <table className="product-specs">
+          <caption className="nl-sr-only">{t('specs')}</caption>
+          <tbody>{specs.map(([k, v]) => <tr key={k}><th scope="row">{k}</th><td>{v}</td></tr>)}</tbody>
+        </table>
+      </div>
+    </div>
+
+    {/* the wide rows and the phone bar sit outside the grid, so the sticky photo and buy box stop at the grid's end (S-191) */}
+
       {offer.more.length > 0 ? (
         <div className="product-wide">
           <RailSection id="product-more" title={t('alsoFrom', { shop: offer.shopName })} more={{ href: store, label: t('seeStore') }}>
@@ -254,7 +264,7 @@ function OfferView({ data, offer, link, market }: { data: ProductPage; offer: Of
         <span className="nl-stickybar-sum"><strong>{money(price)}</strong>{run ? <span>{windowText(run)}</span> : null}</span>
         <button type="button" className="btn btn-primary btn-lg" disabled={disabled} onClick={onAdd}>{t('addToCart')}</button>
       </div>
-    </div>
+    </>
   );
 }
 

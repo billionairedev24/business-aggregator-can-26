@@ -266,29 +266,50 @@ describe('screens and states', () => {
     expect(screen.getByText('This screen is being built (S-57).')).toBeInTheDocument();
   });
 
-  it('has a skip link and the footer with the legal documents', async () => {
+  it('has a skip link and the rich footer (S-191): back to top, four columns, language and region, the legal strip', async () => {
     mockFetch(guest);
     renderApp('/');
     expect(await screen.findByRole('link', { name: 'Skip to content' })).toHaveAttribute('href', '#main');
     const footer = screen.getByRole('contentinfo');
-    expect(within(footer).getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/legal/privacy.html');
-    expect(within(footer).getByRole('link', { name: 'Terms' })).toHaveAttribute('href', '/legal/terms.html');
-    expect(within(footer).getByRole('link', { name: 'Terms' })).toHaveAttribute('hreflang', 'en-CA');
+    expect(within(footer).getByRole('button', { name: 'Back to top' })).toBeInTheDocument();
+    for (const name of ['Get to know us', 'Make money with us', 'Payments and policies', 'Let us help you']) {
+      expect(within(footer).getByRole('navigation', { name })).toBeInTheDocument();
+    }
+    expect(within(footer).getByRole('link', { name: 'Privacy notice' })).toHaveAttribute('href', '/legal/privacy.html');
+    expect(within(footer).getByRole('link', { name: 'Conditions of use' })).toHaveAttribute('href', '/legal/terms.html');
+    expect(within(footer).getByRole('link', { name: 'Conditions of use' })).toHaveAttribute('hreflang', 'en-CA');
+    expect(within(footer).getByRole('link', { name: 'Cookies and ads notice' })).toHaveAttribute('href', '/legal/privacy.html#cookies');
     expect(within(footer).getByRole('link', { name: 'Help' })).toHaveAttribute('href', '/help'); // S-145: for guests too
     expect(within(footer).getByRole('link', { name: 'Offer a service' })).toHaveAttribute('href', '/sell?type=provider');
     expect(within(footer).getByRole('link', { name: `Sell on ${brand.name}` })).toHaveAttribute('href', '/sell?type=seller');
+    expect(within(footer).getByRole('link', { name: 'Run a kitchen' })).toHaveAttribute('href', '/sell?type=kitchen');
     expect(within(footer).getByRole('link', { name: 'Returns & refunds' })).toHaveAttribute('href', '/account/orders');
+    expect(within(footer).getByRole('link', { name: 'Your orders' })).toHaveAttribute('href', '/account/orders');
+    expect(within(footer).getByRole('link', { name: 'Your account' })).toHaveAttribute('href', '/account');
     expect(within(footer).getByRole('link', { name: 'Photo credits' })).toHaveAttribute('href', '/credits');
-    expect(within(footer).getByText(`© ${brand.legalName}`)).toBeInTheDocument();
+    expect(within(footer).getByText(new RegExp(`^© \\d{4} ${brand.legalName}$`))).toBeInTheDocument();
+    expect(within(footer).getByText('Canada · CAD $')).toBeInTheDocument();
+  });
+
+  it('points every footer link at a route of the app or a legal document', async () => {
+    mockFetch(guest);
+    renderApp('/');
+    const footer = await screen.findByRole('contentinfo');
+    const known = /^\/(|help|shop|services|food|search|sell|account|account\/orders|location|credits|legal\/(terms|privacy)\.html)$/;
+    for (const a of within(footer).getAllByRole('link')) {
+      expect(new URL(a.getAttribute('href')!, 'https://x').pathname).toMatch(known);
+    }
   });
 
   it('has the footer in French', async () => {
     mockFetch(guest);
     renderApp('/', { locale: 'fr' });
     const footer = await screen.findByRole('contentinfo');
-    for (const name of ['Confidentialité', 'Conditions', 'Aide', `Vendre sur ${brand.name}`, 'Offrir un service']) {
+    for (const name of ['Avis de confidentialité', 'Conditions d’utilisation', 'Aide', `Vendre sur ${brand.name}`, 'Offrir un service', 'Vos commandes']) {
       expect(within(footer).getByRole('link', { name })).toBeInTheDocument();
     }
+    expect(within(footer).getByRole('button', { name: 'Retour en haut' })).toBeInTheDocument();
+    expect(within(footer).getByRole('navigation', { name: 'Gagnez de l’argent avec nous' })).toBeInTheDocument();
     expect(within(footer).getByRole('button', { name: 'English' })).toHaveAttribute('lang', 'en-CA');
   });
 });

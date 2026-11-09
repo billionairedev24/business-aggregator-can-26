@@ -74,6 +74,14 @@ export function SearchResults({ params }: { params: SearchParams }) {
     <div className="nl-page nl-results-page">
       <div className="nl-results-bar">
         <h1 className="nl-results-h1">{first ? <Heading t={t} params={params} total={total} page={page} count={items.length} /> : <Skeleton width={320} height={18} />}</h1>
+      </div>
+      {/* S-191: Filters and Sort in one bar — beside the summary on wide screens, stuck under the search on phones */}
+      <div className="nl-results-tools">
+        <button type="button" className="btn btn-secondary btn-sm nl-results-filters-toggle" aria-haspopup="dialog" onClick={() => setSheet(true)}>
+          <Faders size={16} aria-hidden />{t('filtersButton')}
+          {applied ? <span className="nl-results-count" aria-hidden>{applied}</span> : null}
+          {applied ? <span className="nl-sr-only">{t('filtersCount', { count: applied })}</span> : null}
+        </button>
         <SortControl t={t} value={params.sort ?? 'relevance'} located={located} onChange={sort => go({ ...params, sort: sort === 'relevance' ? undefined : sort })} />
       </div>
 
@@ -82,11 +90,6 @@ export function SearchResults({ params }: { params: SearchParams }) {
 
         <div className="nl-results-main" aria-busy={results.isFetching}>
           <div className="nl-results-chips" role="group" aria-label={t('filtersApplied')}>
-            <button type="button" className="btn btn-secondary btn-sm nl-results-filters-toggle" aria-haspopup="dialog" onClick={() => setSheet(true)}>
-              <Faders size={16} aria-hidden />{t('filtersButton')}
-              {applied ? <span className="nl-results-count" aria-hidden>{applied}</span> : null}
-              {applied ? <span className="nl-sr-only">{t('filtersCount', { count: applied })}</span> : null}
-            </button>
             <AppliedChips t={t} params={params} facets={facets} go={go} />
             {applied ? <button type="button" className="btn btn-tertiary btn-sm nl-results-clear" onClick={clear}>{t('clearAll')}</button> : null}
           </div>

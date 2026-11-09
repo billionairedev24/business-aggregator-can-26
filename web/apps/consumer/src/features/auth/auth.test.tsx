@@ -71,7 +71,7 @@ describe('sign in (design 06 auth)', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Sign in to pick up where you left off.' })).toBeInTheDocument();
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Welcome back')).toBeInTheDocument();
-    expect(screen.getAllByRole('listitem').map(li => li.textContent)).toEqual([
+    expect(within(screen.getByRole('main')).getAllByRole('listitem').map(li => li.textContent)).toEqual([
       '1Passkeys welcomeFace ID, Touch ID or Windows Hello. Phishing-resistant by design.',
       '2Two factors for paymentsEscrow and saved cards sit behind a second factor.',
       '3Your data stays in CanadaStored on servers in Canada under PIPEDA and provincial privacy law.',

@@ -12125,3 +12125,67 @@ states in ink #121418 and the status colours are as S-188 left them.
 - **Not done / not verified:** no device or simulator (react-native-web only). The consumer web's two booking tests that assume Halifax
   is UTC−3 fail since daylight time ended on 1 Nov (real clock; not this story). `docs/design/revamp-walkthrough.md`
   (the S-180 walkthrough, a record) still says violet.
+
+## 2026-11-09 — S-191 Amazon-grade consumer shell
+
+Owner feedback on the deployed consumer site: "this website does not match amazon in any way", "the footer is so dry",
+"the current website is also bizarre on mobile". The audit is `docs/design/amazon-parity.md` (21 gaps, ranked, with
+what is fixed and what is open). amazon.ca is blocked by the proxy (403), so the audit works from Amazon's well-known
+desktop and mobile web patterns; it says so. Patterns only, no Amazon trade dress, tokens only (S-189 is moving the
+palette to Northern Pine; nothing here names a colour).
+
+- **Footer.** Replaces S-170's one-line band (audit #9 then; the owner now finds it "so dry"): a "Back to top" bar
+  (scrolls to the top, focus to `#main`, no smooth scroll under reduced motion), four columns — Get to know us · Make
+  money with us · Payments and policies · Let us help you — a row with the logo, the FR/EN switch and "Canada · CAD $",
+  and the legal strip: Conditions of use, Privacy notice, Cookies and ads notice (→ privacy § 9 "Cookies and analytics";
+  we run no interest-based ads, so the notice is the cookies section) and "© {year} {company}". **The year is back**:
+  S-170 dropped it because a clock read at render could differ; it now reads the render clock (`useRenderNow`, S-182),
+  the same on the server and the browser's first render. Every link is a real route or a help-centre section
+  (`/help#help-pay`, `#help-a11y`); a test fails on any other target. "Run a kitchen" is now in the footer (S-170 left it
+  out pending the owner: Amazon's "Make money with us" lists every way in). Footer link names differ from the hero
+  tiles' ("Find a pro", not "Book a pro") so a page never has two links of one name going to different places. Every
+  footer link is a 44 px row as wide as its column (ui-a11y's 44 px report is clean for the footer); two columns on phones.
+- **Phone header.** Rows as before (menu · logo · account · cart / search / place / strip), but: the place is a slim
+  full-width bar on the strip's colour, the strip's items are square chips (32 px drawn in the 44 px target) without
+  the group hairlines, and **scrolling down keeps only the search**: `useStickyOffset` now also measures what sits under
+  the `tuckTo` element and publishes `--nl-header-clip`; the tucked header clips it away (`clip-path`, which also stops
+  clicks there), and `--nl-header-h` is then the search alone, so sticky bars sit right under it. Focus into the header
+  or scrolling up shows it all. Desktop never tucks (the 16 % rule), unchanged. Only a header that starts the page
+  tucks (its container's top at the page's top): the gallery shows the header further down, where a tuck used to be
+  invisible but a clip hid the place and the strip. The location slot's words and behaviour
+  are S-190's; this story only gave the bar its look.
+- **16 px phone gutters** in the consumer shell (`.nl-app` under 600 px; safe areas kept). The scale's fluid gutter
+  (12 px at 390) stays for the Studio and console.
+- **Home.** Phones: a compact band — the 24 px display headline on two lines, one trust point, the run card in an 88 px
+  box, the three department tiles side by side at 88 px with their name only (11 px under 400 px so "Commander" never
+  breaks). **Order changed on every width**: band → the four cards (the deal of the day first) → "Order again" and
+  "Popular near …" → maker of the week → pros → kitchens. The hybrid mockup has the maker right after the band; the owner's
+  "does not match Amazon" and "bizarre on mobile" outrank it here (Amazon: card grid, then rails). A product now shows at
+  about 540 px on a 390 × 844 phone (was about 2,350 px).
+- **Results (phones).** The Filters button moved out of the chips row into one bar with Sort (`.nl-results-tools`),
+  sticky under the header; on wide screens the same element sits at the summary bar's right end (absolute; the summary
+  reserves its width) and the Filters button stays hidden. The chips row only shows with applied filters.
+- **Product page.** The details column is three blocks — head (store, title, rating, run tag), info (price, options),
+  details (about, facts) — in the same column on wide screens; on phones head → photo → thumbnails → info → **buy box**
+  → details. DOM order follows the phone's reading order. The buy box hides its own price on phones (it is just above).
+- **Cart (phones under 480 px).** The line's body joins the line grid (`display: contents`): photo beside name, meta,
+  stock and price; stepper, Delete and Save for later in one row under both; the "|" separators hidden there.
+- **Checks.** Before/after shots in `$SCRATCH/s191-shots/` (1440, 390, 360; en + fr; scrolled phone states in
+  `after/scrolled/`); no sideways scroll at 360, nothing cut off. `make ui-shots` fails on `/sign-in`, `/register` and
+  `/forgot-password` with React error 418 — **the same on a build of develop** (checked), not from this story: a
+  follow-up for the lead (the `ui-hydration` result below says the same).
+- **Focus under the bottom bars (WCAG 2.4.11).** After the 16 px gutters, `ui-a11y` found focused controls on the
+  checkout and the quote wizard sitting under their sticky bottom bars (nothing gave the browser a bottom
+  scroll-padding). Under 1000 px, a page with `.nl-stickybar`, `.co-bar`, `.nl-qt-actions` or `.nl-bk-actions` now
+  sets `scroll-padding-bottom` (the bar's height plus room). On the desktop product page the rails and reviews moved
+  out of `.product-grid`: a sticky item's limit is its grid container, so the sticky buy box could slide over "Visit
+  the store" in the rail below (`ui-a11y` 1440).
+- **Visual gate.** After merging S-189 (Northern Pine), develop's baselines pass in this container. Only `site` and
+  `hero` changed at 390, and every 390 section under them moved by a fraction of a pixel. Those 33 phone baselines were
+  re-shot on the Northern Pine tokens and reviewed by eye (the header's slim place bar and chips, the compact hero). The
+  desktop baselines are unchanged, and `pnpm test:visual` passes 16/16. The run card is 88 px and the trust line has a
+  whole-pixel line height, so the band's height is whole pixels.
+- **Not done here (backlog S-191a–l):** recently viewed card, a real deals feed, a phone results list layout, a swipe
+  carousel, the "Returns & orders" shortcut (owner decision), best-seller badges, interleaved results rails, product
+  reviews / Q&A / bought together (api), a region picker, denser checkout review lines, account rows at the top of the
+  phone menu, the 0.37 phone header layout shift.

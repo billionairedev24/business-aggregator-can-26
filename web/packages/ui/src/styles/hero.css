@@ -73,18 +73,26 @@
   .nl-hhero-top { grid-template-columns: minmax(0, 1fr) 300px; gap: var(--space-6); }
   .nl-hhero-title { font-size: var(--text-5xl); }
 }
-/* phones: the headline over the trust points (in a column, the third dropped), the run card, then the tiles one under the other */
+/* phones (S-191, the owner: "bizarre on mobile"; Amazon puts products on the first screen): a compact band — the headline
+   on two lines, one trust point, the run card in three short lines (88 px, whole pixels so nothing below lands between pixels), then the three department tiles side by side as
+   short photo tiles with their name only (the kicker, meta and arrow return from 768 px) */
 @media (max-width: 767.98px) {
-  .nl-hhero { --nl-hhero-tile: 136px; --nl-hhero-edge: 70px; padding-top: var(--space-5); }
-  .nl-hhero-top { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
-  .nl-hhero-title { font-size: var(--type-display-hero-sm); line-height: round(0.98em, 1px); min-height: calc(3 * round(0.98em, 1px)); }
-  .nl-hhero-trust { flex-direction: column; gap: var(--space-1-5) var(--space-3-5); margin-top: var(--space-3-5); font-size: var(--type-label); }
-  .nl-hhero-wide { display: none !important; }
-  .nl-hhero-run { min-height: 112px; padding: var(--space-3) var(--space-3-5); margin: 0; }
-  .nl-hhero-run-t { font-size: var(--type-run-time-sm); }
-  .nl-hhero-depts { grid-template-columns: minmax(0, 1fr); gap: var(--space-2-5); margin-top: var(--space-4); }
-  .nl-hhero-dept-c { left: var(--space-4); bottom: var(--space-3-5); right: 64px; }
-  .nl-hhero-dept-t { font-size: var(--type-display-tile-sm); }
-  .nl-hhero-dept-m { font-size: var(--type-label); }
-  .nl-hhero-dept-go { right: var(--space-3-5); bottom: var(--space-3-5); width: 38px; height: 38px; }
+  .nl-hhero { --nl-hhero-tile: 88px; --nl-hhero-edge: 44px; padding-top: var(--space-4); }
+  .nl-hhero-top { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
+  .nl-hhero-title { font-size: var(--type-display-tile-sm); line-height: round(1.04em, 1px); min-height: calc(2 * round(1.04em, 1px)); letter-spacing: -0.03em; }
+  .nl-hhero-trust { margin-top: var(--space-2); font-size: var(--type-meta); line-height: round(1.34em, 1px); }
+  .nl-hhero-trust > li + li, .nl-hhero-wide { display: none !important; }
+  .nl-hhero-run { min-height: calc(22 * var(--space-1)); padding: var(--space-2-5) var(--space-3); margin: 0; gap: 2px var(--space-3); }
+  .nl-hhero-run-t { font-size: var(--type-sub); }
+  .nl-hhero-run-s { font-size: var(--type-meta); }
+  .nl-hhero-depts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-3); }
+  .nl-hhero-dept-c { left: var(--space-2); right: var(--space-2); bottom: var(--space-2); }
+  .nl-hhero-dept-k, .nl-hhero-dept-m, .nl-hhero-dept-go { display: none; }
+  .nl-hhero-dept-t { font-size: var(--type-card-title); letter-spacing: -0.02em; overflow-wrap: normal; hyphens: auto; }
+  .nl-hhero-dept::after { background: linear-gradient(180deg, transparent 20%, color-mix(in srgb, var(--color-hero-scrim) 80%, transparent) 100%); }
+}
+/* the narrowest phones: the tile names a size down so one word ("Commander") never breaks inside */
+@media (max-width: 399.98px) {
+  .nl-hhero-dept-c { left: var(--space-1-5); right: var(--space-1-5); }
+  .nl-hhero-dept-t { font-size: var(--type-caps); letter-spacing: -0.01em; }
 }
