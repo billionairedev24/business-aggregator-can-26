@@ -45,7 +45,7 @@ export const useHomeT = defineMessages({
     seeMoreOf: '{label}: {title}',
     eta: '{from}–{to} min', open: 'Open now', closed: 'Closed now',
     loading: 'Loading what’s near you…', loadError: 'We couldn’t load what’s near you.',
-    emptyCity: 'Nothing near {city} yet.', emptyAnywhere: 'Nothing on {brand} yet.', emptyHint: 'Shops and providers are joining every week. Try another location.',
+    emptyCity: 'Nothing near {city} yet.', emptyAnywhere: 'We’re not live near you yet.', emptyHint: 'Shops and providers are joining every week. Try another location.',
     changeLocation: 'Choose another location',
   },
   fr: {
@@ -85,7 +85,7 @@ export const useHomeT = defineMessages({
     seeMoreOf: '{label} : {title}',
     eta: '{from} à {to} min', open: 'Ouvert', closed: 'Fermé',
     loading: 'Chargement de ce qui est près de chez vous…', loadError: 'Impossible de charger ce qui est près de chez vous.',
-    emptyCity: 'Rien près de {city} pour l’instant.', emptyAnywhere: 'Rien sur {brand} pour l’instant.', emptyHint: 'De nouveaux commerces et prestataires s’inscrivent chaque semaine. Essayez un autre lieu.',
+    emptyCity: 'Rien près de {city} pour l’instant.', emptyAnywhere: 'Nous ne sommes pas encore offerts près de chez vous.', emptyHint: 'De nouveaux commerces et prestataires s’inscrivent chaque semaine. Essayez un autre lieu.',
     changeLocation: 'Choisir un autre lieu',
   },
 });

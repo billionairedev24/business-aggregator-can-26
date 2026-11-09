@@ -10,7 +10,7 @@ export const useFoodT = defineMessages({
     // S-190: the visitor's place isn't known — every live market's kitchens, nothing waits for a location
     subAny: '{count, plural, one {# kitchen open} other {# kitchens open}} on {brand} · choose your location to see who delivers to you',
     headingAny: 'Popular kitchens on {brand}',
-    emptyAny: 'No kitchens on {brand} yet.', chooseLocation: 'Choose your location', cooksIn: 'In {city}',
+    emptyAny: 'We’re not live near you yet. Local kitchens are joining every week.', chooseLocation: 'Choose your location', cooksIn: 'In {city}',
     modeLabel: 'Delivery or pickup', deliver: 'Deliver', pickup: 'Pickup',
     schedule: 'Schedule for later', now: 'Now',
     scheduleNote: 'Kitchens start cooking so it arrives hot in the window. Pick the window at checkout.',
@@ -77,7 +77,7 @@ export const useFoodT = defineMessages({
     subPickup: '{count, plural, one {# cuisine ouverte} other {# cuisines ouvertes}} · cueillette près de {area} · prêt en {eta}',
     subAny: '{count, plural, one {# cuisine ouverte} other {# cuisines ouvertes}} sur {brand} · choisissez votre adresse pour voir qui vous livre',
     headingAny: 'Cuisines populaires sur {brand}',
-    emptyAny: 'Aucune cuisine sur {brand} pour l’instant.', chooseLocation: 'Choisissez votre adresse', cooksIn: 'À {city}',
+    emptyAny: 'Nous ne sommes pas encore offerts près de chez vous. Des cuisines locales s’inscrivent chaque semaine.', chooseLocation: 'Choisissez votre adresse', cooksIn: 'À {city}',
     modeLabel: 'Livraison ou cueillette', deliver: 'Livraison', pickup: 'Cueillette',
     schedule: 'Planifier pour plus tard', now: 'Maintenant',
     scheduleNote: 'Les cuisines commencent à cuisiner pour que tout arrive chaud dans la plage. Choisissez la plage au paiement.',

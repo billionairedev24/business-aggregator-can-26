@@ -212,6 +212,19 @@ describe('provider list (design 06 providers; redesign service cards, AT Shop:89
     expect(placeOf({ status: 'detected', city: 'Red Deer', lat: 52.27, lng: -113.81, source: 'ip' })).toEqual({ city: 'Red Deer' });
   });
 
+  it('S-190: with no place, every provider by tier — and a friendly state when nothing is live yet', async () => {
+    const first = mockFetch(api({ '/api/v1/public/services/mobile-mechanic/providers': { ...list, area: null, city: null } }));
+    const view = renderApp('/services/mobile-mechanic/providers', { routes, geolocation: denied });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Mobile mechanics on Northline · 2' })).toBeInTheDocument();
+    expect(screen.getByText(/Sorted by tier, rating and reviews/)).toBeInTheDocument();
+    expect(first.find(c => c.url.startsWith('/api/v1/public/services/mobile-mechanic/providers'))!.url).toBe('/api/v1/public/services/mobile-mechanic/providers?lang=en');
+    view.unmount();
+    mockFetch(api({ '/api/v1/public/services/mobile-mechanic/providers': { ...list, area: null, city: null, items: [] } }));
+    renderApp('/services/mobile-mechanic/providers', { routes, geolocation: denied });
+    expect(await screen.findByText('We’re not live near you yet.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Choose your location' })).toBeInTheDocument();
+  });
+
   it('outside every market and without a fallback market, leaves the place to the api', async () => {
     const calls = mockFetch(api({
       '/api/v1/geo/reverse': { label: 'Parkdale, Toronto', city: 'Toronto', province: 'ON', market: null, zone: null },
