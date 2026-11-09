@@ -2,8 +2,9 @@
    panel (photo · story · two side tiles), the four home tiles, then the rails (features/pages). Tokens only; every
    picture box has its size before its photo arrives (no layout shift). */
 .nl-home { min-width: 0; }
-/* the band runs straight on from the department strip; the maker hero follows it */
-.nl-home > .nl-hero { margin-top: var(--space-6); }
+/* the band runs straight on from the department strip; the card grid follows it, the maker hero sits between the rails (S-191) */
+.nl-home > .nl-hero { margin-top: var(--space-8); }
+@media (max-width: 599.98px) { .nl-home > .nl-hero { margin-top: var(--space-6); } }
 
 /* ── maker hero: one white panel with a hairline edge — the photo (1.55:1), the copy (its headline in the display face,
    S-188), two side tiles ── */
@@ -41,6 +42,7 @@
 
 /* ── the four home tiles ── */
 .nl-home-tiles { margin-top: var(--space-4); }
+@media (max-width: 767.98px) { .nl-home-tiles { margin-top: var(--space-3); } }
 .nl-home-deal-link { display: flex; flex-direction: column; gap: var(--space-1); color: var(--color-text); text-decoration: none; min-width: 0; }
 .nl-home-deal-link:hover { color: var(--color-text); text-decoration: none; }
 .nl-home-deal-link:hover .nl-home-deal-name { text-decoration: underline; }

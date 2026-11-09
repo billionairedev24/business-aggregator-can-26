@@ -1200,5 +1200,89 @@ Acceptance criteria:
 - Visual baselines, ui-a11y and ui-hydration green
 
 Refs: docs/design/revamp-epic.md § Brand layer, design/revamp/palettes/, docs/DECISIONS.md (2026-11-09 — S-189)",Highest,3,ui-revamp,design-system,brand,web,Sprint 3,2026-11-09,2026-11-13,Done
+S-191,E-15,Story,Amazon-grade consumer shell: rich footer and a real mobile web layout,,"Owner feedback 2026-11-09 on the deployed consumer site (""does not match amazon in any way"", ""the footer is so dry"", ""bizarre on mobile""). An Amazon parity audit (docs/design/amazon-parity.md, 21 ranked gaps) and fixes for the shell and the worst gaps: a rich footer (Back to top, four link columns, language and region, legal strip; en + fr-CA, every link a real route); the phone header (only the search stays on scroll, a slim Deliver-to bar, department chips); the phone home (compact hero band, card grid then rails, a product on the first screen); sticky Filters/Sort on results; the product page head before the photo and the buy box under the options; one-row cart lines; 16 px phone gutters.
+
+Acceptance criteria:
+- The footer has the four columns, the language and region row and the legal strip at 1440 and 390, en and fr-CA
+- A product shows on the first screen of the home at 390 and 360
+- No sideways scroll at 360; ui-a11y (consumer) and the visual gate green
+
+Refs: docs/design/amazon-parity.md (S-191), docs/DECISIONS.md (2026-11-09 — S-191)",Highest,5,ui-revamp,consumer,amazon-parity,web,Sprint 3,2026-11-09,2026-11-13,Done
+S-191a,E-15,Story,"Home: ""Pick up where you left off"" (recently viewed) card",,"Amazon opens its home with personal cards (recently viewed, keep shopping for). Nothing records what someone viewed. Start browser-only (localStorage of product ids, waits for hydration), later the api.
+
+Acceptance criteria:
+- Signed-in or guest, the last 4 products viewed show as the first home card
+- Nothing on the server render; no hydration error
+
+Refs: docs/design/amazon-parity.md (S-191), docs/DECISIONS.md (2026-11-09 — S-191)",Medium,3,ui-revamp,consumer,amazon-parity,web,Sprint 8,2027-01-11,2027-01-22,To Do
+S-191b,E-15,Story,"A real deals feed for ""Today's deals"" and the home deals card",,"Today's deals opens tonight's pooled-run items and the home ""deal of the day"" is picked from three popular products, because the api has no deals feed (S-170). Add a deals endpoint (offers with compareAtCents, by market) and a deals page.
+
+Acceptance criteria:
+- ""Today's deals"" lists discounted offers with their stickers
+- The home deals card shows up to 4 deals
+
+Refs: docs/design/amazon-parity.md (S-191), docs/DECISIONS.md (2026-11-09 — S-191)",High,5,ui-revamp,consumer,amazon-parity,api,Sprint 8,2027-01-11,2027-01-22,To Do
+S-191c,E-15,Story,"Results on phones: a list layout (image left, details right)",,"Phone results are 2-up cards each with a full-width Add to cart, about 2.5 products a screen. Amazon's phone results are a dense list. Offer the list as the phone default (or a toggle) in ItemCard.
+
+Acceptance criteria:
+- At 390, 4 or more results per screen with image, title, rating, price and delivery promise
+- 44 px targets kept; ui-a11y green
+
+Refs: docs/design/amazon-parity.md (S-191), docs/DECISIONS.md (2026-11-09 — S-191)",High,3,ui-revamp,consumer,amazon-parity,web,Sprint 8,2027-01-11,2027-01-22,To Do
+S-191d,E-15,Story,Product page on phones: swipeable image carousel with dots,,"One photo with a ""1 / 3"" count and a thumbnail row; Amazon swipes. A scroll-snap carousel, keyboard reachable, with dots.
+
+Acceptance criteria:
+- Swipe and arrow keys move between photos; the dots show the current one
+- No layout shift
+
+Refs: docs/design/amazon-parity.md (S-191), docs/DECISIONS.md (2026-11-09 — S-191)",Medium,2,ui-revamp,consumer,amazon-parity,web,Sprint 8,2027-01-11,2027-01-22,To Do
+S-191e,E-15,Story,"Header: ""Returns & orders"" shortcut and an account flyout on hover (owner decision)",,"Amazon shows ""Returns & Orders"" beside the account and opens ""Account & Lists"" on hover. CLAUDE.md keeps orders in the account menu (click). Owner to decide.
+
+Acceptance criteria:
+- Decision recorded; if yes, the shortcut at 1440 and the flyout keyboard-operable
+
+Refs: docs/design/amazon-parity.md (S-191), docs/DECISIONS.md (2026-11-09 — S-191)",Low,2,ui-revamp,consumer,decision,web,Sprint 8,2027-01-11,2027-01-22,To Do
+S-191f,E-15,Story,Rails: best-seller badges and category ranks,,"Amazon rails carry ""Best seller"" / ""#1 in"" badges. Search items carry no sales rank. Needs a rank in the search index.
+
+Acceptance criteria:
+- A product in the top N of its department shows a badge on cards and the product page
+
+Refs: docs/design/amazon-parity.md (S-191), docs/DECISIONS.md (2026-11-09 — S-191)",Low,3,ui-revamp,consumer,amazon-parity,api,Sprint 8,2027-01-11,2027-01-22,To Do
+S-191g,E-15,Story,Results on desktop: interleaved rails and a clearer results heading,,"Amazon interleaves ""Customers also bought"" rails and a ""Results"" heading in the grid. Ours is one grid after a small summary line.
+
+Acceptance criteria:
+- A rail after the first two result rows when related products exist
+
+Refs: docs/design/amazon-parity.md (S-191), docs/DECISIONS.md (2026-11-09 — S-191)",Low,2,ui-revamp,consumer,amazon-parity,web,Sprint 8,2027-01-11,2027-01-22,To Do
+S-191h,E-15,Story,"Product page: frequently bought together, questions, product reviews",,"The product page has the shop's rating only: the api has no product reviews, Q&A or co-purchase data.
+
+Acceptance criteria:
+- Product reviews listed with a summary; ""Frequently bought together"" when the data exists
+
+Refs: docs/design/amazon-parity.md (S-191), docs/DECISIONS.md (2026-11-09 — S-191)",Medium,8,ui-revamp,consumer,amazon-parity,api,Sprint 8,2027-01-11,2027-01-22,To Do
+S-191i,E-15,Story,Footer: a language and region picker,,"The footer row has a two-way FR/EN switch and a static ""Canada · CAD $"". A picker only makes sense with a second region or currency.
+
+Acceptance criteria:
+- When a second region exists, the footer opens a picker with language and region
+
+Refs: docs/design/amazon-parity.md (S-191), docs/DECISIONS.md (2026-11-09 — S-191)",Lowest,2,ui-revamp,consumer,amazon-parity,web,Sprint 8,2027-01-11,2027-01-22,To Do
+S-191j,E-15,Story,Checkout on phones: denser review lines,,"The checkout is already Amazon-like; its review items use a 44 px select for quantity on its own row. Make each review line one row.
+
+Acceptance criteria:
+- Each review line at 390 is no taller than its photo plus one row
+
+Refs: docs/design/amazon-parity.md (S-191), docs/DECISIONS.md (2026-11-09 — S-191)",Lowest,1,ui-revamp,consumer,amazon-parity,web,Sprint 8,2027-01-11,2027-01-22,To Do
+S-191k,E-15,Story,"The phone menu: account, orders and help at the top of the ""All"" sheet",,"Amazon's hamburger opens with the account and orders, then departments, programs and help. Ours lists categories, then help, sell and the language.
+
+Acceptance criteria:
+- Signed in, the sheet starts with Hello {name}, Your orders, Your account; guests see Sign in
+
+Refs: docs/design/amazon-parity.md (S-191), docs/DECISIONS.md (2026-11-09 — S-191)",Medium,2,ui-revamp,consumer,amazon-parity,web,Sprint 8,2027-01-11,2027-01-22,To Do
+S-191l,E-15,Story,Phone header: the 0.37 layout shift after hydration,,"Measured by S-188 on develop and still there: the phone header's first row settles after hydration (CLS about 0.37 at 390).
+
+Acceptance criteria:
+- CLS below 0.1 at 390 on the home, en and fr
+
+Refs: docs/design/amazon-parity.md (S-191), docs/DECISIONS.md (2026-11-09 — S-191)",High,2,ui-revamp,consumer,performance,web,Sprint 8,2027-01-11,2027-01-22,To Do
 S-190,E-15,Story,"Location is never required: show everything, rank by nearness when known",,"Owner 2026-11-09: no page may require a location. Public home, Shop (landing, department, product) and kitchens answer without a city: every live market of the region model, ranked by popularity, rating and recency; a market or lat/lng ranks markets by distance and lists other markets' products apart, labelled not deliverable (nearby / elsewhere, shipsFrom, deliverable). Malformed city or point stays 422 (validation-rules.md § Location). Consumer web: saved choice → default address → CDN city → nothing; no dialog or geolocation on load; 'Choose your location'; 'Popular on {brand}' / 'near {city}'. Consumer app: no forced location step; fixtures answer like the api.
 Refs: docs/DECISIONS.md 2026-11-09 S-190",Highest,5,location,discovery,ux,api,Sprint 3,2026-11-09,2026-11-13,Done

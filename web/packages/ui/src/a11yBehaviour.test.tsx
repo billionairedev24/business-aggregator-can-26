@@ -212,9 +212,11 @@ describe('language', () => {
     expect(document.documentElement.style.getPropertyValue('--nl-header-h')).toBe('');
   });
 
-  it('tucks its first row away while scrolling down on a short screen, and back on the way up or on focus', async () => {
+  it('tucks all but the search away while scrolling down on a short screen, and back on the way up or on focus', async () => {
     // a phone: 150px of header on an 800px window, the search's row 60px below the header's top
     const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      // the header's container scrolls with the page (the header starts it); the header itself is stuck at the top
+      if (!this.classList.contains('nl-site-search') && !this.classList.contains('nl-site-header')) return { top: -window.scrollY, height: 2000 } as DOMRect;
       return (this.classList.contains('nl-site-search') ? { top: 60, height: 46 } : { top: 0, height: 150 }) as DOMRect;
     });
     const scrollTo = (y: number) => { Object.defineProperty(window, 'scrollY', { value: y, configurable: true }); window.dispatchEvent(new Event('scroll')); };
@@ -224,7 +226,8 @@ describe('language', () => {
     expect(header.style.getPropertyValue('--nl-header-tuck')).toBe('56px');
     scrollTo(400);
     await waitFor(() => expect(header).toHaveAttribute('data-tucked'));
-    expect(root.getPropertyValue('--nl-header-h')).toBe('94px'); // what is still on screen: the search and the nav row
+    expect(root.getPropertyValue('--nl-header-h')).toBe('54px'); // what is still on screen: the search (S-191: the rows under it are clipped)
+    expect(header.style.getPropertyValue('--nl-header-clip')).toBe('40px');
     scrollTo(300);
     await waitFor(() => expect(header).not.toHaveAttribute('data-tucked'));
     expect(root.getPropertyValue('--nl-header-h')).toBe('150px');
@@ -235,6 +238,17 @@ describe('language', () => {
     rect.mockRestore();
     unmount();
     scrollTo(0);
+  });
+
+  it('never tucks a header shown further down a page (the component gallery)', () => {
+    const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (!this.classList.contains('nl-site-search') && !this.classList.contains('nl-site-header')) return { top: 900, height: 400 } as DOMRect;
+      return (this.classList.contains('nl-site-search') ? { top: 960, height: 46 } : { top: 900, height: 150 }) as DOMRect;
+    });
+    const { unmount } = wrap(<SiteHeader location={null} search={<input aria-label="Search" />} links={[]} account={null} />);
+    expect(screen.getByRole('banner').style.getPropertyValue('--nl-header-tuck')).toBe('0px');
+    rect.mockRestore();
+    unmount();
   });
 
   it('never tucks on a tall screen (desktop)', () => {
