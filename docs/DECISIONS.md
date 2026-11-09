@@ -12174,13 +12174,11 @@ palette to Northern Pine; nothing here names a colour).
   `after/scrolled/`); no sideways scroll at 360, nothing cut off. `make ui-shots` fails on `/sign-in`, `/register` and
   `/forgot-password` with React error 418 — **the same on a build of develop** (checked), not from this story: a
   follow-up for the lead (the `ui-hydration` result below says the same).
-- **Visual gate.** In this container the gate fails on develop too (text anti-aliasing against the committed baselines,
-  first section `tokens`, plus `shell` and the 390 dialog), so the changed sections were found by shooting develop's
-  gallery here and comparing: `site` and `hero` changed at 390, and every 390 section under them moved by a fraction of
-  a pixel. Those 38 phone baselines are re-shot here (reviewed by eye: the header's slim place bar and chips, the
-  compact hero); the desktop baselines and the unchanged phone ones are as committed. Against develop's baselines
-  re-shot here, the branch passes twice in a row. The run card is 88 px and the trust line has a whole-pixel line
-  height so the band's height is whole pixels.
+- **Visual gate.** After merging S-189 (Northern Pine), develop's baselines pass in this container. Only `site` and
+  `hero` changed at 390, and every 390 section under them moved by a fraction of a pixel. Those 33 phone baselines were
+  re-shot on the Northern Pine tokens and reviewed by eye (the header's slim place bar and chips, the compact hero). The
+  desktop baselines are unchanged, and `pnpm test:visual` passes 16/16. The run card is 88 px and the trust line has a
+  whole-pixel line height, so the band's height is whole pixels.
 - **Not done here (backlog S-191a–l):** recently viewed card, a real deals feed, a phone results list layout, a swipe
   carousel, the "Returns & orders" shortcut (owner decision), best-seller badges, interleaved results rails, product
   reviews / Q&A / bought together (api), a region picker, denser checkout review lines, account rows at the top of the
