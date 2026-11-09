@@ -12080,8 +12080,8 @@ palette to Northern Pine; nothing here names a colour).
   the same on the server and the browser's first render. Every link is a real route or a help-centre section
   (`/help#help-pay`, `#help-a11y`); a test fails on any other target. "Run a kitchen" is now in the footer (S-170 left it
   out pending the owner: Amazon's "Make money with us" lists every way in). Footer link names differ from the hero
-  tiles' ("Find a pro", not "Book a pro") so a page never has two links of one name going to different places. Desktop
-  footer links are 32 px rows (like the filter rail, S-171; WCAG 2.5.8 asks 24); on phones 44 px, two columns.
+  tiles' ("Find a pro", not "Book a pro") so a page never has two links of one name going to different places. Every
+  footer link is a 44 px row as wide as its column (ui-a11y's 44 px report is clean for the footer); two columns on phones.
 - **Phone header.** Rows as before (menu · logo · account · cart / search / place / strip), but: the place is a slim
   full-width bar on the strip's colour, the strip's items are square chips (32 px drawn in the 44 px target) without
   the group hairlines, and **scrolling down keeps only the search**: `useStickyOffset` now also measures what sits under

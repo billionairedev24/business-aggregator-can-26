@@ -13,7 +13,7 @@ body { text-wrap: pretty; }
 /* footer (S-191, after Amazon's footer; E-15 / S-188 brand layer colours): the "Back to top" bar on the strip's violet,
    four link columns on the footer violet, a row with the logo, the FR/EN switch and the region, then the legal strip
    under a hairline. White links and headings, the light violet meta (never the action violet: no violet text on violet).
-   Phones: the columns two by two, the rows stacked and centred, every link a 44 px target. Footer and strip roles only. */
+   Phones: the columns two by two, the rows stacked and centred. Every link is a 44 px target (the column's width). Footer and strip roles only. */
 .nl-footer { background: var(--color-footer-bg); color: var(--color-footer-muted); font-size: var(--type-label); }
 .nl-footer a { color: var(--color-footer-text); text-decoration: none; }
 .nl-footer a:hover { color: var(--color-footer-text); text-decoration: underline; text-underline-offset: 3px; }
@@ -24,8 +24,8 @@ body { text-wrap: pretty; }
 .nl-footer-top:focus-visible { outline-offset: -4px; }
 .nl-footer-cols { display: grid; grid-template-columns: repeat(4, minmax(0, max-content)); justify-content: center; gap: var(--space-6) clamp(var(--space-8), 6vw, var(--space-16)); max-width: var(--page-max); margin: 0 auto; padding: var(--space-10) var(--page-gutter) var(--space-8); box-sizing: border-box; }
 .nl-footer-col { min-width: 0; max-width: 240px; }
-.nl-footer-head { margin: 0 0 var(--space-2); font-size: var(--type-sub); font-weight: var(--weight-bold); color: var(--color-footer-text); line-height: var(--leading-tight); }
-.nl-footer-col a { display: inline-flex; align-items: center; min-height: var(--space-8); line-height: var(--leading-tight); overflow-wrap: anywhere; }
+.nl-footer-head { margin: 0 0 var(--space-1); font-size: var(--type-sub); font-weight: var(--weight-bold); color: var(--color-footer-text); line-height: var(--leading-tight); }
+.nl-footer-col a { display: flex; align-items: center; min-height: var(--size-touch); line-height: var(--leading-tight); overflow-wrap: anywhere; }
 .nl-footer-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--space-3) var(--space-6); max-width: var(--page-max); margin: 0 auto; padding: var(--space-6) var(--page-gutter); box-sizing: border-box; border-top: 1px solid var(--color-footer-border); }
 .nl-footer-brand { display: inline-flex; align-items: center; min-height: var(--size-touch); margin-right: var(--space-6); }
 .nl-footer-brand:hover { text-decoration: none; }
@@ -41,7 +41,6 @@ body { text-wrap: pretty; }
 @media (max-width: 899.98px) {
   .nl-footer-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); justify-content: stretch; gap: var(--space-6) var(--space-5); padding-block: var(--space-6) var(--space-5); }
   .nl-footer-col { max-width: none; }
-  .nl-footer-col a { min-height: var(--size-touch); }
   .nl-footer-head { font-size: var(--type-card-title); margin-bottom: 0; }
 }
 @media (max-width: 599.98px) {
