@@ -12062,3 +12062,65 @@ cut-off pills, violet actions, links and focus in both apps, the courier app's s
   the hero (the headline wraps; the tile names are one line and cap at 1.6×). The web's "Today's deals" link on the
   strip isn't drawn: the app has no deals destination. The kit's `HomeHero` holds no minimum headline height (no
   server render to shift against).
+
+## 2026-11-09 — S-190 Location is never required
+
+Owner direction (2026-11-09): "We should not require location to show stuff, but if we discover location, we can
+simply show products that are closer to that user." On the demo every Shop page answered `422 "Choose a city."`: the
+Shop fell back to the region's fallback market, and with no live market there was none. Supersedes the "fallback
+market" source of the 2026-10-19 light-foundation location rules and S-46/S-49/S-57's required city. No migration.
+
+**API (`/api/v1/public/home`, `/public/shop`, `/public/shop/departments/{slug}`, `/public/shop/products/{id}`,
+`/public/kitchens`).**
+- City/market optional. Blank = not known. Malformed values stay 422 with one set of rules and messages,
+  `ca.northline.shared.PlaceParams` (validation-rules.md § Location, new): > 60 characters "At most 60 characters.",
+  not a place name "Enter a city name." (new, fr-CA in the TSV), lat/lng both or neither and in range. The Shop's
+  too-long market now says "At most 60 characters." (was "Choose a city."); the kitchens now require lat and lng
+  together, like search and services.
+- **No place = every live market** of the region model (`Regions.liveMarkets()`, new default method; the Shop uses
+  `DeliveryRuns.markets()`, new: the live markets plus any configured extra market — test markets only). Never a
+  city in code. `market`/`city` in the answer is `null`. Nothing claims a run (`run` null, offers without runs, no
+  direct-courier line) since the run is per market. Ranking: products by popularity (30-day sales, then newest —
+  the catalogue's existing order); shops by tier, rating, products, name; kitchens open first, then distance, then
+  rating and reviews (new tiebreak, also with a city), then name; home's trusted providers unchanged (rating,
+  reviews, tier).
+- **A point without a market**: markets are ordered by the distance from the point to their centre (region data;
+  a market without a centre last), products listed market by market, each by popularity. Kitchens use their own
+  location (unchanged).
+- **A market**: its lists stay filtered to it (`deliverable: true`). What the other live markets sell is listed
+  apart, nearest market first (from the point, else the market's centre): `nearby` on the landing and department
+  (8 products), `elsewhere` on the product page (offers) — labelled `deliverable: false` with `shipsFrom`, on no run,
+  instead of hidden. A city without delivery (`served: false`) keeps empty lists but still gets `nearby`. New fields:
+  `ShopCard.city`, `ProductCard.shipsFrom/deliverable`, `Offer.shipsFrom/deliverable`, kitchen `Card.city`.
+  "Ships from" is the shop's market, not a parcel service: there is no shipping between markets; the label says
+  "not available for delivery to you".
+- Search: with no `market` and no configured default, the first served province (was a 422); still one province per
+  query (a multi-province index query would touch three adapters for little gain while one province is served).
+- `PublicDirectory.activeIn(types, cities)` (new, named apart from `active` so Mockito's `any()` stays unambiguous).
+  The home and kitchen caches key "no city" as "".
+- Not changed: the services providers list (providers come to you; with no place the api uses its fallback market
+  as before, else nobody covers) — a candidate follow-up; the BFF relays these paths untouched (no change needed).
+  OpenAPI `api-public.yaml` hand-edited to what springdoc generates (lat/lng on the Shop reads, the new properties);
+  the generated check (`make openapi-check`) needs Docker and wasn't run. The kitchen card schema is collapsed onto
+  the payment `Card` by springdoc's name clash (pre-existing), so its `city` isn't documented.
+
+**Consumer web.** Sources: saved choice → default address → CDN city → nothing (`status: 'denied'`), the api's
+fallback market dropped (`resolveLocation` lost `fallback`; `knowsPlace()` new). Server render and first browser
+render agree on "locating" (no hydration change). Nothing waits for a place: home, Shop, department, product and
+food fetch as soon as the sources are read, without a city. Header: "Deliver to" over "Choose your location"
+(was "Set your location"), a button that opens the existing dialog; the dialog's line says "Showing everything on
+{brand}…". Copy: "Popular on {brand}", "Top-rated pros on {brand}", "Popular kitchens on {brand}", "Ships from
+{city}", "From {city} · not available for delivery to you" (no Add to cart on those cards), "From nearby cities"
+rail/section, "Sold in other cities" on a product without offers here; meta descriptions without a city. The header
+change is copy only (S-191 owns the header layout; S-189 the colours).
+
+**Consumer app.** No forced location step: sign-up and sign-in land on Home (was `/location?step=address`); the
+place bar says "Deliver to · Choose your location" when nothing is known; the fallback market is no longer a source
+(`fallbackLocation` removed). Cards say "Ships from" / "not available for delivery to you" (no Add). Fixtures answer
+home/shop/department/product without a city like the api and refuse a malformed one with its messages. "Rewards
+near you" still needs a place (it is "near").
+
+**Not done / not run here:** Docker isn't available, so the Testcontainers api tests (PublicShopApiTest,
+ProductPageApiTest, HomeApiTest, FoodOrderingApiTest — updated and compiled) and the OpenAPI check didn't run; the
+new ranking is covered by the unit test `ShopBrowsingServiceTest` (runs without Docker). On a deployment whose
+markets are all pilot/waitlist (V345) the pages are now empty, not 422 — going live is the go-live switch.

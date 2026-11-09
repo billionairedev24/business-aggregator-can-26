@@ -14,7 +14,7 @@ Open each reference in a browser. "State key" = the view/screen value that shows
 ## Shared shells
 | Shell | Used by | Pattern |
 |---|---|---|
-| Consumer header | web consumer | S-170, `SiteHeader`: one white bar — logo · "Deliver to (first name)" over the place (the location dialog) · search with its All / Services / Shop / Food scope · "Hello, … / Account & orders" (the account menu: orders, bookings, FR/EN, sign out) · cart with its count in the commerce colour; the grey department strip (All · Services Shop Food · departments \| service categories · Today's deals, Sell on {brand}); the delivery cut-off strip on the home and Shop pages. Phones: menu · logo · account · cart, then the search and the place. Footer: one compact grey band. Auth pages: the logo alone |
+| Consumer header | web consumer | S-170, `SiteHeader`: one white bar — logo · "Deliver to (first name)" over the place, or a quiet "Choose your location" when nothing is known (S-190: never required, never a dialog or geolocation prompt on load; the place comes from the saved choice → default address → CDN city; clicking opens the location dialog) · search with its All / Services / Shop / Food scope · "Hello, … / Account & orders" (the account menu: orders, bookings, FR/EN, sign out) · cart with its count in the commerce colour; the grey department strip (All · Services Shop Food · departments \| service categories · Today's deals, Sell on {brand}); the delivery cut-off strip on the home and Shop pages. Phones: menu · logo · account · cart, then the search and the place. Footer: one compact grey band. Auth pages: the logo alone |
 | Studio shell | provider, seller, kitchen | S-174, `AppShell`: white top bar (logo + "Studio", the business switcher, the global search — "/" —, the assistant, the account menu) · 228 px sidebar of caps-headed groups (Dashboard · Operations · Catalogue · Money · Store · Account), current item on the grey tint with the 3 px ink bar; icon rail < 1024 px, disclosure menu < 768 px. Onboarding has its own top bar with the step indicator (S-176) |
 | Console shell | platform ops | S-177, the same `AppShell`: logo + "Console", the market / province scope, the global search, the staff member and role · sidebar filtered by role; Pilot, UAT, Go-live, API and On-call only with `VITE_NL_TESTING_TOOLS` |
 | Mobile apps | iOS/Android | S-169/S-178/S-179, `@northline/mobile-kit`: `AppHeader` and the `BottomTabBar` (consumer Home · Browse · Activity · Cart · Account; the courier's stack); gallery at `/dev/gallery` |
@@ -23,7 +23,7 @@ Open each reference in a browser. "State key" = the view/screen value that shows
 home · location · search · category · svcCategory · shop · product · cart · confirmed · food · restaurant · foodCheckout · foodTrack · services · providers · provider · book · quote · orders · account · auth (sign in / register / OTP / MFA)
 
 ## Consumer app — `design/01 Consumer App.dc.html` (screens in `Consumer Screen.dc.html`)
-- A Account: welcome, signup, otp, mfa, location
+- A Account: welcome, signup, otp, mfa, location (S-190: optional — sign-up and sign-in land on Home; the place bar opens the location sheet)
 - B Shop: home, search, product, cart, checkout, pay, confirmed, track, delivered, refund
 - C Services: services, providers, provider, book_service, book_slot, book_review, booked, notifications, eta, signoff, review
 - D Account: orders, quote, account, security, wallet
