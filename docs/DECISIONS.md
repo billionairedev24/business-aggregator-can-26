@@ -12087,12 +12087,14 @@ palette to Northern Pine; nothing here names a colour).
   the group hairlines, and **scrolling down keeps only the search**: `useStickyOffset` now also measures what sits under
   the `tuckTo` element and publishes `--nl-header-clip`; the tucked header clips it away (`clip-path`, which also stops
   clicks there), and `--nl-header-h` is then the search alone, so sticky bars sit right under it. Focus into the header
-  or scrolling up shows it all. Desktop never tucks (the 16 % rule), unchanged. The location slot's words and behaviour
+  or scrolling up shows it all. Desktop never tucks (the 16 % rule), unchanged. Only a header that starts the page
+  tucks (its container's top at the page's top): the gallery shows the header further down, where a tuck used to be
+  invisible but a clip hid the place and the strip. The location slot's words and behaviour
   are S-190's; this story only gave the bar its look.
 - **16 px phone gutters** in the consumer shell (`.nl-app` under 600 px; safe areas kept). The scale's fluid gutter
   (12 px at 390) stays for the Studio and console.
-- **Home.** Phones: a compact band — the 24 px display headline on two lines, one trust point, the run card in a 76 px
-  box, the three department tiles side by side at 88 px with their name only (12 px under 400 px so "Commander" never
+- **Home.** Phones: a compact band — the 24 px display headline on two lines, one trust point, the run card in an 88 px
+  box, the three department tiles side by side at 88 px with their name only (11 px under 400 px so "Commander" never
   breaks). **Order changed on every width**: band → the four cards (the deal of the day first) → "Order again" and
   "Popular near …" → maker of the week → pros → kitchens. The hybrid mockup has the maker right after the band; the owner's
   "does not match Amazon" and "bizarre on mobile" outrank it here (Amazon: card grid, then rails). A product now shows at
@@ -12109,6 +12111,13 @@ palette to Northern Pine; nothing here names a colour).
   `after/scrolled/`); no sideways scroll at 360, nothing cut off. `make ui-shots` fails on `/sign-in`, `/register` and
   `/forgot-password` with React error 418 — **the same on a build of develop** (checked), not from this story: a
   follow-up for the lead (the `ui-hydration` result below says the same).
+- **Visual gate.** In this container the gate fails on develop too (text anti-aliasing against the committed baselines,
+  first section `tokens`, plus `shell` and the 390 dialog), so the changed sections were found by shooting develop's
+  gallery here and comparing: `site` and `hero` changed at 390, and every 390 section under them moved by a fraction of
+  a pixel. Those 38 phone baselines are re-shot here (reviewed by eye: the header's slim place bar and chips, the
+  compact hero); the desktop baselines and the unchanged phone ones are as committed. Against develop's baselines
+  re-shot here, the branch passes twice in a row. The run card is 88 px and the trust line has a whole-pixel line
+  height so the band's height is whole pixels.
 - **Not done here (backlog S-191a–l):** recently viewed card, a real deals feed, a phone results list layout, a swipe
   carousel, the "Returns & orders" shortcut (owner decision), best-seller badges, interleaved results rails, product
   reviews / Q&A / bought together (api), a region picker, denser checkout review lines, account rows at the top of the
