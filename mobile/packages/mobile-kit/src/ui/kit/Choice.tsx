@@ -25,8 +25,8 @@ export interface ChoiceOption<T extends string> {
 
 /**
  * The one tab style: underline tabs with counts, scrolling sideways when they don't fit. `chrome` (S-188): on the
- * consumer's violet department strip — white words, the current one bold over a 3 pt white bar (`header-indicator`),
- * the strip's lighter violet when pressed; no violet text on violet.
+ * consumer's forest department strip — white words, the current one bold over a 3 pt white bar (`header-indicator`),
+ * the strip's lighter green when pressed; no spruce text on the forest chrome.
  */
 export function UnderlineTabs<T extends string>({ options, value, onChange, label, chrome, testID }: { options: ChoiceOption<T>[]; value: T; onChange: (v: T) => void; label: string; chrome?: boolean; testID?: string }) {
   return (

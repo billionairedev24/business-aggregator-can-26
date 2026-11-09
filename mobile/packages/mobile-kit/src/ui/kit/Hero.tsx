@@ -17,7 +17,7 @@ export interface HomeHeroTrust {
 export interface HomeHeroRun {
   kicker: string;
   title: string;
-  /** The time left, on the yellow sticker; absent when there is nothing to count down. */
+  /** The time left, on the gold sticker; absent when there is nothing to count down. */
   left?: string;
   note?: string;
 }
@@ -42,10 +42,10 @@ const RUN_MIN = space[16] + space[12];
 
 /**
  * The consumer home's hero band (S-188 brand layer, the web's `HomeHero`; design/revamp/hybrid/index.html "Consumer home
- * · phone (390)"): the deep-violet band with its violet glow, the headline in the display face (Archivo expanded 800, 36)
- * with its last words in the light violet, the trust line, the run card with the time left on the yellow sticker, then
- * three department photo tiles stacked 136 pt tall, the last one reaching 70 pt onto the white page. No violet text on
- * violet: text on the band is white, `hero-text` or `hero-accent`; the tiles' arrow square is white with a violet arrow.
+ * · phone (390)"; S-189 Northern Pine colours): the deep forest band with its pine glow (and a faint gold one at the lower
+ * left, as the web), the headline in the display face (Archivo expanded 800, 36) with its last words in gold, the
+ * trust line, the run card with the time left on the gold sticker, then three department photo tiles stacked 136 pt tall, the last one reaching 70 pt onto the white page. No action-coloured
+ * text on the band: text there is white, `hero-text` or `hero-accent`; the tiles' arrow square is white with a spruce arrow.
  */
 export function HomeHero({
   title,
@@ -58,7 +58,7 @@ export function HomeHero({
   departmentsLabel,
   testID,
 }: {
-  /** The headline's lead ("Everything Kensington needs,") and its light-violet end ("tonight."). */
+  /** The headline's lead ("Everything Kensington needs,") and its gold end ("tonight."). */
   title: string;
   accent?: string;
   trust?: readonly HomeHeroTrust[];
@@ -87,8 +87,8 @@ export function HomeHero({
               <Stop offset="0.7" stopColor={semantic['hero-glow']} stopOpacity={0} />
             </RadialGradient>
             <RadialGradient id={`${id}-low`} cx="4%" cy="100%" rx="60%" ry="40%" fx="4%" fy="100%">
-              <Stop offset="0" stopColor={semantic['hero-glow']} stopOpacity={0.3} />
-              <Stop offset="0.7" stopColor={semantic['hero-glow']} stopOpacity={0} />
+              <Stop offset="0" stopColor={semantic.commerce} stopOpacity={0.13} />
+              <Stop offset="0.7" stopColor={semantic.commerce} stopOpacity={0} />
             </RadialGradient>
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${id}-bg)`} />

@@ -64,11 +64,11 @@ describe('code rules', () => {
     expect(hits).toEqual([]);
   });
 
-  // S-188: the courier keeps its sunlight rules — ink on white, large numbers — and its only violet is the primary
-  // action (the kit's Button): no link or action colour, no violet tertiary, no display face, the tab bar in ink
-  it('draws in ink, with violet only for the primary action (S-188)', () => {
-    const violet = /semantic\.link\b|semantic\[['"](?:link|action-primary|action-accent|nav-active-marker)['"]\]|textStyles\.link\b|variant=["']tertiary["']|textStyles\.display|tone=["']brand["']/;
-    expect(source.filter((f) => violet.test(readFileSync(f, 'utf8'))).map((f) => f.slice(ROOT.length + 1))).toEqual([]);
+  // S-188: the courier keeps its sunlight rules — ink on white, large numbers — and its only spruce is the primary
+  // action (the kit's Button): no link or action colour, no spruce tertiary, no display face, the tab bar in ink
+  it('draws in ink, with spruce only for the primary action (S-188)', () => {
+    const spruce = /semantic\.link\b|semantic\[['"](?:link|action-primary|action-accent|nav-active-marker)['"]\]|textStyles\.link\b|variant=["']tertiary["']|textStyles\.display|tone=["']brand["']/;
+    expect(source.filter((f) => spruce.test(readFileSync(f, 'utf8'))).map((f) => f.slice(ROOT.length + 1))).toEqual([]);
   });
 
   // S-169: the shared chrome draws with the kit's type roles (textStyles / TYPE), never a raw font size or the retired display face

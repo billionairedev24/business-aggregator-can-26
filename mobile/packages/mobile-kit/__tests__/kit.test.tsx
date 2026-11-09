@@ -172,7 +172,7 @@ describe('shapes and states (Plainsight)', () => {
 describe('the brand layer (S-188: Plainsight + Chinook)', () => {
   const tree = (id: string) => screen.getByTestId(id);
 
-  it('draws deals as the tilted yellow sticker and cut-offs as the upright pill, ink on yellow with an ink edge', () => {
+  it('draws deals as the tilted gold sticker and cut-offs as the upright pill, ink on gold with an ink edge', () => {
     render(
       <>
         <DealBadge label="20% off" testID="deal" />
@@ -190,7 +190,7 @@ describe('the brand layer (S-188: Plainsight + Chinook)', () => {
     expect(pill.transform).toBeUndefined();
     expect(flat(screen.getByText('Order within 2 h 48 min').props.style).color).toBe(semantic['commerce-text']);
     expect(flat(tree('sticker').props.style).transform).toEqual([{ rotate: '-3deg' }]);
-    // yellow is never text (12.77:1 ink on yellow; yellow on white is 1.44:1)
+    // gold is never text (10.34:1 ink on gold; gold on white is 1.78:1)
     expect(semantic['commerce-text']).toBe(semantic.text);
   });
 
@@ -230,7 +230,7 @@ describe('the brand layer (S-188: Plainsight + Chinook)', () => {
     expect(screen.queryByTestId('hero-run')).toBeNull();
   });
 
-  it('puts white on the violet chrome: the department strip, the search field, the search button', () => {
+  it('puts white on the forest chrome: the department strip, the search field, the search button', () => {
     render(
       <>
         <UnderlineTabs chrome label="Departments" options={[{ value: 'all', label: 'All' }, { value: 'shop', label: 'Shop' }]} value="all" onChange={() => undefined} testID="strip" />
@@ -243,7 +243,7 @@ describe('the brand layer (S-188: Plainsight + Chinook)', () => {
     expect(flat(tree('search').props.style).borderWidth).toBe(0);
   });
 
-  it('marks the consumer’s current tab with the violet marker (brand), the courier’s in ink', () => {
+  it('marks the consumer’s current tab with the spruce marker (brand), the courier’s in ink', () => {
     const items = [{ key: 'home', label: 'Home', icon: 'house' as const }];
     const { rerender, toJSON } = render(<BottomTabBar tone="brand" current="home" onSelect={() => undefined} items={items} />);
     expect(JSON.stringify(toJSON())).toContain(semantic['nav-active-marker']);
@@ -251,7 +251,7 @@ describe('the brand layer (S-188: Plainsight + Chinook)', () => {
     expect(JSON.stringify(toJSON())).not.toContain(semantic['nav-active-marker']);
   });
 
-  it('gives the courier an ink tertiary (`plain`) and everyone the violet primary', () => {
+  it('gives the courier an ink tertiary (`plain`) and everyone the spruce primary', () => {
     render(
       <>
         <Button label="Go" onPress={() => undefined} testID="p" />
