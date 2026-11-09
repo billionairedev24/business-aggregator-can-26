@@ -44,14 +44,14 @@ Quote is immutable once sent; edits create version+1 and mark prior `superseded`
 - brand_color must pass 4.5:1 with white (the swatch set is curated; custom colours rejected if they fail).
 - tagline ≤ 80 chars. slug `^[a-z0-9-]{3,40}$`. custom_domain requires CNAME verification before `published_at`.
 
-## Location (public discovery reads: home, Shop, kitchens — S-190)
+## Location (public discovery reads: home, Shop, kitchens, services providers — S-190)
 A location is never required: every field below is optional, and a blank value means "not known" (every live market, ranked by popularity). Only a value that is sent is checked. Server: `ca.northline.shared.PlaceParams`; clients send a city only once one is known (consumer web `features/location/sources.ts`, consumer app `src/location/DeliveryLocation.tsx`; the app's fixtures apply the same rules).
 | field | rule | message |
 |---|---|---|
 | city / market | optional; trimmed; ≤ 60 characters | At most 60 characters. |
 | city / market | letters (any script, accents), digits, spaces and `.` `'` `’` `-`, starting with a letter or digit | Enter a city name. |
 | lat, lng | both or neither | Send both lat and lng, or neither. |
-| lat | −90 … 90 | Latitude must be between -90 and 90. |
-| lng | −180 … 180 | Longitude must be between -180 and 180. |
+| lat | −90 … 90 | Latitude must be between -90 and 90. (services providers: That location is outside the map.) |
+| lng | −180 … 180 | Longitude must be between -180 and 180. (services providers: That location is outside the map.) |
 "Choose a city." is no longer answered by these reads (it was the 422 for a missing city before S-190).
 

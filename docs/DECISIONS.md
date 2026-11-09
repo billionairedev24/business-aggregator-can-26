@@ -12225,8 +12225,14 @@ market" source of the 2026-10-19 light-foundation location rules and S-46/S-49/S
   query (a multi-province index query would touch three adapters for little gain while one province is served).
 - `PublicDirectory.activeIn(types, cities)` (new, named apart from `active` so Mockito's `any()` stays unambiguous).
   The home and kitchen caches key "no city" as "".
-- Not changed: the services providers list (providers come to you; with no place the api uses its fallback market
-  as before, else nobody covers) — a candidate follow-up; the BFF relays these paths untouched (no change needed).
+- **Services providers (`/public/services/{slug}/providers`, owner answer to the open question):** the same rule. No
+  place = every published provider of the category, by tier, rating, reviews, name (`city: null`); a point = the
+  covering providers nearest first (km to the nearest centre of their zones, `ServiceAreas.distanceKm`, new), then
+  trust; a city keeps S-53's trust order. The region's fallback city is gone (`RegionDefaults.fallbackCity` removed);
+  the city is checked by `PlaceParams` (the point keeps its own messages). No contract change (`city` was already
+  nullable on the wire; the web's schema now says so). The BFF relays these paths untouched (no change needed).
+- **Nothing live yet** (every market pilot / waitlist): correct, and the pages say so — "We’re not live near you yet."
+  (Shop, department, food, home, providers on the web; Home and providers in the app), never a blank page.
   OpenAPI `api-public.yaml` hand-edited to what springdoc generates (lat/lng on the Shop reads, the new properties);
   the generated check (`make openapi-check`) needs Docker and wasn't run. The kitchen card schema is collapsed onto
   the payment `Card` by springdoc's name clash (pre-existing), so its `city` isn't documented.
@@ -12247,7 +12253,9 @@ place bar says "Deliver to · Choose your location" when nothing is known; the f
 home/shop/department/product without a city like the api and refuse a malformed one with its messages. "Rewards
 near you" still needs a place (it is "near").
 
-**Not done / not run here:** Docker isn't available, so the Testcontainers api tests (PublicShopApiTest,
-ProductPageApiTest, HomeApiTest, FoodOrderingApiTest — updated and compiled) and the OpenAPI check didn't run; the
-new ranking is covered by the unit test `ShopBrowsingServiceTest` (runs without Docker). On a deployment whose
-markets are all pilot/waitlist (V345) the pages are now empty, not 422 — going live is the go-live switch.
+**Tests.** The shared test database's markets are pilot/waitlist (V345), so the no-location and distance cases open
+made-up live markets for the test and turn them off afterwards (`support.TestMarkets`). Run with Docker: PublicShopApiTest
+10, ProductPageApiTest 6, HomeApiTest 6, FoodOrderingApiTest 13, ServicesBrowsingApiTest 9, OrderTrackingApiTest 4,
+SearchApiTest 17, MeilisearchSearchApiTest 13, SecondProvinceTest 9, OpenApiSpecsTest 9 (the hand-edited spec matches),
+plus the unit tests — all green. After merging S-191 the location copy lives in its "Deliver to" bar (still
+`LocationPill`); the footer's "Your delivery location" keeps `/location`, which still exists and opens the dialog.
