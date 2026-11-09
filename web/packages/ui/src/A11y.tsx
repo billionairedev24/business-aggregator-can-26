@@ -43,7 +43,10 @@ export function useStickyOffset<E extends HTMLElement>(ref: RefObject<E | null>,
       const full = Math.round(box.height);
       const below = tuckTo ? el.querySelector<HTMLElement>(tuckTo) : null;
       const offset = below ? Math.round(below.getBoundingClientRect().top - box.top) - 4 : 0;
-      tuck = offset > 24 && full > window.innerHeight * 0.16 ? offset : 0;
+      // only a header that starts the page tucks (not one shown further down, as in the component gallery)
+      const parent = el.parentElement?.getBoundingClientRect();
+      const startsPage = !parent || parent.top + window.scrollY < 8;
+      tuck = startsPage && offset > 24 && full > window.innerHeight * 0.16 ? offset : 0;
       // what sits under the element (4px kept for its shadow): clipped away while tucked
       const under = below ? below.getBoundingClientRect() : null;
       clip = tuck && under ? Math.max(0, full - Math.round(under.top + under.height - box.top) - 4) : 0;

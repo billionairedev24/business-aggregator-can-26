@@ -73,15 +73,15 @@
   .nl-hhero-title { font-size: var(--text-5xl); }
 }
 /* phones (S-191, the owner: "bizarre on mobile"; Amazon puts products on the first screen): a compact band — the headline
-   on two lines, one trust point, the run card in three short lines, then the three department tiles side by side as
+   on two lines, one trust point, the run card in three short lines (88 px, whole pixels so nothing below lands between pixels), then the three department tiles side by side as
    short photo tiles with their name only (the kicker, meta and arrow return from 768 px) */
 @media (max-width: 767.98px) {
   .nl-hhero { --nl-hhero-tile: 88px; --nl-hhero-edge: 44px; padding-top: var(--space-4); }
   .nl-hhero-top { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
   .nl-hhero-title { font-size: var(--type-display-tile-sm); line-height: round(1.04em, 1px); min-height: calc(2 * round(1.04em, 1px)); letter-spacing: -0.03em; }
-  .nl-hhero-trust { margin-top: var(--space-2); font-size: var(--type-meta); }
+  .nl-hhero-trust { margin-top: var(--space-2); font-size: var(--type-meta); line-height: round(1.34em, 1px); }
   .nl-hhero-trust > li + li, .nl-hhero-wide { display: none !important; }
-  .nl-hhero-run { min-height: 76px; padding: var(--space-2-5) var(--space-3); margin: 0; gap: 2px var(--space-3); }
+  .nl-hhero-run { min-height: calc(22 * var(--space-1)); padding: var(--space-2-5) var(--space-3); margin: 0; gap: 2px var(--space-3); }
   .nl-hhero-run-t { font-size: var(--type-sub); }
   .nl-hhero-run-s { font-size: var(--type-meta); }
   .nl-hhero-depts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-3); }
