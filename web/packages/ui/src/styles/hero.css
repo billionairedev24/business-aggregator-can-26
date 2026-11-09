@@ -87,6 +87,10 @@
   .nl-hhero-depts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-3); }
   .nl-hhero-dept-c { left: var(--space-2); right: var(--space-2); bottom: var(--space-2); }
   .nl-hhero-dept-k, .nl-hhero-dept-m, .nl-hhero-dept-go { display: none; }
-  .nl-hhero-dept-t { font-size: var(--type-card-title); letter-spacing: -0.02em; overflow-wrap: anywhere; }
+  .nl-hhero-dept-t { font-size: var(--type-card-title); letter-spacing: -0.02em; overflow-wrap: normal; hyphens: auto; }
   .nl-hhero-dept::after { background: linear-gradient(180deg, transparent 20%, color-mix(in srgb, var(--color-hero-scrim) 80%, transparent) 100%); }
+}
+/* the narrowest phones: the tile names a size down so one word ("Commander") never breaks inside */
+@media (max-width: 399.98px) {
+  .nl-hhero-dept-t { font-size: var(--type-meta); letter-spacing: -0.01em; }
 }
