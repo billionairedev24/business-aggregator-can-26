@@ -171,7 +171,7 @@ describe('B1 Home', () => {
   it('says when Northline doesn’t deliver there yet (empty)', async () => {
     await start({ welcomed: true, store: saved({ label: '77 Harbour Road, Faraway', city: 'Faraway', province: 'XC' }) });
     expect(await screen.findByText("Northline doesn't deliver to Faraway yet. Look around, or choose another address.")).toBeTruthy();
-    expect(screen.getByText('No shops deliver here yet.')).toBeTruthy();
+    expect(screen.getByText('We’re not live near you yet. Local shops are joining every week.')).toBeTruthy();
   });
 
   it('is in French on a French phone', async () => {

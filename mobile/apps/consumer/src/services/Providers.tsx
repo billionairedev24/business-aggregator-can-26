@@ -88,7 +88,10 @@ export function Providers({ slug }: { slug: string }) {
         empty={
           <EmptyState
             art={slug}
-            message={t('services.providers.empty', { area: list.data?.area ?? list.data?.city ?? location.city ?? '' })}
+            message={(list.data?.area ?? list.data?.city ?? location.city)
+              ? t('services.providers.empty', { area: list.data?.area ?? list.data?.city ?? location.city ?? '' })
+              // S-190: nothing live anywhere (pilot / waitlist markets): a friendly line, never a blank
+              : t('services.providers.notLiveYet')}
             action={t('services.providers.emptyAction')}
             onAction={() => router.push('/services')}
           />
@@ -100,7 +103,7 @@ export function Providers({ slug }: { slug: string }) {
           return (
             <>
               <Text accessibilityRole="header" style={textStyles.label}>
-                {t('services.providers.count', { n: shown.length, area })}
+                {area ? t('services.providers.count', { n: shown.length, area }) : t('services.providers.countAnywhere', { n: shown.length })}
               </Text>
               {shown.length === 0 ? (
                 <EmptyState message={t('services.providers.filteredEmpty')} action={t('services.providers.clearFilters')} onAction={() => setOn(new Set())} />

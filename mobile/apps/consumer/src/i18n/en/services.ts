@@ -47,6 +47,8 @@ export const services = {
   'services.providers.onDay': '{day} {time}',
   'services.providers.noOpenings': 'No openings soon',
   'services.providers.empty': 'No verified providers cover {area} for this service yet.',
+  'services.providers.notLiveYet': 'We’re not live near you yet. Verified providers are joining every week.',
+  'services.providers.countAnywhere': '{n, plural, one {# provider} other {# providers}} on {brand} · sorted by tier and rating',
   'services.providers.emptyAction': 'See all services',
   'services.providers.filteredEmpty': 'No providers match these filters.',
   'services.providers.clearFilters': 'Clear filters',
