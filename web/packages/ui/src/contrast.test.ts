@@ -35,13 +35,14 @@ describe('the contrast gate', () => {
   });
   // S-189 Northern Pine: the guards the mockup's table sets stay in force on the new colours
   it('keeps the rejected pairs failing: gold on white, the spruce action on the forest chrome', () => {
-    for (const [fg, bg, min] of REJECTED) expect(contrast(theme.color[fg]!, theme.color[bg]!)).toBeLessThan(min);
-    expect(Number(contrast(theme.color['action-primary']!, theme.color['header-bg']!).toFixed(2))).toBe(2.38);
-    expect(vetRoles(theme.color)).toEqual([]);
+    const colours: Record<string, string> = theme.color;
+    for (const [fg, bg, min] of REJECTED) expect(contrast(colours[fg]!, colours[bg]!)).toBeLessThan(min);
+    expect(Number(contrast(colours['action-primary']!, colours['header-bg']!).toFixed(2))).toBe(2.38);
+    expect(vetRoles(colours)).toEqual([]);
   });
   it('refuses gold (a fill, or the hero accent) as the text of a pair on a light surface', () => {
     for (const fg of [...FILL_ONLY, ...CHROME_ONLY]) {
-      expect(vetRoles(theme.color, [[fg, 'surface', 4.5, 'test']]).map(f => f.fg)).toContain(fg);
+      expect(vetRoles(theme.color as Record<string, string>, [[fg, 'surface', 4.5, 'test']]).map(f => f.fg)).toContain(fg);
       expect(PAIRS.filter(([f, b]) => f === fg && ['surface', 'canvas', 'well', 'commerce-bg'].includes(b))).toEqual([]);
     }
   });
