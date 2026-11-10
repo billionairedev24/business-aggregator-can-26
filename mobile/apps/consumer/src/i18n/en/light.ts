@@ -5,7 +5,7 @@
  */
 export const light = {
   'lt.near': 'Near',
-  'lt.setPlace': 'Choose your location',
+  'lt.setPlace': 'Choose location',
 
   'lt.home.heroTitle': 'Everything local, from people you can trust',
   'lt.home.heroSub': 'Book verified pros, shop neighbourhood stores and get it all delivered together — you pay only when it’s done.',
@@ -46,4 +46,25 @@ export const light = {
   'lt.loc.chooseAnother': 'Choose another place',
   'lt.browse.live': '{n, plural, one {# category live} other {# categories live}}',
   'lt.browse.bandSub': 'Every provider is verified before they appear, and every job is paid into escrow — released only when you sign off.',
+
+  // S-192: the location sheet after Amazon's "Choose your location" (the web's dialog, the same words)
+  'lt.loc.intro': 'Delivery options and delivery speeds may vary for different locations.',
+  'lt.loc.delivering': 'Delivering to {place}.',
+  'lt.loc.signInForAddresses': 'Sign in to see your addresses',
+  'lt.loc.defaultAddress': 'Default address',
+  'lt.loc.manageAddresses': 'Manage addresses',
+  'lt.loc.orPostal': 'or enter a postal or ZIP code',
+  'lt.loc.postal': 'Postal or ZIP code',
+  'lt.loc.postalPlaceholder': 'e.g. 90210 or SW1A 1AA',
+  'lt.loc.apply': 'Apply',
+  'lt.loc.postalRequired': 'Enter a postal or ZIP code.',
+  'lt.loc.postalTooLong': 'At most 12 characters.',
+  'lt.loc.postalFormat': 'Use letters, digits, spaces and hyphens only.',
+  'lt.loc.appliedElsewhere': '{brand} doesn’t deliver to {place} yet. Showing everything, nearest first.',
+  'lt.loc.orCountry': 'or deliver to another country',
+  'lt.loc.country': 'Country',
+  'lt.loc.chooseCountry': 'Choose',
+  'lt.loc.allCountries': 'All countries',
+  'lt.loc.done': 'Done',
+  'lt.loc.hereOutsideKept': '{brand} doesn’t deliver there yet. Showing everything, nearest first.',
 } as const;

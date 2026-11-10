@@ -3,7 +3,7 @@ import type { light as en } from '../en/light';
 /** La direction claire, axée sur les photos (2026-10-19) : les mots du site web (dialogue d'adresse, accueil). */
 export const light: { [k in keyof typeof en]: string } = {
   'lt.near': 'Près de',
-  'lt.setPlace': 'Choisissez votre adresse',
+  'lt.setPlace': 'Choisir l’adresse',
 
   'lt.home.heroTitle': 'Tout le local, par des gens de confiance',
   'lt.home.heroSub': 'Réservez des pros vérifiés, magasinez dans les commerces du quartier et recevez tout en une seule livraison — vous payez seulement une fois le travail terminé.',
@@ -44,4 +44,24 @@ export const light: { [k in keyof typeof en]: string } = {
   'lt.loc.chooseAnother': 'Choisir un autre endroit',
   'lt.browse.live': '{n, plural, one {# catégorie active} other {# catégories actives}}',
   'lt.browse.bandSub': 'Chaque prestataire est vérifié avant d’apparaître, et chaque travail est payé en fiducie — versé seulement une fois que vous l’approuvez.',
+
+  'lt.loc.intro': 'Les options et les délais de livraison peuvent varier selon l’endroit.',
+  'lt.loc.delivering': 'Livraison à {place}.',
+  'lt.loc.signInForAddresses': 'Connectez-vous pour voir vos adresses',
+  'lt.loc.defaultAddress': 'Adresse par défaut',
+  'lt.loc.manageAddresses': 'Gérer les adresses',
+  'lt.loc.orPostal': 'ou entrez un code postal ou ZIP',
+  'lt.loc.postal': 'Code postal ou ZIP',
+  'lt.loc.postalPlaceholder': 'p. ex. 90210 ou SW1A 1AA',
+  'lt.loc.apply': 'Appliquer',
+  'lt.loc.postalRequired': 'Entrez un code postal ou ZIP.',
+  'lt.loc.postalTooLong': 'Au plus 12 caractères.',
+  'lt.loc.postalFormat': 'Utilisez seulement des lettres, des chiffres, des espaces et des traits d’union.',
+  'lt.loc.appliedElsewhere': '{brand} ne livre pas encore à {place}. Vous voyez tout, du plus proche au plus loin.',
+  'lt.loc.orCountry': 'ou livrez dans un autre pays',
+  'lt.loc.country': 'Pays',
+  'lt.loc.chooseCountry': 'Choisir',
+  'lt.loc.allCountries': 'Tous les pays',
+  'lt.loc.done': 'Terminé',
+  'lt.loc.hereOutsideKept': '{brand} ne livre pas encore là. Vous voyez tout, du plus proche au plus loin.',
 };

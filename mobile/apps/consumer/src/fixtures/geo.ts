@@ -53,6 +53,19 @@ export function geoFixtures(ctx: FixtureContext, state: { waitlist: Array<{ regi
           attribution: 'Fixture Maps',
         });
       }
+      case '/geo/postal': {
+        // S-192: the api's rules and messages (validation-rules.md § Location), any country's code
+        const code = (q.get('code') ?? '').trim().replace(/\s+/g, ' ').toUpperCase();
+        if (!code) return ctx.answer(422, { errors: [{ field: 'code', rule: 'required', message: 'Enter a postal or ZIP code.' }] });
+        if (code.length > 12) return ctx.answer(422, { errors: [{ field: 'code', rule: 'length', message: 'At most 12 characters.' }] });
+        if (!/^[A-Z0-9](?:[A-Z0-9 -]*[A-Z0-9])?$/.test(code)) return ctx.answer(422, { errors: [{ field: 'code', rule: 'format', message: 'Use letters, digits, spaces and hyphens only.' }] });
+        const a = ADDRESSES.find((x) => x.postalCode === code);
+        if (!a) return ctx.answer(200, { postalCode: code, found: false });
+        return ctx.answer(200, {
+          postalCode: code, found: true, city: a.city, region: a.province, country: 'ZZ', lat: a.lat, lng: a.lng,
+          resolution: { market: a.market, zone: a.zone, waitlist: a.market ? null : { regionId: a.province, name: 'Waitlist Province', stage: 'waitlist' } },
+        });
+      }
       case '/geo/waitlist': {
         state.waitlist.push({ regionId: String(req.body.regionId ?? ''), email: req.body.email as string | undefined });
         return ctx.answer(201, { joined: true });
