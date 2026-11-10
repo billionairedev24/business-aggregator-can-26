@@ -14,6 +14,39 @@ export function SkipLink({ target = 'main' }: { target?: string }) {
 
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
+/** The keys that move focus or act on it: after one of these the ring shows, whatever moved the focus. */
+const KEYBOARD_KEYS = new Set(['Tab', 'Enter', ' ', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown', 'F6']);
+let modalityUsers = 0;
+let stopModality: (() => void) | null = null;
+
+/**
+ * S-192 (owner, 2026-11-10: "you should not be having border line on links when i click them or hover"): which device
+ * moved focus last, as `data-input="pointer" | "keyboard"` on <html>. Browsers already keep `:focus-visible` off a link
+ * or button that is clicked, but not when a script moves focus after a click — a menu that opens and focuses its first
+ * item, a dialog that hands focus back to its opener on close — so a mouse or finger could still leave a ring behind.
+ * `base.css` hides the ring of everything but text fields while `data-input="pointer"`; a key press brings it back at
+ * once (WCAG 2.4.7 / 2.4.11: the keyboard always sees where it is). Mounted by the shells (SiteHeader, AppShell); one
+ * listener pair however many mount it.
+ */
+export function useInputModality(): void {
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (modalityUsers++ === 0) {
+      const root = document.documentElement;
+      const pointer = () => { root.dataset.input = 'pointer'; };
+      const keyboard = (e: KeyboardEvent) => { if (KEYBOARD_KEYS.has(e.key) && !e.metaKey && !e.ctrlKey) root.dataset.input = 'keyboard'; };
+      document.addEventListener('pointerdown', pointer, true);
+      document.addEventListener('keydown', keyboard, true);
+      stopModality = () => {
+        document.removeEventListener('pointerdown', pointer, true);
+        document.removeEventListener('keydown', keyboard, true);
+        delete root.dataset.input;
+      };
+    }
+    return () => { if (--modalityUsers === 0) { stopModality?.(); stopModality = null; } };
+  }, []);
+}
+
 /**
  * Publishes the height of a sticky header as `--nl-sticky-top` on <html>, which `scroll-padding-top` reads, so the
  * browser scrolls a focused control clear of the header instead of under it (WCAG 2.4.11 focus not obscured).

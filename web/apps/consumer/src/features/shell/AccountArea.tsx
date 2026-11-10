@@ -1,4 +1,4 @@
-import { Bell, CalendarCheck, ChatCircleText, ClipboardText, CreditCard, Heart, Leaf, Lifebuoy, MapPinLine, Receipt, ShieldCheck, SignOut, Star, Storefront, Translate, User, UserCircle, Wallet } from '@phosphor-icons/react';
+import { Bell, BookmarkSimple, CalendarCheck, ChatCircleText, ClipboardText, CreditCard, Heart, Leaf, Lifebuoy, MapPinLine, Receipt, ShieldCheck, SignOut, Star, Storefront, Translate, UserCircle, Wallet } from '@phosphor-icons/react';
 import { AccountMenu, formatMoney, formatNumber, fullNavEnabled, useLocale, type AccountMenuSection } from '@northline/ui';
 import { useAccountSummary, type AccountSummary } from '../account/api';
 import type { SessionUser } from '../session/api';
@@ -26,7 +26,7 @@ export const ACCOUNT_LINKS = {
 } as const;
 
 /** Signed in: the design's account menu. Values come from the account summary when the api has it. */
-export function AccountArea({ user, onSignOut, onToggleLocale, greeting }: { user: SessionUser; onSignOut: () => void; onToggleLocale: () => void; greeting?: { line1: string; line2: string } }) {
+export function AccountArea({ user, onSignOut, onToggleLocale, greeting, closeKey }: { user: SessionUser; onSignOut: () => void; onToggleLocale: () => void; greeting?: { line1: string; line2: string }; closeKey?: unknown }) {
   const t = useShellT();
   const { locale } = useLocale();
   const { data: s } = useAccountSummary(true);
@@ -35,13 +35,19 @@ export function AccountArea({ user, onSignOut, onToggleLocale, greeting }: { use
   const item = (key: keyof typeof ACCOUNT_LINKS, icon: typeof Receipt, value?: string) => ({ key, label: t(key === 'sell' ? 'sellOrOffer' : key === 'account' ? 'yourAccount' : key), icon, value, href: ACCOUNT_LINKS[key] });
   // redesign § 3.6: Wallet & points, Dietary and Plus are hidden for the demo (VITE_NL_FULL_NAV brings them back)
   const full = fullNavEnabled();
+  // S-192 (Amazon's flyout): "Your lists" | "Your account", side by side (one column on phones)
   const sections: AccountMenuSection[] = [
-    { heading: t('activity'), items: [item('orders', Receipt, v.orders), item('bookings', CalendarCheck), item('quoteRequests', ClipboardText), item('messages', ChatCircleText), item('favourites', Heart, v.favourites), ...(full ? [item('wallet', Wallet, v.wallet)] : [])] },
-    { heading: t('account'), items: [item('account', UserCircle), item('profile', User, name), item('addresses', MapPinLine, v.addresses), item('payments', CreditCard, v.payments), item('security', ShieldCheck, v.security)] },
-    // redesign § 3.3: the FR/EN switch lives here and in the footer (it left the header)
-    { heading: t('preferences'), items: [item('notifications', Bell, v.quiet), { key: 'language', label: t('langSwitch'), lang: locale === 'fr' ? 'en-CA' : 'fr-CA', icon: Translate, value: v.language, onSelect: onToggleLocale }, ...(full ? [item('dietary', Leaf, v.dietary), item('plus', Star, v.plus)] : [])] },
-    { heading: '', items: [item('help', Lifebuoy, v.help), item('sell', Storefront), { key: 'signOut', label: t('signOut'), icon: SignOut, onSelect: onSignOut }] },
+    { heading: t('yourLists'), items: [item('favourites', Heart, v.favourites), { key: 'savedForLater', label: t('savedForLater'), icon: BookmarkSimple, href: '/cart' }, ...(full ? [item('wallet', Wallet, v.wallet)] : [])] },
+    { heading: t('yourAccountCol'), items: [
+      item('account', UserCircle), item('orders', Receipt, v.orders), item('bookings', CalendarCheck), item('quoteRequests', ClipboardText), item('messages', ChatCircleText),
+      item('addresses', MapPinLine, v.addresses), item('payments', CreditCard, v.payments), item('security', ShieldCheck, v.security), item('notifications', Bell, v.quiet),
+      // redesign § 3.3: the FR/EN switch lives here and in the footer (it left the header)
+      { key: 'language', label: t('langSwitch'), lang: locale === 'fr' ? 'en-CA' : 'fr-CA', icon: Translate, value: v.language, onSelect: onToggleLocale },
+      ...(full ? [item('dietary', Leaf, v.dietary), item('plus', Star, v.plus)] : []),
+      item('help', Lifebuoy, v.help), item('sell', Storefront), { key: 'signOut', label: t('signOut'), icon: SignOut, onSelect: onSignOut },
+    ] },
   ];
+
   const email = user.email ?? '';
   const detail = s?.reliability != null && email ? t('reliability', { email, score: formatNumber(s.reliability, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) }) : email || undefined;
   const card = full && s?.points ? (
@@ -50,7 +56,7 @@ export function AccountArea({ user, onSignOut, onToggleLocale, greeting }: { use
       {s.plus != null && <span className="tag tag-highlight">{t(s.plus ? 'plusTag' : 'standardTag')}</span>}
     </>
   ) : undefined;
-  return <AccountMenu greeting={greeting} user={{ name, initials: user.initials, detail }} headerAction={{ label: t('addPhoto'), href: ACCOUNT_LINKS.profile }} card={card} sections={sections} />;
+  return <AccountMenu greeting={greeting} user={{ name, initials: user.initials, detail }} headerAction={{ label: t('addPhoto'), href: ACCOUNT_LINKS.profile }} card={card} sections={sections} layout="columns" closeKey={closeKey} />;
 }
 
 type T = ReturnType<typeof useShellT>;

@@ -1,7 +1,10 @@
 import type { ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useRouterState } from '@tanstack/react-router';
 import { testingToolsEnabled } from '@northline/ui';
 import { DeliveryLocationProvider } from '../location/useDeliveryLocation';
+import { visitorQuery } from '../location/api';
+import type { SavedLocation } from '../location/sources';
 import { VisitorPlace } from '../location/regions';
 import { LocationChooser } from '../location/LocationChooser';
 import { useViewer } from '../session/api';
@@ -17,15 +20,17 @@ import { PilotControl } from '../pilot/PilotControl';
  * § 3.4: guests sign in at the checkout or booking step, or from the avatar menu); the pilot's "Send feedback" control
  * only where the testing tools are on (§ 3.5, `VITE_NL_TESTING_TOOLS`).
  */
-export function ConsumerLayout({ children }: { children: ReactNode }) {
+export function ConsumerLayout({ children, initialPlace }: { children: ReactNode; initialPlace?: SavedLocation | null }) {
   const t = useShellT();
   const { user, session, loading } = useViewer();
+  // S-192: in the cache from the server's render (the root loader); a page without it (tests) asks the api once
+  const visitor = useQuery(visitorQuery).data ?? null;
   // the delivery cut-off strip: on the Shop pages, where the next pooled run is the point (S-188: the home has the run
   // card in its hero band instead)
   const pathname = useRouterState({ select: s => s.location.pathname });
   const cutoff = pathname === '/shop' || pathname.startsWith('/shop/');
   return (
-    <DeliveryLocationProvider ipCity={session?.location?.city} signedIn={loading ? undefined : !!user}>
+    <DeliveryLocationProvider ipCity={session?.location?.city} visitor={visitor} initial={initialPlace} signedIn={loading ? undefined : !!user}>
       <VisitorPlace>
         <div className="nl-app">
           <a href="#main" className="nl-skip">{t('skip')}</a>
