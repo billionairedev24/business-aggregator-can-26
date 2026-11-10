@@ -12259,3 +12259,102 @@ made-up live markets for the test and turn them off afterwards (`support.TestMar
 SearchApiTest 17, MeilisearchSearchApiTest 13, SecondProvinceTest 9, OpenApiSpecsTest 9 (the hand-edited spec matches),
 plus the unit tests — all green. After merging S-191 the location copy lives in its "Deliver to" bar (still
 `LocationPill`); the footer's "Your delivery location" keeps `/location`, which still exists and opens the dialog.
+
+## 2026-11-10 — S-192 Amazon-style location chooser, account menu, focus
+
+Owner feedback on the deployed demo, side by side with amazon.com (2026-11-10): "when I click on account and orders, the
+dropdown shows below and you should not be having border line on links when i click them or hover. and the location
+still does not seem to be good enough. and the ui for detecting location is bizarre. see how amazon does it. and don't
+lock to canada or alberta anymore. we will handle that in a followup story". Builds on S-190 (a location never blocks,
+only ranks) and S-191 (the shell). Patterns only, tokens only.
+
+**Account menu.**
+- Cause: the panel hung from the header bar, and the header's `clip-path: inset(0)` (S-191's tuck) cut everything
+  below the header, so only the strip-high top edge showed. `AccountMenu` now draws its panel in a portal on `<body>`,
+  `position: fixed` under the trigger (`--nl-flyout-top/-right`, kept on scroll and resize; phones: the window less
+  16 px gutters), `z-index: var(--z-drawer)` above the sticky header. The header's resting clip is now
+  `inset(0 0 -100vh 0)`, so the search predictions hanging from it are never cut either. The "All" sheet (`Drawer`) and
+  the location dialog (`Dialog`) were already portals.
+- Amazon's contents: signed out, the primary "Sign in" and "New customer? Start here." (→ register), then two columns
+  "Your lists" (Saved, Saved for later → the cart) | "Your account" (Your account, Orders, Bookings, Help, Sell,
+  Français — the account links go through sign-in); signed in, the person's head, then "Your lists" | "Your account"
+  (orders, bookings, quotes, messages, addresses, payments, security, notifications, language, help, sell, sign out).
+  New props `signIn`, `layout="columns"` (one column under 600 px), `closeKey`. The Studio and console keep their own
+  `Menu` (unchanged).
+- Opens on click (focus to its first item) and, on a desktop pointer (`(hover: hover) and (pointer: fine)`, mouse
+  pointer events only), on hover after 150 ms; a hover-opened panel closes 250 ms after the pointer leaves both, and a
+  click on the trigger then pins it. Closes on a click outside, Escape and a route change (`closeKey` = the URL), and
+  gives focus back to the trigger (Escape, a button item, or a navigation while focus was inside). Kept `role="menu"`
+  with arrow keys over every item, the sign-in button included.
+
+**No border lines on mouse or touch.**
+- The header's hover ring (`box-shadow: inset 0 0 0 1px header-ring`) is gone: hover is the soft `header-hover-bg` fill
+  only (also while the account menu is open); the strip keeps its fill; footer links keep the underline.
+- Browsers already keep `:focus-visible` off a clicked link or button, but not when a script moves focus after a click
+  (a menu focusing its first item, a dialog handing focus back to its opener — the restored ring is what the owner
+  saw). New `useInputModality()` (ui `A11y.tsx`, mounted by `SiteHeader` and `AppShell`, so consumer, Studio and
+  console) sets `data-input="pointer"|"keyboard"` on `<html>`; `base.css` drops the outline (and the `.btn` /
+  hero-tile halo) under `pointer` for everything but text fields. A Tab, arrow, Enter, Space or Escape switches back,
+  so the keyboard always gets its ring (WCAG 2.4.7 / 2.4.11). No `:focus` outline rule fired on click anywhere
+  (checked: only `:focus { outline: none }` resets). `-webkit-tap-highlight-color: transparent` on links and buttons
+  (no grey tap box on phones).
+
+**Location chooser (Amazon's "Choose your location").**
+- Centred dialog (a bottom sheet on phones), 440 px: the line "Delivery options and delivery speeds may vary for
+  different locations", what the header says now, signed in the saved addresses as cards (`aria-pressed` on the one in
+  use, "Default address", "Manage addresses" → `/account?tab=addresses`) or "Sign in to see your addresses", "or enter a
+  postal or ZIP code" + Apply, "or deliver to another country" (a native select: common countries first, then all by
+  name), "Use my current location" (the only geolocation prompt, on the press) and **Done**. Done is spruce, not
+  Amazon's yellow: the commerce gold is never a button (CLAUDE.md § Colour roles).
+- Each choice is saved at once (the page behind follows, like Amazon's Apply); Done and ✕ close. The address
+  autocomplete and the market chips left the dialog (Amazon has neither; the chips implied a lock to our markets).
+- Postal code: `GET /api/v1/geo/postal?code=` (new, rate-limited like the other lookups) through the places port
+  (`PlacesAutocomplete.postalCode`: Google's Geocoding API by `components=postal_code:…`; the local fixtures know the
+  fixture codes plus three abroad) and resolved to a market by the same PostGIS lookup. Inside a live or pilot market the
+  place gets its city, zone and market; elsewhere only the code, the locality and the point (the reads rank the nearest
+  markets first, S-190); unknown or a failed lookup: the code alone. A market not open yet offers its waitlist under
+  the result. No country is passed with the code (a guess could hide a foreign code); the server looks everywhere.
+- A country alone saves `{country}` — no city; the header names the country (`Intl.DisplayNames`, no names in code).
+- "Use my current location" outside every market now keeps the place (locality + point; "doesn't deliver to {place}
+  yet. Showing everything, nearest first.") instead of refusing it.
+- The header: "Deliver to {first name}" over "{city or locality} {postal code}" once a place is known
+  (`headerPlace`); "Deliver to" over the detected city (with its postal prefix when the edge sends one) or only the
+  country; "Deliver to" over "Choose location" otherwise (was "Choose your location"; the dialog's title keeps it).
+  The name only once a place is known. Services pages keep "Near".
+
+**Passive detection (port + adapters, `region` module).** `VisitorLocator` (application port), chosen by
+`northline.visitor-location.detector` (`VISITOR_LOCATION_DETECTOR`): `none` (default), `edge` (Cloudflare's
+`cf-ipcountry`, `cf-ipcity`, `cf-region-code`/`cf-region`, `cf-postal-code`, `cf-iplatitude/longitude`, else generic
+`X-Geo-*`), `geoip` (a GeoLite2/GeoIP2 City `.mmdb` at `VISITOR_LOCATION_DATABASE`, read with MaxMind's own
+`com.maxmind.db:maxmind-db` 4.2.0 — Apache-2.0, no dependencies; the database is never vendored, licence; start-up
+fails without a readable file). Every part is cleaned (`VisitorParts`: a real two-letter country — not `XX`/`T1`; the
+place-name rule; the postal rule; a point in range; percent-decoding; UTF-8 header bytes Tomcat read as Latin-1
+re-decoded — Cloudflare sends UTF-8). `GET /api/v1/geo/visitor` answers it (`Cache-Control: no-store`; all null with
+`source: none`). A forged header only moves the forger's own guess (never filters, prices or charges). The guess keeps
+no province: it never switches the language (French-first) or the privacy law; its city ranks/filters exactly as
+S-190's CDN city did. The BFF's `client-city-header` / `session.location.city` stays as a fallback source.
+
+**Server render.** The root loader prefetches `visitorQuery` (forwarding the visitor's `cf-*`/`x-geo-*` headers and the
+address chain) and reads the saved place's new `nl.loc` cookie (city, locality, postal code, country, market, point,
+zone — never a street or label); `DeliveryLocationProvider` starts from cookie → detected → "locating", the same on the
+server and in the browser's first render (no hydration mismatch, and returning visitors no longer see "Finding your
+area…"). The browser then reads `localStorage`, the default address and the detected place as before.
+
+**No Canada/Alberta lock (chooser, header, footer, their validation).** "Canada · CAD $" is gone: the footer's region is
+a "language · country" button opening the dialog — the visitor's chosen country, else the detected one, else
+`NL_SITE_COUNTRY`, else "Choose location"; `NL_COMMON_COUNTRIES` orders the dialog's countries (unset: a general
+list). Postal codes: one permissive rule on both sides — required, ≤ 12, letters/digits with inner spaces and hyphens —
+and the country two letters (validation-rules.md § Location, fr-CA in the TSV). Not reworked (S-192a, To Do): the region
+model's provinces, CAD money and tax, the checkout's and address book's Canadian postal rule and province field (they
+feed sales tax), Google autocomplete restricted to `ca` (the address book), CASL/PIPEDA copy.
+
+**Consumer app.** The location sheet follows the same pattern (intro, current place, address cards with "Default
+address" and "Manage addresses", "Sign in to see your addresses", postal or ZIP code + Apply against `GET /geo/postal`
+with the same rules and messages, an expandable country list, "Use my current location", Done); market chips and the
+address search left the sheet; `SavedLocation` may be a postal code or a country; the place bar says "{town} {postal}"
+(`placeLine`) or "Choose location". Fixtures answer `/geo/postal` with the api's rules. No passive detection in the app
+(no edge headers there).
+
+**Demo.** `values-dryrun.yaml` sets `VISITOR_LOCATION_DETECTOR=edge`: silent until the Cloudflare records are proxied
+and "Add visitor location headers" is on — then Full (strict) and a reachable ACME path for HTTP-01 renewals
+(docs/runbooks/location.md, ovh.md § DNS). Recommended: Cloudflare, proxied; GeoLite2 (`geoip`) for DNS-only.

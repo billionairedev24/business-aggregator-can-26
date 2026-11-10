@@ -261,6 +261,11 @@ demo.northline.ca.        IN CAA 0 issue "letsencrypt.org"
 (with your domain and the printed address). Let's Encrypt issues each host's certificate a few minutes after the
 records resolve; then `deploy` again for the HTTPS smoke test.
 
+**"Deliver to {city}" from the visitor's IP (S-192, optional):** the demo's api runs `VISITOR_LOCATION_DETECTOR=edge`,
+so proxying these records through Cloudflare and turning on its **Add visitor location headers** managed transform
+turns the detection on — with SSL mode **Full (strict)** and the ACME path reachable for HTTP-01 renewals. Steps, the
+certificate implications and the DNS-only GeoLite2 alternative: [location.md](location.md#turning-detection-on-for-the-demo--cloudflare-recommended).
+
 ### 8. Teardown
 
 1. **Pause** between demos: action `down` (apps to 0; `ovh-mks`: also the nodes → 0). On `ovh-vps` the instance keeps
@@ -807,6 +812,20 @@ demo.northline.ca.        IN CAA 0 issue "letsencrypt.org"
 If the zone is at OVHcloud (Web Cloud › Domain names › DNS zone) the same records go there. Let's Encrypt validates
 each host over HTTP-01 through the Gateway once the records resolve; `kubectl -n northline-dryrun get certificates`.
 Switching a demo from Google Cloud to OVHcloud (or back) is changing these records — the hosts are the same.
+
+**Proxied through Cloudflare (S-192, IP detection for "Deliver to {city}").** With the zone at Cloudflare, the records
+can be **Proxied** (orange cloud) and **Rules › Settings › Managed Transforms › Add visitor location headers** turned
+on: the api (`VISITOR_LOCATION_DETECTOR=edge` in `values-dryrun.yaml`) then reads `cf-ipcity`, `cf-ipcountry`,
+`cf-postal-code`… and the consumer header says where the visitor is before they choose. With proxying on:
+
+- set **SSL/TLS › encryption mode** to **Full (strict)** (the origin keeps its Let's Encrypt certificates; *Flexible*
+  loops on the Gateway's HTTPS redirect);
+- keep `http://<host>/.well-known/acme-challenge/*` reachable — no "Always Use HTTPS", WAF or bot rule in front of it —
+  or HTTP-01 renewals fail (or switch the issuer to DNS-01 with a Cloudflare token);
+- the Gateway now sees Cloudflare's addresses as peers (the per-client limits read the forwarded chain).
+
+Or keep the records **DNS only** and use a GeoLite2 City file (`VISITOR_LOCATION_DETECTOR=geoip`). Recommended for the
+demo: **Cloudflare, proxied** — nothing to license or refresh. Details: [location.md](location.md).
 
 ## Email
 
