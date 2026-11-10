@@ -148,4 +148,20 @@ class VisitorLocatorsTest {
         assertThat(fake.postalCode("90210", "CA", Locale.ENGLISH)).isEmpty();
         assertThat(fake.postalCode("00000", null, Locale.ENGLISH)).isEmpty();
     }
+
+    @Test
+    void fakePlacesResolvesAnyCanadianCodeToItsAreasFixtureCity() {
+        var fake = new FakePlaces();
+        assertThat(fake.postalCode("T2M 0L4", null, Locale.ENGLISH)).hasValueSatisfying(p -> {
+            assertThat(p.city()).isEqualTo("Calgary");
+            assertThat(p.postalCode()).isEqualTo("T2M 0L4");
+            assertThat(p.country()).isEqualTo("CA");
+        });
+        assertThat(fake.postalCode("t3h0a1", "CA", Locale.ENGLISH))
+                .hasValueSatisfying(p -> assertThat(p.city()).isEqualTo("Calgary"));
+        assertThat(fake.postalCode("T5K 2J1", null, Locale.ENGLISH))
+                .hasValueSatisfying(p -> assertThat(p.city()).isEqualTo("Edmonton"));
+        assertThat(fake.postalCode("X0A 0H0", null, Locale.ENGLISH)).isEmpty();
+        assertThat(fake.postalCode("T2M 0L4", "US", Locale.ENGLISH)).isEmpty();
+    }
 }
