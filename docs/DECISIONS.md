@@ -12358,3 +12358,24 @@ address search left the sheet; `SavedLocation` may be a postal code or a country
 **Demo.** `values-dryrun.yaml` sets `VISITOR_LOCATION_DETECTOR=edge`: silent until the Cloudflare records are proxied
 and "Add visitor location headers" is on — then Full (strict) and a reachable ACME path for HTTP-01 renewals
 (docs/runbooks/location.md, ovh.md § DNS). Recommended: Cloudflare, proxied; GeoLite2 (`geoip`) for DNS-only.
+
+**Checks.**
+- api with Docker: 103 tests, all green — PlaceParamsTest, every `region` test (GeoApiTest +5, VisitorLocatorsTest 9, GooglePlacesWireMock +1), ValidationMessageCatalogue, Modularity, Architecture, OpenApiSpecsTest. `api-public.yaml` was regenerated with `-Popenapi.write=true`. spotless and checkstyle are clean.
+- web:
+  - `pnpm -r typecheck`: clean. lint:tokens, lint:colors and lint:brand: clean.
+  - Tests: ui 294/294, studio 416/416, console 245/245. Consumer 507/509: the two failures are date-dependent and pre-existing. The booking and provider calendars show "1 pm" in Halifax, but Halifax left daylight saving time on Nov 1. They fail the same on develop's code. Follow-up for the lead.
+  - Storybook: AccountMenu and SiteHeader pass. The LocationPill stories fail axe contrast (the header's muted text on a white canvas) the same as on develop; nothing here changed them.
+- UI checks:
+  - `make ui-shots` consumer 1440 + 390: 48 passed. The 3 failures (sign-in, register, forgot-password, React 418) are pre-existing.
+  - `make ui-a11y` consumer, studio and console: 306 passed. The keyboard paths are ok; no finding touches the changed components.
+  - `make ui-hydration`: 48 passed, with the same 3 auth pages failing.
+  - `pnpm test:visual`: 16/16 with no re-baseline.
+- mobile: typecheck, lint and consumer jest 333/333 all pass.
+- docs build: passes.
+- Shots: `$SCRATCH/s192-shots/` (before/after `make ui-shots` and `targeted/`).
+
+**Not done here:**
+- CLAUDE.md § Consumer patterns still says "Choose your location"; that is for the lead to update.
+- No IP detection in the consumer app.
+- No arrow or dim backdrop on the account flyout.
+- S-192a, as listed above.
