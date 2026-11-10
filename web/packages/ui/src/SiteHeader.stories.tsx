@@ -55,7 +55,8 @@ export const SignedOut: S = {
     await expect(c.getByRole('navigation', { name: 'Main' })).not.toHaveTextContent(/Orders/);
     await expect(c.getByRole('link', { name: 'Cart, 3 items' })).toBeInTheDocument();
     await userEvent.click(c.getByRole('button', { name: 'Account menu' }));
-    await expect(c.getByRole('menu')).toHaveTextContent('Welcome, guest');
+    // S-192: the panel draws in a portal on <body>, above the header
+    await expect(within(canvasElement.ownerDocument.body).getByRole('menu')).toHaveTextContent('Welcome, guest');
   },
 };
 /** "All": every category by section, in a sheet from the left. */
