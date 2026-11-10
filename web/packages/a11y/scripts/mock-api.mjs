@@ -1,11 +1,12 @@
 // The mock api over HTTP (S-109), for the consumer's server-side rendering (NL_BFF_URL points here):
 //   node scripts/mock-api.mjs <app> <port>
 // GET /__mock/health answers "ok"; POST /__mock/state?signedIn=true|false switches the session, ?down=503 makes every
-// answer that status (the BFF or the api down: the error states; ?down=0 back to normal). Everything else is answered
+// answer that status (the BFF or the api down: the error states; ?down=0 back to normal), ?visitor={json} sets the
+// detected place (S-192; ?visitor= clears it). Everything else is answered
 // by responder.mjs.
 import { createServer } from 'node:http';
 import { responder } from './responder.mjs';
-import { setSignedIn } from './overrides.mjs';
+import { setSignedIn, setVisitor } from './overrides.mjs';
 
 const [app = 'consumer', port = '4603'] = process.argv.slice(2);
 const answer = responder(app);
@@ -16,6 +17,7 @@ createServer((req, res) => {
     const params = new URL(req.url, 'http://x').searchParams;
     if (params.has('signedIn')) setSignedIn(app, params.get('signedIn') === 'true');
     if (params.has('down')) down = Number(params.get('down')) || 0;
+    if (params.has('visitor')) setVisitor(params.get('visitor') ? JSON.parse(params.get('visitor')) : null); // S-192
     res.statusCode = 204; res.end(); return;
   }
   if (down) { res.writeHead(down, { 'content-type': 'application/json' }); res.end(JSON.stringify({ status: down, error: 'down' })); return; }

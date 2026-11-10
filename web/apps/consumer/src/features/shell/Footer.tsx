@@ -4,6 +4,8 @@ import { useShellT } from './messages';
 import { useSiteConfig } from '../../lib/config';
 import { useRenderNow } from '../../lib/renderClock';
 import { DEALS_HREF } from './Header';
+import { countryName } from '../location/countries';
+import { useDeliveryLocation } from '../location/useDeliveryLocation';
 
 type Key = Parameters<ReturnType<typeof useShellT>>[0];
 interface FooterLink { key: Key; href: string; legal?: boolean }
@@ -50,7 +52,8 @@ const LEGAL: readonly FooterLink[] = [
 /**
  * The footer (S-191, after Amazon's: the owner found the one-line band "so dry"): a "Back to top" bar, four link columns
  * (Get to know us · Make money with us · Payments and policies · Let us help you), a row with the logo, the FR/EN switch
- * and the region, then the legal strip (conditions of use, privacy, the cookies and ads notice, "© year company"). The
+ * and "language · country" (S-192: the visitor's country — chosen, else detected, else NL_SITE_COUNTRY — opening the
+ * location dialog; no country or currency in code), then the legal strip (conditions of use, privacy, the cookies and ads notice, "© year company"). The
  * year is the render clock's (lib/renderClock: the server and the browser's first render agree, no hydration error);
  * the company is configuration (`NL_LEGAL_ENTITY`, S-134). Help is here for everyone, guests included (WCAG 3.2.6). On
  * phones the columns pair up two by two and the rows stack, every link a 44 px target. Colours are the footer and
@@ -59,8 +62,12 @@ const LEGAL: readonly FooterLink[] = [
 export function Footer() {
   const t = useShellT();
   const { locale, setLocale } = useLocale();
-  const { legalEntity } = useSiteConfig();
+  const { legalEntity, country: siteCountry } = useSiteConfig();
   const year = useRenderNow().getFullYear();
+  const { location, visitor, chooser } = useDeliveryLocation();
+  const code = (location.status !== 'locating' ? location.country : undefined) ?? visitor?.country ?? siteCountry ?? undefined;
+  const country = code ? countryName(code, locale) : t('regionNoCountry');
+  const language = t('languageName');
   const link = (l: FooterLink) => (
     <li key={l.key}><SiteLink href={l.href} hrefLang={l.legal ? 'en-CA' : undefined}>{t(l.key)}</SiteLink></li>
   );
@@ -84,7 +91,9 @@ export function Footer() {
         <SiteLink href="/" className="nl-footer-brand" aria-label={t('homeLink')}><Logo size={28} className="nl-footer-logo" /></SiteLink>
         <button type="button" className="nl-footer-chip nl-footer-lang" lang={locale === 'fr' ? 'en-CA' : 'fr-CA'}
           onClick={() => setLocale(locale === 'fr' ? 'en' : 'fr')}><Translate size={16} aria-hidden />{t('langSwitch')}</button>
-        <span className="nl-footer-chip nl-footer-region"><Globe size={16} aria-hidden />{t('region')}</span>
+        <button type="button" className="nl-footer-chip nl-footer-region" aria-haspopup="dialog" aria-label={code ? t('regionChange', { language, country }) : undefined} onClick={chooser.show}>
+          <Globe size={16} aria-hidden /><span aria-hidden={code ? true : undefined}>{t('regionLabel', { language, country })}</span>
+        </button>
       </div>
       <div className="nl-footer-legal">
         <nav aria-label={t('footerLegal')}><ul>{LEGAL.map(link)}</ul></nav>

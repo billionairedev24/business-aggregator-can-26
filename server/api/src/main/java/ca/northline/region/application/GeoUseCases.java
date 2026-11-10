@@ -30,6 +30,19 @@ public final class GeoUseCases {
         Resolution resolve(GeoPoint point);
     }
 
+    /** S-192: the visitor's place guessed from the request (the configured {@link VisitorLocator}); empty = no guess. */
+    public interface LocateVisitor {
+        Optional<VisitorLocator.VisitorPlace> locate(VisitorLocator.VisitorRequest request);
+    }
+
+    /**
+     * S-192: a postal or ZIP code of any country (the location dialog's "Apply"), checked with
+     * {@code PlaceParams.postalCode} / {@code country} (422), then looked up where the places provider knows it.
+     */
+    public interface LookUpPostalCode {
+        GeoViews.PostalPlace lookUp(@Nullable String code, @Nullable String country, Locale locale);
+    }
+
     public interface BrowseMarkets {
         GeoViews.Markets provinces(Locale locale);
     }

@@ -93,6 +93,9 @@ apps:
       # buy an age-restricted item (docs/runbooks/demo.md). Test mode's hosted page lets you pick the outcome.
       IDENTITY_PROVIDER: stripe
       AGE_VERIFICATION_PROVIDER: stripe
+      # S-192: "Deliver to {city}" from Cloudflare's visitor location headers — silent until the records are proxied and
+      # "Add visitor location headers" is on (docs/runbooks/location.md; DNS-only alternative: geoip + a GeoLite2 file)
+      VISITOR_LOCATION_DETECTOR: edge
     resources:                  # S-163: measured peak RSS 555–620 MiB (docs/runbooks/deploy.md § JVM memory)
       requests: { cpu: 200m, memory: 768Mi }
       limits: { memory: 768Mi }

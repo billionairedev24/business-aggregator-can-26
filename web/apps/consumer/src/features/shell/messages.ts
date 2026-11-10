@@ -19,7 +19,9 @@ export const useShellT = defineMessages({
     privacy: 'Privacy notice', terms: 'Conditions of use', helpLink: 'Help', langSwitch: 'Français', photoCredits: 'Photo credits',
     sell: 'Sell on {brand}', offer: 'Offer a service', kitchen: 'Run a kitchen',
     // the footer (S-191): four columns, the language and region row, the legal strip
-    backToTop: 'Back to top', homeLink: '{brand} — home', region: 'Canada · CAD $', footerLegal: 'Legal',
+    backToTop: 'Back to top', homeLink: '{brand} — home', footerLegal: 'Legal',
+    // S-192: the footer's "language · country" (the country from the visitor's place, else configuration)
+    languageName: 'English', regionLabel: '{language} · {country}', regionChange: '{language} · {country}. Change location', regionNoCountry: 'Choose location',
     colKnow: 'Get to know us', howItWorks: 'How {brand} works', shopLocal: 'Local shops', bookPro: 'Find a pro', orderIn: 'Order food',
     colEarn: 'Make money with us', waysIn: 'Every way to join',
     colPay: 'Payments and policies', paymentHeld: 'Payment held until delivery', paymentMethods: 'Payment methods', accessibility: 'Accessibility',
@@ -27,6 +29,8 @@ export const useShellT = defineMessages({
     adsNotice: 'Cookies and ads notice',
     // account menu
     activity: 'Activity', account: 'Account', preferences: 'Preferences',
+    // S-192: Amazon's flyout — "Sign in", "New customer? Start here.", then "Your lists" | "Your account"
+    yourLists: 'Your lists', yourAccountCol: 'Your account', newCustomer: 'New customer?', startHere: 'Start here.', savedForLater: 'Saved for later',
     orders: 'Orders', bookings: 'Bookings', messages: 'Messages', quoteRequests: 'Quote requests', yourAccount: 'Your account', favourites: 'Saved', wallet: 'Wallet & points', profile: 'Profile',
     addresses: 'Addresses', payments: 'Payment methods', security: 'Login & security',
     notifications: 'Notifications', language: 'Language / Langue & region', dietary: 'Dietary & accessibility',
@@ -56,13 +60,15 @@ export const useShellT = defineMessages({
     skip: 'Aller au contenu',
     privacy: 'Avis de confidentialité', terms: 'Conditions d’utilisation', helpLink: 'Aide', langSwitch: 'English', photoCredits: 'Crédits photo',
     sell: 'Vendre sur {brand}', offer: 'Offrir un service', kitchen: 'Gérer une cuisine',
-    backToTop: 'Retour en haut', homeLink: '{brand} — accueil', region: 'Canada · $ CA', footerLegal: 'Mentions légales',
+    backToTop: 'Retour en haut', homeLink: '{brand} — accueil', footerLegal: 'Mentions légales',
+    languageName: 'Français', regionLabel: '{language} · {country}', regionChange: '{language} · {country}. Changer d’adresse', regionNoCountry: 'Choisir l’adresse',
     colKnow: 'Apprenez à nous connaître', howItWorks: 'Comment fonctionne {brand}', shopLocal: 'Commerces locaux', bookPro: 'Trouver un pro', orderIn: 'Commander un repas',
     colEarn: 'Gagnez de l’argent avec nous', waysIn: 'Toutes les façons de vous joindre à nous',
     colPay: 'Paiements et politiques', paymentHeld: 'Paiement retenu jusqu’à la livraison', paymentMethods: 'Modes de paiement', accessibility: 'Accessibilité',
     colHelp: 'Besoin d’aide ?', yourOrders: 'Vos commandes', yourBookings: 'Vos réservations', deliveryPlace: 'Votre adresse de livraison',
     adsNotice: 'Avis sur les témoins et la publicité',
     activity: 'Activité', account: 'Compte', preferences: 'Préférences',
+    yourLists: 'Vos listes', yourAccountCol: 'Votre compte', newCustomer: 'Nouveau client ?', startHere: 'Commencez ici.', savedForLater: 'Enregistrés pour plus tard',
     orders: 'Commandes', bookings: 'Réservations', messages: 'Messages', quoteRequests: 'Demandes de devis', yourAccount: 'Votre compte', favourites: 'Enregistrés', wallet: 'Portefeuille et points', profile: 'Profil',
     addresses: 'Adresses', payments: 'Modes de paiement', security: 'Connexion et sécurité',
     notifications: 'Notifications', language: 'Langue / Language et région', dietary: 'Alimentation et accessibilité',

@@ -55,3 +55,11 @@ A location is never required: every field below is optional, and a blank value m
 | lng | −180 … 180 | Longitude must be between -180 and 180. (services providers: That location is outside the map.) |
 "Choose a city." is no longer answered by these reads (it was the 422 for a missing city before S-190).
 
+**Postal or ZIP code and country (S-192, the location dialog's "Apply" — `GET /api/v1/geo/postal?code=&country=`).** Any country's code: no country's pattern (S-192a brings per-country formats); a code nobody knows is kept as typed, never refused. Server: `PlaceParams.postalCode` / `PlaceParams.country`; client: consumer web `features/location/LocationChooser.tsx` (`postalSchema`), consumer app `src/location/LocationSheet.tsx` (`postalError`). The address book and the checkout keep their Canadian postal rule until S-192a (they feed sales tax).
+| field | rule | message |
+|---|---|---|
+| code | required; trimmed, inner spaces made one, upper-cased | Enter a postal or ZIP code. |
+| code | ≤ 12 characters | At most 12 characters. |
+| code | letters A–Z and digits, with spaces and hyphens between them (not first or last) | Use letters, digits, spaces and hyphens only. |
+| country | optional; ISO 3166-1 alpha-2 (two letters, not XA–XZ) | Choose a country from the list. |
+

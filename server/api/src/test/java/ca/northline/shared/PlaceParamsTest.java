@@ -61,6 +61,50 @@ class PlaceParamsTest {
     }
 
     @Test
+    void postalCodesOfAnyCountryAreAccepted_normalised() {
+        assertThat(PlaceParams.postalCode("code", "  t2p   1b5 ")).isEqualTo("T2P 1B5");
+        assertThat(PlaceParams.postalCode("code", "90210")).isEqualTo("90210");
+        assertThat(PlaceParams.postalCode("code", "90210-1234")).isEqualTo("90210-1234");
+        assertThat(PlaceParams.postalCode("code", "SW1A 1AA")).isEqualTo("SW1A 1AA");
+        assertThat(PlaceParams.postalCode("code", "110-0001")).isEqualTo("110-0001");
+        assertThat(PlaceParams.postalCode("code", "x".repeat(12))).hasSize(12);
+    }
+
+    @Test
+    void postalCodeRulesAndMessages() {
+        for (var blank : new String[] {null, "", "   "}) {
+            assertThatThrownBy(() -> PlaceParams.postalCode("code", blank))
+                    .isInstanceOfSatisfying(
+                            RuleViolation.class,
+                            e -> assertThat(e.getViolations())
+                                    .containsExactly(new RuleViolation.Violation(
+                                            "code", "required", "Enter a postal or ZIP code.")));
+        }
+        assertThatThrownBy(() -> PlaceParams.postalCode("code", "1".repeat(13))).hasMessage("At most 12 characters.");
+        for (var bad : new String[] {"T2P_1B5", "<b>", "-1234", "12 34-", "T2P/1B5", "ÉÉ1"}) {
+            assertThatThrownBy(() -> PlaceParams.postalCode("code", bad))
+                    .as(bad)
+                    .hasMessage("Use letters, digits, spaces and hyphens only.");
+        }
+        assertThat(PlaceParams.postalOrNull("bad_code")).isNull();
+        assertThat(PlaceParams.postalOrNull("t2p1b5")).isEqualTo("T2P1B5");
+    }
+
+    @Test
+    void countryIsTwoLetters_orNotGiven() {
+        assertThat(PlaceParams.country("country", null)).isNull();
+        assertThat(PlaceParams.country("country", " ")).isNull();
+        assertThat(PlaceParams.country("country", "us")).isEqualTo("US");
+        for (var bad : new String[] {"USA", "U", "1A", "XX", "T1"}) {
+            assertThatThrownBy(() -> PlaceParams.country("country", bad))
+                    .as(bad)
+                    .hasMessage("Choose a country from the list.");
+        }
+        assertThat(PlaceParams.isCountry("XX")).isFalse();
+        assertThat(PlaceParams.isCountry("FR")).isTrue();
+    }
+
+    @Test
     void distanceIsGreatCircleKm() {
         assertThat(PlaceParams.km(0, 0, 0, 0)).isZero();
         // one degree of latitude ≈ 111.2 km

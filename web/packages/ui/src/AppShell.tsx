@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { CaretDown, List, SidebarSimple, X, type Icon } from '@phosphor-icons/react';
 import { defineMessages } from './i18n';
-import { SkipLink, useStickyOffset } from './A11y';
+import { SkipLink, useInputModality, useStickyOffset } from './A11y';
 import { Menu, type MenuEntry } from './Overlay';
 
 const useT = defineMessages({
@@ -65,6 +65,7 @@ export function AppShell({ brand, headerStart, search, headerEnd, pinned, groups
   const shellRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   useStickyOffset(headerRef, h => shellRef.current?.style.setProperty('--nl-shell-top', `${h}px`));
+  useInputModality(); // S-192: focus rings for the keyboard only, never after a click or a tap
   const closeMenu = (refocus: boolean) => { setMenu(false); if (refocus) menuButton.current?.focus(); };
 
   const go = (i: NavItem) => { setMenu(false); setMediumOpen(false); onNavigate(i); };

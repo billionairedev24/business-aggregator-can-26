@@ -29,6 +29,9 @@ const PROVINCE_KEY = /(?:^|[_.\-])(?:alberta|british_columbia|ontario|quebec|man
 
 /** file (relative to web/) → literal fragments allowed there, each with its reason. */
 const ALLOWED: Record<string, { fragment: RegExp; reason: string }[]> = {
+  'apps/consumer/src/features/location/countries.ts': [
+    { fragment: /^MT$/, reason: 'S-192: Malta’s ISO 3166-1 code in the list of every country (names from Intl.DisplayNames), not a time zone' },
+  ],
   'apps/studio/src/features/compliance/docs.ts': [
     { fragment: /^(?:AMVIC|AGLC)$/, reason: 'a registry code the server sends (merchants.registry_checks.source, taxonomy data), compared to pick a note — not copy' },
   ],

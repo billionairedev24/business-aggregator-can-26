@@ -1,66 +1,68 @@
 import { useQuery } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ApiError, colors, Icon, LINE, MIN_TARGET, radius, randomToken, semantic, shadow, space, textStyles, type IconName } from '@northline/mobile-kit';
+import { ApiError, colors, Icon, LINE, MIN_TARGET, radius, semantic, shadow, space, textStyles } from '@northline/mobile-kit';
 
 import type { Address as AccountAddress } from '../api/account';
-import { geoApi, type Address, type Market, type Province } from '../api/geo';
+import { geoApi, type PostalPlace, type Resolution } from '../api/geo';
 import { useAuth } from '../auth/AuthProvider';
 import { EMAIL_PATTERN } from '../auth/rules';
 import { useI18n, type MessageKey } from '../i18n';
 import { services } from '../services';
-import { Body, Button, Field, Notice, Row, Tag, type } from '../ui/primitives';
+import { Body, Button, Field, Notice, type } from '../ui/primitives';
 import { RoundButton } from '../ui/screen';
 import { Skeleton } from '../ui/states';
-import { locateHere, placeOfAddress, useDeliveryLocation, type DeliveryLocation, type SavedLocation } from './DeliveryLocation';
+import { countryName, countryOptions } from './countries';
+import { locateHere, placeLine, placeOfAddress, useDeliveryLocation, type SavedLocation } from './DeliveryLocation';
 
 type T = (key: MessageKey, params?: Record<string, string | number>) => string;
 
-/** Waits `ms` after the last change (typeahead: one request per pause, not per keystroke). */
-function useDebounced<V>(value: V, ms: number): V {
-  const [v, setV] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setV(value), ms);
-    return () => clearTimeout(timer);
-  }, [value, ms]);
-  return v;
+/** validation-rules.md § Location (S-192): the api's `PlaceParams.postalCode`, the same messages. */
+const POSTAL = /^[A-Z0-9](?:[A-Z0-9 -]*[A-Z0-9])?$/;
+export function postalError(t: T, raw: string): { code: string } | { error: string } {
+  const code = raw.trim().replace(/\s+/g, ' ').toUpperCase();
+  if (!code) return { error: t('lt.loc.postalRequired') };
+  if (code.length > 12) return { error: t('lt.loc.postalTooLong') };
+  if (!POSTAL.test(code)) return { error: t('lt.loc.postalFormat') };
+  return { code };
 }
 
-const newSession = () => randomToken(16);
-
-/** A known place without its status, as the store keeps it (the caller checked label and city). */
-function stripStatus(l: DeliveryLocation): SavedLocation {
-  const { status: _status, label = '', city = '', ...rest } = l;
-  return { label, city, ...rest };
+/** What the sheet saves for a postal code (S-192): inside a live or pilot market its city; elsewhere the code and its point. */
+export function fromPostal(p: PostalPlace): SavedLocation {
+  const m = p.resolution?.market;
+  const served = !!m && (m.stage === 'live' || m.stage === 'pilot');
+  const locality = p.city ?? undefined;
+  return {
+    label: locality ? `${locality} ${p.postalCode}` : p.postalCode,
+    postalCode: p.postalCode,
+    ...(locality ? { locality } : {}),
+    ...(p.country ? { country: p.country } : {}),
+    ...(p.lat != null && p.lng != null ? { lat: p.lat, lng: p.lng } : {}),
+    ...(served && m ? { city: m.city, province: m.province, marketId: m.id } : {}),
+    ...(served && p.resolution?.zone ? { zoneId: p.resolution.zone.id, zone: p.resolution.zone.name } : {}),
+  };
 }
 
 /**
- * The location sheet (light direction; the consumer web's location dialog, DECISIONS "Light foundation"): a bottom
- * sheet over the screen it was opened from, with what is shown now and four ways to change it —
- *   · "Use my current location": the only place the app asks for the phone's position, on the press
- *     (`expo-location`, then `GET /geo/reverse`); refused, unavailable or outside our markets each say so;
- *   · "Address or postal code": suggestions through the api (`/geo/autocomplete`, Canada only, one session token per
- *     search), resolved by `/geo/places/{id}` to a market and zone — "Deliver here" with the unit / buzzer note, or
- *     the waitlist outside a live market;
- *   · the signed-in person's addresses (`GET /me/addresses`);
- *   · the live markets (`GET /geo/markets`).
- * Choosing saves the place (every screen reads it in place) and closes the sheet — or goes on to `next` (the sign-in
- * and sign-up flows' address step).
+ * The location sheet (S-192, the consumer web's "Choose your location" after Amazon's): a bottom sheet over the screen
+ * it was opened from — the line that delivery depends on the place, what is shown now, the signed-in person's addresses
+ * as cards (the chosen one marked, "Default address", "Manage addresses") or "Sign in to see your addresses", "or enter
+ * a postal or ZIP code" with Apply (any country, `GET /geo/postal`; a code nobody knows is kept as typed), "or deliver to
+ * another country" (a country alone, no city), "Use my current location" (the only place the app asks for the phone's
+ * position, on the press) and Done. Each choice is saved at once; Done closes (or goes on to `next`, the sign-in flows'
+ * address step). A place outside every market is kept: the screens rank the nearest markets first (S-190).
  */
 export function LocationSheet() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const insets = useSafeAreaInsets();
   const { next, step } = useLocalSearchParams<{ next?: string; step?: string }>();
-  // after a sign-up or sign-in with no address yet: Journey A's question (design 01 A5) heads the sheet
   const askAddress = step === 'address';
   const { location, save } = useDeliveryLocation();
   const { status } = useAuth();
-  const geo = geoApi(services().api);
-  const markets = useQuery({ queryKey: ['geo', 'markets'], queryFn: () => geo.markets(), staleTime: 300_000 });
   const addresses = useQuery({
     queryKey: ['account', 'addresses'],
     queryFn: async () => (await services().api.get<{ items: AccountAddress[] }>('/me/addresses'))?.items ?? [],
@@ -68,120 +70,73 @@ export function LocationSheet() {
     staleTime: 60_000,
   });
 
-  const [query, setQuery] = useState('');
-  const [session, setSession] = useState(newSession);
-  const [placeId, setPlaceId] = useState<string | null>(null);
-  const [listOpen, setListOpen] = useState(false);
-  const [here, setHere] = useState<DeliveryLocation | null>(null);
-  const [unit, setUnit] = useState(location.status === 'saved' ? (location.unit ?? '') : '');
+  const [code, setCode] = useState('');
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
+  const [applied, setApplied] = useState<PostalPlace | null>(null);
+  const [countriesOpen, setCountriesOpen] = useState(false);
   const [note, setNote] = useState<{ text: string; settings?: boolean } | null>(null);
   const [locating, setLocating] = useState(false);
-
-  const debounced = useDebounced(query, 250);
-  const typed = debounced.trim();
-  const suggestions = useQuery({
-    queryKey: ['geo', 'autocomplete', typed.toLowerCase()],
-    queryFn: () => geo.suggest(typed, session, location),
-    enabled: listOpen && typed.length >= 3 && !placeId,
-    staleTime: 60_000,
-    retry: false,
-  });
-  const address = useQuery({
-    queryKey: ['geo', 'place', placeId],
-    queryFn: () => geo.place(placeId!, session),
-    enabled: !!placeId,
-    staleTime: Infinity,
-    retry: false,
-  });
-  const picked: Address | null = address.data ?? null;
-  const provinces = useMemo(() => markets.data?.items ?? [], [markets.data]);
-  const live = useMemo(() => provinces.flatMap((p) => p.markets.filter((m) => m.stage === 'live').map((m) => ({ m, p }))), [provinces]);
+  const countries = useMemo(() => countryOptions(locale), [locale]);
 
   const close = () => {
-    // the sign-up / sign-in address step goes on to Home (what is under the sheet there is the sign-in flow)
     const to = typeof next === 'string' && next.startsWith('/') && !next.startsWith('//') ? next : askAddress ? '/home' : null;
     if (to) router.replace(to as never);
     else if (router.canGoBack()) router.back();
     else router.replace('/home');
   };
-  const choose = async (l: SavedLocation) => {
-    await save(l);
-    close();
+  const choose = (l: SavedLocation) => {
+    setNote(null);
+    void save(l);
   };
 
-  const onQuery = (v: string) => {
-    setQuery(v);
-    setListOpen(true);
-    setHere(null);
-    setNote(null);
-    if (placeId) {
-      setPlaceId(null);
-      setSession(newSession()); // a new search, a new Google session
+  const apply = async () => {
+    const checked = postalError(t, code);
+    if ('error' in checked) return setCodeError(checked.error);
+    setCodeError(null);
+    setApplying(true);
+    try {
+      const p = (await geoApi(services().api).postal(checked.code)) ?? { postalCode: checked.code, found: false };
+      setApplied(p);
+      setCode(p.postalCode);
+      choose(fromPostal(p));
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 422) setCodeError(e.message);
+      else {
+        // the lookup is down: the code is still a place (S-190, never blocks)
+        const p = { postalCode: checked.code, found: false };
+        setApplied(p);
+        choose(fromPostal(p));
+      }
+    } finally {
+      setApplying(false);
     }
-  };
-  const pick = (id: string, label: string) => {
-    setPlaceId(id);
-    setQuery(label);
-    setListOpen(false);
   };
 
   const locate = async () => {
     setNote(null);
+    setApplied(null);
     setLocating(true);
     const r = await locateHere();
     setLocating(false);
     if (r.ok) {
-      setPlaceId(null);
-      setQuery('');
-      setListOpen(false);
-      setHere(r.place);
+      const { status: _status, ...place } = r.place;
+      await save(place);
+      close();
       return;
     }
-    setNote(
-      r.reason === 'outside'
-        ? { text: t('lt.loc.hereOutside') }
-        : r.reason === 'unavailable'
-          ? { text: t('lt.loc.hereUnavailable') }
-          : { text: t('lt.loc.hereDenied'), settings: r.reason === 'settings' },
-    );
+    if (r.reason === 'outside') {
+      if (r.place) void save(r.place);
+      setNote({ text: r.place ? t('lt.loc.hereOutsideKept') : t('lt.loc.hereOutside') });
+    } else if (r.reason === 'unavailable') setNote({ text: t('lt.loc.hereUnavailable') });
+    else setNote({ text: t('lt.loc.hereDenied'), settings: r.reason === 'settings' });
   };
 
-  const savePicked = async () => {
-    const extra = unit.trim() ? { unit: unit.trim() } : {};
-    if (picked) {
-      const r = picked.resolution;
-      if (!r.market || r.market.stage !== 'live') return; // the waitlist is shown instead
-      await choose({
-        label: picked.label,
-        city: r.market.city,
-        lat: picked.lat,
-        lng: picked.lng,
-        placeId: picked.placeId,
-        street: picked.street,
-        ...extra,
-        ...(picked.province ? { province: picked.province } : {}),
-        ...(picked.postalCode ? { postalCode: picked.postalCode } : {}),
-        marketId: r.market.id,
-        ...(r.zone ? { zoneId: r.zone.id, zone: r.zone.name } : {}),
-      });
-    } else if (here?.label && here.city) {
-      await choose({ ...stripStatus(here), ...extra });
-    }
-  };
-
-  const current = location.label ?? location.city;
-  const currentLine =
-    location.status === 'saved' && current
-      ? t('lt.loc.currentSaved', { place: current })
-      : location.status === 'address' && current
-        ? t('lt.loc.currentAddress', { place: current })
-        : current
-          ? t('lt.loc.currentDefault', { place: current })
-          : t('lt.loc.currentNone');
-  const showList = listOpen && typed.length >= 3 && !placeId;
-  const pickedLive = picked ? picked.resolution.market?.stage === 'live' : false;
-  const chosen = picked ?? null;
-  const taxOf = (code?: string | null) => provinces.find((p) => p.code === code);
+  const place = placeLine(location, (c) => countryName(c, locale));
+  const currentLine = place ? t('lt.loc.delivering', { place }) : t('lt.loc.currentNone');
+  const chosen = (a: AccountAddress) => location.status !== 'locating' && location.street === a.street && location.city === a.city;
+  const pickedCountry = location.status !== 'locating' && !location.city && !location.postalCode ? location.country : undefined;
+  const appliedServed = !!applied?.resolution?.market && ['live', 'pilot'].includes(applied.resolution.market.stage);
 
   return (
     <View style={styles.root} testID="location">
@@ -197,10 +152,108 @@ export function LocationSheet() {
             <RoundButton icon="x" label={t('lt.loc.close')} onPress={close} testID="location-close" />
           </View>
           <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-            <View style={styles.current}>
-              <Icon name="map-pin" size={20} filled color={semantic['action-primary']} />
-              <Text style={[type.body, styles.flex]}>{currentLine}</Text>
+            <Body tone="muted">{t('lt.loc.intro')}</Body>
+            <Text style={[type.body, type.strong]} accessibilityLiveRegion="polite" testID="location-current">
+              {currentLine}
+            </Text>
+
+            {status === 'signedIn' ? (
+              <View style={styles.gap} testID="location-addresses">
+                <Text style={type.kicker}>{t('lt.loc.savedAddresses')}</Text>
+                {addresses.isPending ? <Skeleton height={64} /> : null}
+                {(addresses.data ?? []).map((a) => (
+                  <Pressable
+                    key={a.id}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: chosen(a) }}
+                    accessibilityLabel={[a.label, a.street, a.city, a.postal, a.isDefault ? t('lt.loc.defaultAddress') : null].filter(Boolean).join(', ')}
+                    onPress={() => {
+                      setApplied(null);
+                      choose(placeOfAddress(a));
+                    }}
+                    style={({ pressed }) => [styles.card, chosen(a) && styles.cardChosen, pressed && styles.pressed]}
+                    testID={`address-${a.id}`}
+                  >
+                    <View style={styles.flex}>
+                      <Text style={[type.body, type.strong]} numberOfLines={2}>
+                        {a.label ? `${a.label} · ${a.street}` : a.street}
+                      </Text>
+                      <Text style={type.small}>{[a.city, a.province, a.postal].filter(Boolean).join(' ')}</Text>
+                      {a.isDefault ? <Text style={[type.small, type.strong]}>{t('lt.loc.defaultAddress')}</Text> : null}
+                    </View>
+                    {chosen(a) ? <Icon name="check" size={20} color={semantic.selected} /> : null}
+                  </Pressable>
+                ))}
+                <Pressable accessibilityRole="link" onPress={() => router.push('/account/addresses' as never)} style={styles.link} testID="location-manage">
+                  <Text style={styles.linkText}>{t('lt.loc.manageAddresses')}</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Button label={t('lt.loc.signInForAddresses')} tone="secondary" onPress={() => router.push('/sign-in')} testID="location-sign-in" />
+            )}
+
+            <Divider label={t('lt.loc.orPostal')} />
+            <View style={styles.postal}>
+              <View style={styles.flex}>
+                <Field
+                  label={t('lt.loc.postal')}
+                  placeholder={t('lt.loc.postalPlaceholder')}
+                  value={code}
+                  onChangeText={(v) => {
+                    setCode(v);
+                    setCodeError(null);
+                  }}
+                  error={codeError}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  autoComplete="postal-code"
+                  textContentType="postalCode"
+                  maxLength={20}
+                  onSubmitEditing={() => void apply()}
+                  testID="field-postal"
+                />
+              </View>
+              <Button label={t('lt.loc.apply')} tone="secondary" busy={applying} onPress={() => void apply()} style={styles.apply} testID="location-apply" />
             </View>
+            {applied && !appliedServed ? (
+              <View style={styles.gap}>
+                <Body tone="small">{t('lt.loc.appliedElsewhere', { place: applied.city ? `${applied.city} ${applied.postalCode}` : applied.postalCode })}</Body>
+                {applied.resolution?.waitlist ? <Waitlist t={t} resolution={applied.resolution} /> : null}
+              </View>
+            ) : null}
+
+            <Divider label={t('lt.loc.orCountry')} />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`${t('lt.loc.country')}, ${pickedCountry ? countryName(pickedCountry, locale) : t('lt.loc.chooseCountry')}`}
+              accessibilityState={{ expanded: countriesOpen }}
+              onPress={() => setCountriesOpen((o) => !o)}
+              style={({ pressed }) => [styles.select, pressed && styles.pressed]}
+              testID="location-country"
+            >
+              <Text style={[type.body, styles.flex]}>{pickedCountry ? countryName(pickedCountry, locale) : t('lt.loc.chooseCountry')}</Text>
+              <Icon name={countriesOpen ? 'caret-right' : 'caret-down'} size={18} color={colors.textMuted} />
+            </Pressable>
+            {countriesOpen ? (
+              <View style={styles.list} accessibilityLabel={t('lt.loc.allCountries')}>
+                {countries.map((c) => (
+                  <Pressable
+                    key={c.code}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: pickedCountry === c.code }}
+                    onPress={() => {
+                      setApplied(null);
+                      setCountriesOpen(false);
+                      choose({ country: c.code });
+                    }}
+                    style={({ pressed }) => [styles.option, pressed && styles.pressed]}
+                    testID={`country-${c.code}`}
+                  >
+                    <Text style={type.body}>{c.name}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
 
             <Pressable
               accessibilityRole="button"
@@ -211,7 +264,7 @@ export function LocationSheet() {
               testID="location-use-mine"
             >
               <Icon name="crosshair" size={20} color={semantic['action-primary']} />
-              <Text style={styles.hereText}>{locating ? t('lt.loc.locating') : t('lt.loc.useHere')}</Text>
+              <Text style={styles.linkText}>{locating ? t('lt.loc.locating') : t('lt.loc.useHere')}</Text>
             </Pressable>
             {note ? (
               <View style={styles.gap}>
@@ -219,84 +272,8 @@ export function LocationSheet() {
                 {note.settings ? <Button label={t('location.openSettings')} tone="secondary" onPress={() => void Linking.openSettings()} /> : null}
               </View>
             ) : null}
-            {here ? <Chosen t={t} place={here.label ?? ''} detail={here.zone ? t('location.tagZone', { zone: here.zone }) : here.city} unit={unit} setUnit={setUnit} onSave={() => void savePicked()} /> : null}
 
-            <View style={styles.gap}>
-              <Field
-                label={t('lt.loc.search')}
-                placeholder={t('lt.loc.searchPlaceholder')}
-                value={query}
-                onChangeText={onQuery}
-                onFocus={() => setListOpen(true)}
-                error={address.isError ? t('location.addressError') : null}
-                autoComplete="street-address"
-                textContentType="fullStreetAddress"
-                autoCorrect={false}
-                testID="field-street"
-              />
-              {showList ? (
-                <View accessibilityLabel={t('location.suggestions')} style={styles.list} testID="suggestions">
-                  {(suggestions.data?.items ?? []).map((s) => (
-                    <Choice key={s.placeId} icon="map-pin" title={s.main} sub={s.secondary} onPress={() => pick(s.placeId, `${s.main}, ${s.secondary.split(',')[0]}`)} label={`${s.main}, ${s.secondary}`} />
-                  ))}
-                  {suggestions.isFetching && !suggestions.data?.items.length ? <Body tone="small" style={styles.listNote}>{t('location.searching')}</Body> : null}
-                  {suggestions.isSuccess && !suggestions.isFetching && suggestions.data?.items.length === 0 ? <Body tone="small" style={styles.listNote}>{t('location.noMatch', { q: typed })}</Body> : null}
-                  {suggestions.isError ? (
-                    <Body tone="small" style={styles.listNote}>
-                      {suggestions.error instanceof ApiError && suggestions.error.status === 429 ? t('location.tooMany') : t('location.lookupError')}
-                    </Body>
-                  ) : null}
-                  {suggestions.data ? <Body tone="small" style={styles.listNote}>{t('location.poweredBy', { name: suggestions.data.attribution })}</Body> : null}
-                </View>
-              ) : null}
-              {address.isFetching ? <Body tone="small">{t('location.resolving')}</Body> : null}
-            </View>
-
-            {chosen && pickedLive ? (
-              <Chosen
-                t={t}
-                place={chosen.label}
-                tags={<Tags t={t} zone={chosen.resolution.zone?.name} runs={chosen.resolution.zone?.runsPerDay ?? null} province={taxOf(chosen.province)} />}
-                unit={unit}
-                setUnit={setUnit}
-                onSave={() => void savePicked()}
-              />
-            ) : null}
-            {chosen && !pickedLive ? <Waitlist t={t} address={chosen} onAnother={() => onQuery('')} /> : null}
-
-            {status === 'signedIn' && (addresses.data?.length ?? 0) > 0 ? (
-              <View style={styles.gap} testID="location-addresses">
-                <Text style={type.kicker}>{t('lt.loc.savedAddresses')}</Text>
-                <View style={styles.list}>
-                  {addresses.data!.map((a) => (
-                    <Choice
-                      key={a.id}
-                      icon="house-line"
-                      title={a.label ? `${a.label} · ${a.street}` : a.street}
-                      sub={[a.city, a.isDefault ? t('lt.loc.default') : null].filter(Boolean).join(' · ')}
-                      label={[a.street, a.city, a.isDefault ? t('lt.loc.default') : null].filter(Boolean).join(', ')}
-                      onPress={() => void choose(placeOfAddress(a))}
-                      testID={`address-${a.id}`}
-                    />
-                  ))}
-                </View>
-              </View>
-            ) : null}
-
-            <View style={styles.gap}>
-              <Text style={type.kicker}>{t('lt.loc.markets')}</Text>
-              {markets.isPending ? (
-                <Skeleton height={48} />
-              ) : markets.isError ? (
-                <Notice message={t('location.marketsError')} />
-              ) : (
-                <View style={styles.markets} testID="location-markets">
-                  {live.map(({ m, p }) => (
-                    <MarketChip key={m.id} m={m} p={p} t={t} onPress={() => void choose({ label: m.city, city: m.city, province: m.province, marketId: m.id, ...(m.lat != null && m.lng != null ? { lat: m.lat, lng: m.lng } : {}) })} />
-                  ))}
-                </View>
-              )}
-            </View>
+            <Button label={t('lt.loc.done')} large onPress={close} testID="location-done" />
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
@@ -304,89 +281,25 @@ export function LocationSheet() {
   );
 }
 
-/** A row of the sheet's lists: an icon, the place on one or two lines. */
-function Choice({ icon, title, sub, label, onPress, testID }: { icon: IconName; title: string; sub?: string; label: string; onPress: () => void; testID?: string }) {
+/** "or …": a hairline with the words in the middle. */
+function Divider({ label }: { label: string }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.choice, pressed && styles.pressed]} testID={testID}>
-      <Icon name={icon} size={20} color={colors.textMuted} />
-      <View style={styles.flex}>
-        <Text style={[type.body, type.strong]} numberOfLines={1}>
-          {title}
-        </Text>
-        {sub ? (
-          <Text style={type.small} numberOfLines={1}>
-            {sub}
-          </Text>
-        ) : null}
-      </View>
-    </Pressable>
-  );
-}
-
-function MarketChip({ m, p, t, onPress }: { m: Market; p: Province; t: T; onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${m.city}, ${p.name}`}
-      accessibilityHint={t('lt.loc.marketHint', { city: m.city })}
-      onPress={onPress}
-      style={({ pressed }) => [styles.market, pressed && styles.pressed]}
-      testID={`market-${m.id}`}
-    >
-      <Icon name="storefront" size={16} color={semantic['action-primary']} />
-      <Text style={styles.marketCity}>{m.city}</Text>
-      <Text style={styles.marketProvince}>{p.name}</Text>
-    </Pressable>
-  );
-}
-
-/** The place found (an address picked, or where the phone is): its tags, the unit / buzzer note and "Deliver here". */
-function Chosen({ t, place, detail, tags, unit, setUnit, onSave }: { t: T; place: string; detail?: string; tags?: ReactNode; unit: string; setUnit: (v: string) => void; onSave: () => void }) {
-  return (
-    <View style={styles.chosen} testID="location-chosen">
-      <Text style={type.kicker}>{t('lt.loc.chosen')}</Text>
-      <Text style={[type.item]}>{place}</Text>
-      {detail ? <Body tone="small">{detail}</Body> : null}
-      {tags}
-      <Field
-        label={t('location.unit')}
-        placeholder={t('location.unitPlaceholder')}
-        value={unit}
-        onChangeText={setUnit}
-        maxLength={120}
-        autoComplete="street-address"
-        testID="field-unit"
-      />
-      <Button label={t('lt.loc.useThis')} large onPress={onSave} testID="location-save" />
+    <View style={styles.divider} accessibilityRole="text">
+      <View style={styles.rule} />
+      <Text style={type.small}>{label}</Text>
+      <View style={styles.rule} />
     </View>
   );
 }
 
-/** The tags: "Zone · {zone}", "{n} pooled runs / day", the province's sales tax. */
-function Tags({ t, zone, runs, province }: { t: T; zone?: string | null; runs?: number | null; province?: Province }) {
-  const tags: Array<{ label: string; tone: 'accent' | 'neutral' }> = [];
-  if (zone) tags.push({ label: t('location.tagZone', { zone }), tone: 'accent' });
-  if (runs) tags.push({ label: t('location.tagRuns', { count: runs }), tone: 'neutral' });
-  if (province && zone) tags.push({ label: t('location.tax', { rate: Number((province.taxBps / 100).toFixed(2)) }), tone: 'neutral' });
-  if (!tags.length) return null;
-  return (
-    <Row wrap>
-      {tags.map((g) => (
-        <Tag key={g.label} label={g.label} tone={g.tone} />
-      ))}
-    </Row>
-  );
-}
-
-/** Outside a live market: the waitlist of the place's region, with an email (a guest's own, or the account's). */
-function Waitlist({ t, address, onAnother }: { t: T; address: Address; onAnother: () => void }) {
-  const r = address.resolution;
-  const name = r.waitlist?.name ?? r.market?.city ?? address.city ?? '';
+/** A market not open yet: its waitlist, with an email (a guest's own, or the account's). */
+function Waitlist({ t, resolution }: { t: T; resolution: Resolution }) {
+  const name = resolution.waitlist?.name ?? resolution.market?.city ?? '';
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
   const [busy, setBusy] = useState(false);
-  const regionId = r.waitlist?.regionId ?? r.market?.id ?? null;
+  const regionId = resolution.waitlist?.regionId ?? null;
 
   const join = async () => {
     if (!regionId) return;
@@ -405,31 +318,32 @@ function Waitlist({ t, address, onAnother }: { t: T; address: Address; onAnother
   };
 
   return (
-    <View style={styles.chosen} testID="waitlist">
-      <Text style={[type.body, type.strong]}>{regionId ? t('location.notLiveTitle', { name }) : t('location.outside')}</Text>
-      {joined ? (
-        <Notice message={t('location.joined', { name })} tone="info" />
-      ) : regionId ? (
-        <>
-          <Body tone="muted">{r.market?.stage === 'pilot' ? t('location.notLivePilot', { name }) : t('location.notLiveBody')}</Body>
-          <Field
-            label={t('location.email')}
-            placeholder={t('field.emailPh')}
-            value={email}
-            onChangeText={(v) => {
-              setEmail(v);
-              setError(null);
-            }}
-            error={error}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-            testID="field-waitlist-email"
-          />
-          <Button label={t('location.join')} busy={busy} onPress={() => void join()} testID="waitlist-join" />
-        </>
-      ) : null}
-      <Button label={t('lt.loc.chooseAnother')} tone="secondary" onPress={onAnother} />
+    <View style={styles.card} testID="waitlist">
+      <View style={[styles.flex, styles.gap]}>
+        <Text style={[type.body, type.strong]}>{t('location.notLiveTitle', { name })}</Text>
+        {joined ? (
+          <Notice message={t('location.joined', { name })} tone="info" />
+        ) : (
+          <>
+            <Body tone="muted">{resolution.market?.stage === 'pilot' ? t('location.notLivePilot', { name }) : t('location.notLiveBody')}</Body>
+            <Field
+              label={t('location.email')}
+              placeholder={t('field.emailPh')}
+              value={email}
+              onChangeText={(v) => {
+                setEmail(v);
+                setError(null);
+              }}
+              error={error}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              testID="field-waitlist-email"
+            />
+            <Button label={t('location.join')} tone="secondary" busy={busy} onPress={() => void join()} testID="waitlist-join" />
+          </>
+        )}
+      </View>
     </View>
   );
 }
@@ -443,28 +357,39 @@ const styles = StyleSheet.create({
   grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: radius.control, marginTop: space[2], backgroundColor: semantic['border-strong'] },
   head: { flexDirection: 'row', alignItems: 'center', gap: space[3], paddingHorizontal: space[4], paddingTop: space[2], paddingBottom: space[2] },
   title: { ...StyleSheet.flatten(textStyles.pageTitle), flex: 1 },
-  body: { gap: space[4], paddingHorizontal: space[4], paddingBottom: space[4] },
-  current: { flexDirection: 'row', gap: space[2], alignItems: 'flex-start', padding: space[3], borderRadius: radius.panel, backgroundColor: semantic.well },
-  here: {
-    minHeight: 52,
+  body: { gap: space[3], paddingHorizontal: space[4], paddingBottom: space[4] },
+  gap: { gap: space[2] },
+  card: {
+    minHeight: MIN_TARGET,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: space[2],
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: colors.borderControl,
-    backgroundColor: colors.surface,
+    gap: space[3],
+    padding: space[3],
+    borderRadius: radius.panel,
+    borderWidth: LINE.hair,
+    borderColor: semantic['border-control'],
+    backgroundColor: semantic.surface,
   },
-  hereText: { ...StyleSheet.flatten(textStyles.bodyStrong) },
+  cardChosen: { borderWidth: 2, borderColor: semantic.selected, backgroundColor: semantic['selected-tint'] },
   pressed: { backgroundColor: semantic['surface-hover'] },
-  gap: { gap: space[2] },
+  link: { minHeight: MIN_TARGET, justifyContent: 'center', alignSelf: 'flex-start' },
+  linkText: { ...StyleSheet.flatten(textStyles.bodyStrong), color: semantic['action-primary'] },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: space[3], marginTop: space[1] },
+  rule: { flex: 1, height: LINE.hair, backgroundColor: semantic.border },
+  postal: { flexDirection: 'row', alignItems: 'flex-start', gap: space[2] },
+  apply: { marginTop: space[6] },
+  select: {
+    minHeight: MIN_TARGET,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2],
+    paddingHorizontal: space[3],
+    borderRadius: radius.control,
+    borderWidth: LINE.hair,
+    borderColor: semantic['border-control'],
+    backgroundColor: semantic.surface,
+  },
   list: { borderWidth: LINE.hair, borderColor: semantic['border-card'], borderRadius: radius.panel, backgroundColor: semantic.surface, overflow: 'hidden' },
-  listNote: { paddingHorizontal: space[4], paddingVertical: space[2] },
-  choice: { minHeight: MIN_TARGET + 12, flexDirection: 'row', alignItems: 'center', gap: space[3], paddingHorizontal: space[4], paddingVertical: space[2], borderBottomWidth: LINE.hair, borderBottomColor: semantic.border },
-  markets: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
-  market: { minHeight: MIN_TARGET, flexDirection: 'row', alignItems: 'center', gap: space[1.5], paddingHorizontal: space[4], borderRadius: radius.control, borderWidth: LINE.hair, borderColor: semantic['border-control'], backgroundColor: semantic.surface },
-  marketCity: { ...StyleSheet.flatten(textStyles.bodyStrong) },
-  marketProvince: { ...StyleSheet.flatten(textStyles.body), color: semantic['text-muted'] },
-  chosen: { gap: space[3], padding: space[4], borderRadius: radius.panel, borderWidth: LINE.hair, borderColor: semantic['border-card'], backgroundColor: semantic.surface },
+  option: { minHeight: MIN_TARGET, justifyContent: 'center', paddingHorizontal: space[4], borderBottomWidth: LINE.hair, borderBottomColor: semantic.border },
+  here: { minHeight: MIN_TARGET, flexDirection: 'row', alignItems: 'center', gap: space[2], alignSelf: 'flex-start' },
 });

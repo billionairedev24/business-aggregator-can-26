@@ -78,7 +78,7 @@ describe('B1 Home', () => {
   it('S-190: browses with no location — no forced step, no 422 — every market together, popular first', async () => {
     const { server, services } = await start({ welcomed: true });
     expect(await screen.findByRole('button', { name: 'Set your delivery address' })).toBeTruthy();
-    expect(screen.getByText('Choose your location')).toBeTruthy();
+    expect(screen.getByText('Choose location')).toBeTruthy();
     expect(await screen.findByRole('header', { name: 'Popular on Northline' })).toBeTruthy();
     const landing = server.calls.find((c) => c.path === '/public/shop')!;
     expect(landing).toBeTruthy();
@@ -94,7 +94,7 @@ describe('B1 Home', () => {
   it('shows where you deliver, the search bar, the department strip, the hero band, the maker of the week, the tiles and the rails — to a guest', async () => {
     beforeCutoff();
     const { server, view } = await start({ welcomed: true, store: saved() });
-    expect(await screen.findByRole('button', { name: 'Delivery address: 1204 Example Ave, Sampleville' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Delivery address: Sampleville A1A 1A1' })).toBeTruthy();
     expect(screen.getByText('Deliver to', { exact: false })).toBeTruthy();
     expect(screen.getByRole('image', { name: 'Northline' })).toBeTruthy(); // the logo, from brand.json
     // S-188: the hero band — the headline with the market's city, the trust line, the run card with the next pooled
