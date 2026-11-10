@@ -17,9 +17,18 @@ import { services } from '../services';
  */
 export type LocationStatus = 'locating' | 'saved' | 'address' | 'detected' | 'fallback';
 
+/**
+ * A place: an address (label, the market's city, parts), S-192 a postal or ZIP code of any country (the code, its
+ * locality and point, the market's city only inside one), or a country alone. At least one of label, city, postal
+ * code or country.
+ */
 export interface SavedLocation {
-  label: string;
-  city: string;
+  label?: string;
+  city?: string;
+  /** S-192: the place's own locality when it is not a market's ("Beverly Hills" for 90210). */
+  locality?: string;
+  /** S-192: ISO 3166-1 alpha-2. */
+  country?: string;
   lat?: number;
   lng?: number;
   placeId?: string;
@@ -48,14 +57,30 @@ function parseSaved(raw: string | null): SavedLocation | null {
   if (!raw) return null;
   try {
     const v = JSON.parse(raw) as SavedLocation;
-    return typeof v.label === 'string' && typeof v.city === 'string' && v.label && v.city ? v : null;
+    const text = (x: unknown) => typeof x === 'string' && x.length > 0;
+    return v && typeof v === 'object' && (text(v.label) || text(v.city) || text(v.postalCode) || text(v.country)) ? v : null;
   } catch {
     return null;
   }
 }
 
 /** What pressing "Use my current location" ends in (the only place the app asks for the phone's position). */
-export type HereResult = { ok: true; place: DeliveryLocation } | { ok: false; reason: 'denied' | 'settings' | 'unavailable' | 'outside' };
+export type HereResult =
+  | { ok: true; place: DeliveryLocation }
+  | { ok: false; reason: 'denied' | 'settings' | 'unavailable' | 'outside'; place?: SavedLocation };
+
+/**
+ * The place bar's line (S-192, Amazon's "{city} {postal code}"): "{locality or city} {postal code}", else the city or the
+ * label, else the country's name; undefined when nothing is known.
+ */
+export function placeLine(l: DeliveryLocation, countryName: (code: string) => string): string | undefined {
+  if (l.status === 'locating' || l.status === 'fallback') return undefined;
+  const town = l.locality ?? l.city;
+  if (l.postalCode) return town ? `${town} ${l.postalCode}` : l.postalCode;
+  if (town) return town;
+  if (l.label) return l.label;
+  return l.country ? countryName(l.country) : undefined;
+}
 
 /** Asks for the location permission (now, on the press), reads the position and names it inside a live / pilot market. */
 export async function locateHere(): Promise<HereResult> {
@@ -63,8 +88,12 @@ export async function locateHere(): Promise<HereResult> {
     const asked = await Location.requestForegroundPermissionsAsync();
     if (!asked.granted) return { ok: false, reason: asked.canAskAgain ? 'denied' : 'settings' };
     const fix = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-    const named = await nameOf(fix.coords.latitude, fix.coords.longitude);
-    return named ? { ok: true, place: named } : { ok: false, reason: 'outside' };
+    const { latitude: lat, longitude: lng } = fix.coords;
+    const named = await nameOf(lat, lng);
+    if (named) return { ok: true, place: named };
+    // S-192: outside every market the point is still a place — the screens rank the nearest markets first
+    const r = await geoApi(services().api).reverse(lat, lng).catch(() => null);
+    return { ok: false, reason: 'outside', ...(r?.city ? { place: { label: r.city, locality: r.city, lat, lng } } : {}) };
   } catch {
     return { ok: false, reason: 'unavailable' };
   }

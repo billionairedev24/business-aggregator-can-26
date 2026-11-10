@@ -20,7 +20,74 @@ public final class PlaceParams {
     /** Letters (any script, with accents), digits, spaces and the punctuation of place names ("St. John's", "Rivière-du-Loup"). */
     private static final Pattern CITY = Pattern.compile("[\\p{L}\\p{M}\\p{Nd}][\\p{L}\\p{M}\\p{Nd} .'’-]*");
 
+    /*
+     * S-192: a postal or ZIP code of any country ("T2P 1B5", "90210", "SW1A 1AA", "75008", "110-0001"): no country's
+     * pattern here (S-192a brings per-country formats). Letters and digits, inner spaces and hyphens, at most 12.
+     */
+    public static final int POSTAL_MAX = 12;
+    public static final String POSTAL_REQUIRED = "Enter a postal or ZIP code.";
+    public static final String POSTAL_TOO_LONG = "At most 12 characters.";
+    public static final String POSTAL_FORMAT = "Use letters, digits, spaces and hyphens only.";
+    public static final String COUNTRY_FORMAT = "Choose a country from the list.";
+    private static final Pattern POSTAL = Pattern.compile("[A-Za-z0-9](?:[A-Za-z0-9 -]*[A-Za-z0-9])?");
+    /** ISO 3166-1 alpha-2 ("CA", "US", "FR"); the user-assigned XA–XZ and Cloudflare's "XX"/"T1" are not countries. */
+    private static final Pattern COUNTRY = Pattern.compile("[A-Z]{2}");
+
     private PlaceParams() {}
+
+    /**
+     * A postal or ZIP code as typed (trimmed, inner runs of spaces made one, upper-cased): required, at most
+     * {@value #POSTAL_MAX} characters, letters, digits, spaces and hyphens ({@code docs/spec/validation-rules.md}
+     * § Location).
+     */
+    public static String postalCode(String field, @Nullable String value) {
+        var code = value == null ? "" : value.strip().replaceAll("\\s+", " ").toUpperCase(java.util.Locale.ROOT);
+        if (code.isEmpty()) {
+            throw RuleViolation.of(field, "required", POSTAL_REQUIRED);
+        }
+        if (code.length() > POSTAL_MAX) {
+            throw RuleViolation.of(field, "length", POSTAL_TOO_LONG);
+        }
+        if (!POSTAL.matcher(code).matches()) {
+            throw RuleViolation.of(field, "format", POSTAL_FORMAT);
+        }
+        return code;
+    }
+
+    /** A country, ISO 3166-1 alpha-2 (upper-cased): blank or absent = not given (null). */
+    public static @Nullable String country(String field, @Nullable String value) {
+        var code = value == null ? "" : value.strip().toUpperCase(java.util.Locale.ROOT);
+        if (code.isEmpty()) {
+            return null;
+        }
+        if (!isCountry(code)) {
+            throw RuleViolation.of(field, "format", COUNTRY_FORMAT);
+        }
+        return code;
+    }
+
+    /** Whether {@code code} is a two-letter country code (not Cloudflare's "XX" unknown or "T1" Tor, not XA–XZ). */
+    public static boolean isCountry(@Nullable String code) {
+        return code != null && COUNTRY.matcher(code).matches() && !code.startsWith("X");
+    }
+
+    /** {@link #postalCode} without the exception: the normalised code, or null when it is not one. */
+    public static @Nullable String postalOrNull(@Nullable String value) {
+        try {
+            return value == null || value.isBlank() ? null : postalCode("postalCode", value);
+        } catch (RuleViolation e) {
+            return null;
+        }
+    }
+
+    /** {@link #city} without the exception: the name, or null when it is not one. */
+    public static @Nullable String cityOrNull(@Nullable String value) {
+        try {
+            return city("city", value);
+        } catch (RuleViolation e) {
+            return null;
+        }
+    }
 
     /**
      * A city (or market) name: blank or absent = not known (null); too long or with characters no place name has is a

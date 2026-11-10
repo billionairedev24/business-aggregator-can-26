@@ -326,7 +326,7 @@ describe('Language & region, Dietary & accessibility (behind the full navigation
     open('language');
     expect(await screen.findByRole('button', { name: /Interface, reçus, notifications · requis au Québec/ })).toBeInTheDocument();
     expect(calls.some(c => isRegions(c.url) && /lang=fr/.test(c.url))).toBe(true);
-    screen.getByRole('button', { name: /^English/ });
+    within(screen.getByRole('main')).getByRole('button', { name: /^English/ }); // S-192: the footer has "English · …" too
   });
 
   it('Français says nothing about a place when no place is French-first', async () => {

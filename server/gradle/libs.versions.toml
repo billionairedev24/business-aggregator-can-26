@@ -41,8 +41,11 @@ pdfbox = "3.0.8"
 # S-162: RFC 5545 RRULE recurrence for Plus renewals (Apache-2.0; small, no transitive Groovy/caching like ical4j)
 lib-recur = "0.17.1"
 datasource-micrometer = "2.3.0"
+# S-192: MaxMind's .mmdb reader (Apache-2.0, no dependencies) for the optional GeoLite2/GeoIP2 visitor detector
+maxmind-db = "4.2.0"
 
 [libraries]
+maxmind-db = { module = "com.maxmind.db:maxmind-db", version.ref = "maxmind-db" }
 # S-127 MCP server: springdoc builds MCP tools from the OpenAPI model, Spring AI serves them (Streamable HTTP /mcp).
 springdoc-webmvc-mcp = { module = "org.springdoc:springdoc-openapi-starter-webmvc-mcp", version.ref = "springdoc" }
 spring-ai-mcp-server-webmvc = { module = "org.springframework.ai:spring-ai-starter-mcp-server-webmvc", version.ref = "spring-ai" }

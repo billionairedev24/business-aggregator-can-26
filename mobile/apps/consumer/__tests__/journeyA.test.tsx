@@ -303,72 +303,74 @@ describe('signing in to an existing account (S-159: email + password + its secon
   });
 });
 
-describe('A5 the location sheet (the web\'s location dialog)', () => {
-  it('says what is shown, lists the live markets, picks an address and saves it with its market, zone and note', async () => {
-    const { view, store } = await start({ welcomed: true, url: '/location?next=/cart' });
+describe('A5 the location sheet (S-192, the web\'s "Choose your location" after Amazon\'s)', () => {
+  it('a guest: the line, sign in for addresses, a postal or ZIP code with Apply, a country, Done', async () => {
+    const { view } = await start({ welcomed: true, url: '/location?next=/cart' });
     expect(await screen.findByRole('header', { name: 'Choose your location' })).toBeTruthy();
-    expect(await screen.findByText('Showing everything on Northline. Choose where you are to see what’s near you first.')).toBeTruthy();
-    expect(await screen.findByRole('button', { name: 'Sampleville, Sample Province' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Exampleton, Sample Province' })).toBeTruthy();
-    expect(screen.queryByText(/Waitlist Province/)).toBeNull(); // only live markets are offered
-    fireEvent.changeText(screen.getByTestId('field-street'), '1204 Exa');
-    fireEvent.press(await screen.findByRole('button', { name: '1204 Example Ave, Sampleville, XA' }));
-    expect(await screen.findByText('Zone · Old Town')).toBeTruthy();
-    expect(screen.getByText('3 pooled runs / day')).toBeTruthy();
-    expect(screen.getByText('Sales tax 5%')).toBeTruthy();
-    fireEvent.changeText(screen.getByTestId('field-unit'), 'Apt 804 · buzz 0804');
-    fireEvent.press(screen.getByRole('button', { name: 'Deliver here' }));
+    expect(screen.getByText('Delivery options and delivery speeds may vary for different locations.')).toBeTruthy();
+    expect(screen.getByText('Showing everything on Northline. Choose where you are to see what’s near you first.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sign in to see your addresses' })).toBeTruthy();
+    expect(screen.getByText('or enter a postal or ZIP code')).toBeTruthy();
+    expect(screen.getByText('or deliver to another country')).toBeTruthy();
+    expect(screen.queryByText(/Sample Province/)).toBeNull(); // no market chips: a location never blocks, only ranks
+    fireEvent.press(screen.getByRole('button', { name: 'Done' }));
     await waitFor(() => expect(view.getPathname()).toBe('/cart'));
-    expect(JSON.parse(store.data.get('nl.location')!)).toMatchObject({
-      label: '1204 Example Ave, Sampleville',
-      city: 'Sampleville',
-      street: '1204 Example Ave',
-      unit: 'Apt 804 · buzz 0804',
-      province: 'XA',
-      postalCode: 'A1A 1A1',
-      marketId: 'mkt-sampleville',
-      zoneId: 'zone-old-town',
-      zone: 'Old Town',
-    });
   });
 
-  it('as the sign-up’s address step (A5): asks design 01’s question and goes on to Home once a place is chosen', async () => {
-    const { view } = await start({ signedIn: true, url: '/location?step=address' });
-    expect(await screen.findByRole('header', { name: 'Where should we bring things?' })).toBeTruthy();
-    fireEvent.press(await screen.findByRole('button', { name: 'Sampleville, Sample Province' }));
-    await waitFor(() => expect(view.getPathname()).toBe('/home'));
-  });
-
-  it('chooses a live market in one tap', async () => {
+  it('checks a postal code as the api does, then applies it: in a market its city, zone and point', async () => {
     const { store } = await start({ welcomed: true, url: '/location' });
-    fireEvent.press(await screen.findByRole('button', { name: 'Exampleton, Sample Province' }));
-    await waitFor(() => expect(store.data.get('nl.location')).toBeTruthy());
-    expect(JSON.parse(store.data.get('nl.location')!)).toMatchObject({ label: 'Exampleton', city: 'Exampleton' });
+    fireEvent.press(await screen.findByRole('button', { name: 'Apply' }));
+    expect(await screen.findByText('Enter a postal or ZIP code.')).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('field-postal'), 'A1A_1A1');
+    fireEvent.press(screen.getByRole('button', { name: 'Apply' }));
+    expect(await screen.findByText('Use letters, digits, spaces and hyphens only.')).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('field-postal'), '1234567890123');
+    fireEvent.press(screen.getByRole('button', { name: 'Apply' }));
+    expect(await screen.findByText('At most 12 characters.')).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('field-postal'), ' a1a  1a1 ');
+    fireEvent.press(screen.getByRole('button', { name: 'Apply' }));
+    expect(await screen.findByText('Delivering to Sampleville A1A 1A1.')).toBeTruthy();
+    expect(JSON.parse(store.data.get('nl.location')!)).toMatchObject({ postalCode: 'A1A 1A1', locality: 'Sampleville', city: 'Sampleville', marketId: 'mkt-sampleville', zone: 'Old Town' });
   });
 
-  it('offers the waitlist outside a live market', async () => {
-    const { server } = await start({ welcomed: true, url: '/location' });
-    fireEvent.changeText(await screen.findByTestId('field-street'), '77 Harb');
-    fireEvent.press(await screen.findByRole('button', { name: '77 Harbour Road, Faraway, XC' }));
-    expect(await screen.findByText('Northline isn’t in Waitlist Province yet.')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Deliver here' })).toBeNull();
+  it('keeps a code outside every market (nearest first), offers a market’s waitlist, and keeps a code nobody knows', async () => {
+    const { server, store } = await start({ welcomed: true, url: '/location' });
+    fireEvent.changeText(await screen.findByTestId('field-postal'), 'C1C 1C1');
+    fireEvent.press(screen.getByRole('button', { name: 'Apply' }));
+    expect(await screen.findByText('Northline doesn’t deliver to Faraway C1C 1C1 yet. Showing everything, nearest first.')).toBeTruthy();
+    expect(JSON.parse(store.data.get('nl.location')!)).not.toHaveProperty('city');
+    expect(screen.getByText('Northline isn’t in Waitlist Province yet.')).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Join the waitlist' }));
     expect(await screen.findByText('Email is required.')).toBeTruthy();
     fireEvent.changeText(screen.getByTestId('field-waitlist-email'), 'grace@example.com');
     fireEvent.press(screen.getByRole('button', { name: 'Join the waitlist' }));
     expect(await screen.findByText('You’re on the list for Waitlist Province. We’ll email you when we open.')).toBeTruthy();
     expect(server.geo.waitlist).toEqual([{ regionId: 'XC', email: 'grace@example.com' }]);
+    fireEvent.changeText(screen.getByTestId('field-postal'), '90210');
+    fireEvent.press(screen.getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(JSON.parse(store.data.get('nl.location')!)).toEqual({ label: '90210', postalCode: '90210' }));
   });
 
-  it('“Use my current location”: asks for the permission on the press, names the place through the api, and saves it', async () => {
+  it('delivers to another country: the country alone, no city', async () => {
+    const { store } = await start({ welcomed: true, url: '/location' });
+    fireEvent.press(await screen.findByTestId('location-country'));
+    fireEvent.press(await screen.findByTestId('country-FR'));
+    await waitFor(() => expect(JSON.parse(store.data.get('nl.location')!)).toEqual({ country: 'FR' }));
+  });
+
+  it('as the sign-up’s address step (A5): asks design 01’s question and goes on to Home on Done', async () => {
+    const { view } = await start({ signedIn: true, url: '/location?step=address' });
+    expect(await screen.findByRole('header', { name: 'Where should we bring things?' })).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(view.getPathname()).toBe('/home'));
+  });
+
+  it('“Use my current location”: asks for the permission on the press, names the place through the api, saves it and closes', async () => {
     const { store, view } = await start({ welcomed: true, url: '/location' });
     expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
     fireEvent.press(await screen.findByRole('button', { name: 'Use my current location' }));
-    expect(await screen.findByText('1204 Example Ave, Sampleville')).toBeTruthy();
-    expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1);
-    expect(screen.getByText('Zone · Old Town')).toBeTruthy();
-    fireEvent.press(screen.getByRole('button', { name: 'Deliver here' }));
     await waitFor(() => expect(view.getPathname()).toBe('/home'));
+    expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1);
     expect(JSON.parse(store.data.get('nl.location')!)).toMatchObject({ label: '1204 Example Ave, Sampleville', city: 'Sampleville', marketId: 'mkt-sampleville', zone: 'Old Town' });
   });
 
@@ -382,15 +384,17 @@ describe('A5 the location sheet (the web\'s location dialog)', () => {
     expect(Linking.openSettings).toHaveBeenCalled();
   });
 
-  it('signed in: lists the account’s addresses and chooses one', async () => {
+  it('signed in: the account’s addresses as cards — default marked — and one chosen', async () => {
     const { server, services, store } = await start({ signedIn: true, url: '/location' });
     server.shop.addresses.push({ id: 'ad-1', street: '12 Sample Street', city: 'Sampleville', province: 'XA', postal: 'A1A 1A1', isDefault: true });
     await act(async () => {
       await services.queryClient.invalidateQueries();
     });
-    fireEvent.press(await screen.findByRole('button', { name: '12 Sample Street, Sampleville, default' }));
+    fireEvent.press(await screen.findByRole('button', { name: '12 Sample Street, Sampleville, A1A 1A1, Default address' }));
     await waitFor(() => expect(store.data.get('nl.location')).toBeTruthy());
     expect(JSON.parse(store.data.get('nl.location')!)).toMatchObject({ label: '12 Sample Street, Sampleville', street: '12 Sample Street', postalCode: 'A1A 1A1' });
+    expect(await screen.findByText('Delivering to Sampleville A1A 1A1.')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Manage addresses' })).toBeTruthy();
   });
 
   it('the sources, in order: a saved place, else the account’s default address, else nothing (S-190: no guessed city)', async () => {
@@ -398,7 +402,7 @@ describe('A5 the location sheet (the web\'s location dialog)', () => {
     await screen.findByTestId('home');
     expect(await defaultAddress()).toBeNull(); // no address on the account yet → nothing known, and Home still browses
     expect(screen.getByRole('button', { name: 'Set your delivery address' })).toBeTruthy();
-    expect(screen.getByText('Choose your location')).toBeTruthy();
+    expect(screen.getByText('Choose location')).toBeTruthy();
     expect(screen.queryByText('Near')).toBeNull();
     server.shop.addresses.push({ id: 'ad-2', street: '9 Other Way', city: 'Sampleville', province: 'XA', postal: 'A1A 1A1', isDefault: false });
     server.shop.addresses.push({ id: 'ad-1', street: '12 Sample Street', city: 'Sampleville', province: 'XA', postal: 'A1A 1A1', isDefault: true });

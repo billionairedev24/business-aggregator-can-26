@@ -31,6 +31,7 @@ northline:                               # a STRIPE_SECRET_KEY exported in the s
   payments.stripe-webhook-secret: whsec_test_platform_fake    # obviously fake: S-12 tests sign with these
   payments.stripe-connect-webhook-secret: whsec_test_connect_fake
   stripe.secret-key: ""
+  visitor-location.detector: edge        # S-192: GeoApiTest sends Cloudflare's / X-Geo headers
   search.provider: local                 # S-44: SearchApiTest switches to Elasticsearch (Testcontainers)
   region.provinces: AB,BC=America/Vancouver,ON,QC   # S-134: served by configuration as well as the live rows
   domains:                               # S-31: tests call CustomDomainJobs; "Check now" answers at once

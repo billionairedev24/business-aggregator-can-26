@@ -1,11 +1,14 @@
 import { queryOptions, useMutation, useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { http } from '@northline/client';
+import { visitorHeaders } from '../../lib/request';
+import { Visitor } from './sources';
 
 /**
  * The Location screen's api (S-47, all public under `/api/v1/geo`; the key to Google stays on the server):
- * provinces and markets, address suggestions (Google Places, restricted to Canada, one session token per search),
- * the chosen address resolved to a market and zone, and the waitlist.
+ * provinces and markets, address suggestions (the account's address book; restricted to Canada until S-192a), the
+ * chosen address resolved to a market and zone, the waitlist, and (S-192) a postal code of any country and the
+ * visitor's detected place.
  */
 export const Stage = z.enum(['off', 'waitlist', 'pilot', 'live']);
 export type Stage = z.infer<typeof Stage>;
@@ -81,6 +84,40 @@ export const addressQuery = (placeId: string, session: string) => queryOptions({
 
 export const useAddress = (placeId: string | null, session: string) =>
   useQuery({ ...addressQuery(placeId ?? '', session), enabled: !!placeId });
+
+/**
+ * S-192: where the visitor probably is (`GET /api/v1/geo/visitor`, the api's configured detector: the edge's visitor
+ * location headers or a GeoIP database). Fetched by the root route's loader during the server render (forwarding the
+ * edge's headers), so the server and the browser's first render show the same "Deliver to {city}" — never refetched.
+ * Any failure is "nothing detected".
+ */
+export const visitorQuery = queryOptions({
+  queryKey: ['geo', 'visitor'],
+  queryFn: async (): Promise<Visitor> => {
+    try {
+      const headers = visitorHeaders();
+      return await http('/api/v1/geo/visitor', Object.keys(headers).length ? { headers } : {}, Visitor);
+    } catch {
+      return { source: 'none' };
+    }
+  },
+  staleTime: Infinity,
+  gcTime: Infinity,
+  retry: false,
+});
+
+/**
+ * S-192: a postal or ZIP code of any country, looked up (`GET /api/v1/geo/postal`): the locality, centre and market
+ * when the places provider knows it, else the code alone (`found: false`). 422 = the code's rules (validation-rules.md
+ * § Location).
+ */
+export const PostalPlace = z.object({
+  postalCode: z.string(), found: z.boolean(), city: z.string().nullish(), region: z.string().nullish(), country: z.string().nullish(),
+  lat: z.number().nullish(), lng: z.number().nullish(), resolution: Resolution.nullish(),
+});
+export type PostalPlace = z.infer<typeof PostalPlace>;
+export const lookUpPostal = (code: string, country?: string) =>
+  http(`/api/v1/geo/postal?${params({ code: code.trim(), country })}`, {}, PostalPlace);
 
 export function useJoinWaitlist() {
   return useMutation({

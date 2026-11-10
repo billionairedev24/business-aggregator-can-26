@@ -13,10 +13,12 @@ import { ConsumerLayout } from '../features/shell/ConsumerLayout';
 import { NotFound } from '../features/shell/NotFound';
 import { RouteError } from '../features/shell/RouteError';
 import { htmlLang, persistLocale, urlLocale } from '../lib/locale';
-import { publicConfig, requestLocale } from '../lib/request';
+import { publicConfig, requestLocale, requestPlaceCookie } from '../lib/request';
 import { RouterSiteLink } from '../lib/SiteLinkAdapter';
 import { RenderClockProvider } from '../lib/renderClock';
 import { regionsQuery } from '../features/location/regions';
+import { visitorQuery } from '../features/location/api';
+import { fromCookie } from '../features/location/sources';
 import type { RouterContext } from '../router';
 
 export const Route = createRootRouteWithContext<RouterContext>()({
@@ -26,9 +28,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   // server rendered times in UTC and the browser in the market's zone — a hydration mismatch on every product page.
   // prefetchQuery never throws: without the api the page still renders (in the platform zone, on both sides).
   // S-182: `renderedAt` is the one clock of the server's render and the browser's first render (lib/renderClock.tsx).
+  // S-192: the visitor's detected place (the edge's headers or a GeoIP database, `GET /api/v1/geo/visitor`) and the
+  // saved choice's cookie, read here so the server's "Deliver to …" is the browser's first render too (no hydration
+  // mismatch, no "Finding your area…" flash); the visitor query is fetched once per page load and never again.
   loader: async ({ context }) => {
-    await context.queryClient.prefetchQuery(regionsQuery(context.locale));
-    return { renderedAt: Date.now() };
+    await Promise.all([context.queryClient.prefetchQuery(regionsQuery(context.locale)), context.queryClient.prefetchQuery(visitorQuery)]);
+    return { renderedAt: Date.now(), place: fromCookie(requestPlaceCookie()) };
   },
   head: () => ({
     meta: [{ charSet: 'utf-8' }, { name: 'viewport', content: 'width=device-width, initial-scale=1' }, { title: brand.name }],
@@ -71,7 +76,7 @@ function Document({ children }: { children: ReactNode }) {
 
 function App() {
   const { locale, config, queryClient } = Route.useRouteContext();
-  const { renderedAt } = Route.useLoaderData() ?? {};
+  const { renderedAt, place } = Route.useLoaderData() ?? {};
   // S-182: the platform zone from the region model the page was rendered with, before anything below formats a time.
   // regionsQuery's own call only runs where the query is fetched (the server); the browser gets the data hydrated,
   // so it kept UTC while the server wrote the market's zone — "Order by 5:20 p.m." became "11:20 p.m." (React error 418).
@@ -84,7 +89,7 @@ function App() {
     <I18nProvider initial={locale} onChange={persistLocale}>
       <SiteLinkProvider value={RouterSiteLink}>
         <RenderClockProvider at={renderedAt}>
-          <ConsumerLayout>
+          <ConsumerLayout initialPlace={place ?? null}>
             <Outlet />
           </ConsumerLayout>
         </RenderClockProvider>

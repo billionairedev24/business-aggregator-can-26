@@ -41,11 +41,12 @@ describe('consumer header', () => {
   });
 
   it('greets the signed-in person by name, over the place they deliver to', async () => {
-    mockFetch(signedIn());
+    mockFetch(signedIn(c => (c.url === '/api/v1/me/addresses' ? { body: { items: [{ id: 'A1', label: null, street: '1 Main St', unit: null, city: 'Market City', province: null, postal: 'X1X 1X1', isDefault: true }] } } : undefined)));
     renderApp('/');
     const header = await screen.findByRole('banner');
     expect(await within(header).findByRole('button', { name: 'Hello, Amara Account & orders' })).toHaveAttribute('aria-haspopup', 'menu');
-    expect(within(header).getByRole('button', { name: /^Deliver to Amara/ })).toHaveAttribute('aria-haspopup', 'dialog');
+    // S-192 (Amazon's header): "Deliver to Amara" over "{city} {postal code}"
+    expect(await within(header).findByRole('button', { name: 'Deliver to Amara Market City X1X 1X1. Change location' })).toHaveAttribute('aria-haspopup', 'dialog');
   });
 
   it('opens every category by section from "All", and closes on a pick', async () => {
@@ -116,7 +117,7 @@ describe('consumer header', () => {
     expect(within(screen.getByRole('contentinfo')).getByRole('button', { name: 'English' })).toHaveAttribute('lang', 'en-CA');
     await userEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Bonjour, connectez-vous Compte et commandes' }));
     expect(screen.getByRole('menuitem', { name: 'Se connecter' })).toBeInTheDocument();
-    expect(screen.getByRole('menu')).toHaveTextContent('Bienvenue');
+    expect(screen.getByRole('menu')).toHaveTextContent('Nouveau client ? Commencez ici.');
     expect(screen.queryByRole('note')).toBeNull();
     expect(within(screen.getByRole('banner')).getByRole('combobox', { name: 'Rechercher' })).toHaveAttribute('placeholder', `Rechercher sur ${brand.name}`);
     expect(document.cookie).toContain('nl.locale=fr');
@@ -125,15 +126,40 @@ describe('consumer header', () => {
 });
 
 describe('guests', () => {
-  it('get the account menu — "Welcome, guest", Sign in and Create account coming back to the page, the language', async () => {
+  it('get Amazon’s flyout (S-192) — Sign in and "New customer? Start here." coming back to the page, then Your lists | Your account', async () => {
     mockFetch(guest);
     renderApp('/providers/prairie-wrench');
-    await userEvent.click(await screen.findByRole('button', { name: /Account & orders/ }));
+    const trigger = await screen.findByRole('button', { name: /Account & orders/ });
+    await userEvent.click(trigger);
     const menu = screen.getByRole('menu', { name: 'Account menu' });
-    expect(menu).toHaveTextContent('Welcome, guest');
+    // drawn on <body>, outside the header (its strip and its clip can't hide it)
+    expect(menu.parentElement).toBe(document.body);
     expect(within(menu).getByRole('menuitem', { name: 'Sign in' })).toHaveAttribute('href', '/sign-in?next=%2Fproviders%2Fprairie-wrench');
-    expect(within(menu).getByRole('menuitem', { name: 'Create account' })).toHaveAttribute('href', '/register?next=%2Fproviders%2Fprairie-wrench');
-    expect(within(menu).getByRole('menuitem', { name: 'Français' })).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: 'Sign in' })).toHaveFocus();
+    expect(menu).toHaveTextContent('New customer? Start here.');
+    expect(within(menu).getByRole('menuitem', { name: 'Start here.' })).toHaveAttribute('href', '/register?next=%2Fproviders%2Fprairie-wrench');
+    expect(within(menu).getAllByRole('group').map(g => g.getAttribute('aria-label'))).toEqual(['Your lists', 'Your account']);
+    expect(within(within(menu).getByRole('group', { name: 'Your account' })).getAllByRole('menuitem').map(i => i.textContent)).toEqual(['Your account', 'Orders', 'Bookings', 'Help', 'Sell or offer a service', 'Français']);
+    expect(within(menu).getByRole('menuitem', { name: 'Orders' })).toHaveAttribute('href', '/sign-in?next=%2Faccount%2Forders');
+    // Escape closes it and gives the focus back to the trigger
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(trigger).toHaveFocus();
+  });
+
+  it('close the flyout on a click outside and on a navigation (S-192)', async () => {
+    mockFetch(guest);
+    const { router } = renderApp('/');
+    const trigger = await screen.findByRole('button', { name: /Account & orders/ });
+    await userEvent.click(trigger);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('main'));
+    expect(screen.queryByRole('menu')).toBeNull();
+    await userEvent.click(trigger);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    await router.navigate({ to: '/cart' });
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+    expect(trigger).toHaveFocus(); // the focus was in the flyout: back to its trigger
   });
 
   it('see no guest banner (redesign § 3.4: they sign in at the checkout or booking step, or from the avatar menu)', async () => {
@@ -164,7 +190,7 @@ describe('guests', () => {
 });
 
 describe('the account menu', () => {
-  it('lists Orders and Bookings first, with the values when the api has them — no Wallet, Dietary or Plus (§ 3.6)', async () => {
+  it('lists Your lists then Your account (S-192, Amazon’s columns), with the values when the api has them — no Wallet, Dietary or Plus (§ 3.6)', async () => {
     mockFetch(signedIn(c => c.url === '/api/v1/me/account-summary' ? { body: {
       reliability: 4.9, points: { balance: 12480, valueCents: 12480 }, plus: false, activeOrders: 3, favourites: 4, openCases: 1,
       paymentMethod: { brand: 'Visa', last4: '4471' }, addresses: { count: 2, members: 2 }, signIn: 'passkey', quietHours: { from: '10 pm', to: '7 am' },
@@ -176,11 +202,12 @@ describe('the account menu', () => {
     await within(menu).findByText('amara@example.ca · reliability 4.9');
     const items = within(menu).getAllByRole('menuitem');
     expect(items.map(i => i.textContent)).toEqual([
-      'Add photo', 'Orders3 active', 'Bookings', 'Quote requests', 'Messages', 'Saved4',
-      'Your account', 'ProfileAmara Osei', 'Addresses2 · 2 members', 'Payment methodsVisa ··4471', 'Login & securityPasskey',
+      'Add photo', 'Saved4', 'Saved for later',
+      'Your account', 'Orders3 active', 'Bookings', 'Quote requests', 'Messages', 'Addresses2 · 2 members', 'Payment methodsVisa ··4471', 'Login & securityPasskey',
       'NotificationsQuiet 10 pm–7 am', 'FrançaisEnglish · AB',
       'Help & cases1 open', 'Sell or offer a service', 'Sign out',
     ]);
+    expect(within(menu).getAllByRole('group').map(g => g.getAttribute('aria-label'))).toEqual(['Your lists', 'Your account']);
     expect(within(menu).getByRole('menuitem', { name: /^Orders/ })).toHaveAttribute('href', '/account/orders');
     expect(within(menu).getByRole('menuitem', { name: 'Bookings' })).toHaveAttribute('href', '/account/orders?tab=bookings');
     expect(within(menu).getByRole('menuitem', { name: 'Quote requests' })).toHaveAttribute('href', '/account/orders?tab=quotes');
@@ -288,7 +315,10 @@ describe('screens and states', () => {
     expect(within(footer).getByRole('link', { name: 'Your account' })).toHaveAttribute('href', '/account');
     expect(within(footer).getByRole('link', { name: 'Photo credits' })).toHaveAttribute('href', '/credits');
     expect(within(footer).getByText(new RegExp(`^© \\d{4} ${brand.legalName}$`))).toBeInTheDocument();
-    expect(within(footer).getByText('Canada · CAD $')).toBeInTheDocument();
+    // S-192: "language · country", opening the location dialog — no country or currency in code
+    expect(within(footer).queryByText(/Canada|CAD/)).toBeNull();
+    await userEvent.click(within(footer).getByRole('button', { name: 'English · Choose location' }));
+    expect(await screen.findByRole('dialog', { name: 'Choose your location' })).toBeInTheDocument();
   });
 
   it('points every footer link at a route of the app or a legal document', async () => {

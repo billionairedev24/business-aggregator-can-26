@@ -1325,3 +1325,7 @@ Only the host can do that.	Seul l’hôte peut faire ceci.	new
 Pay your own share. Only the host can pay for someone else.	Payez votre part. Seul l’hôte peut payer pour quelqu’un d’autre.	new
 Pay for the order first.	Payez d’abord la commande.	new
 Pay for the share first.	Payez d’abord votre part.	new
+Enter a postal or ZIP code.	Entrez un code postal ou ZIP.	new
+At most 12 characters.	Au plus 12 caractères.	new
+Use letters, digits, spaces and hyphens only.	Utilisez seulement des lettres, des chiffres, des espaces et des traits d’union.	new
+Choose a country from the list.	Choisissez un pays dans la liste.	new

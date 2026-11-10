@@ -2,8 +2,8 @@ import type { ApiClient } from '@northline/mobile-kit';
 
 /**
  * The region model and the geo api (S-47, S-134; public under `/api/v1/geo`, the Google key stays on the server):
- * provinces and markets with their stage, the fallback market, address suggestions (Canada only, one session token per
- * search), an address resolved to a market and zone, the device's position named, the waitlist. Guests may call all
+ * provinces and markets with their stage, the fallback market, address suggestions (the address book's: Canada only
+ * until S-192a, one session token per search), a postal code of any country (S-192), an address resolved to a market and zone, the device's position named, the waitlist. Guests may call all
  * of it (`auth: 'optional'`).
  */
 export type Stage = 'off' | 'waitlist' | 'pilot' | 'live';
@@ -31,6 +31,20 @@ export interface Reverse {
   province?: string | null;
   market?: { id: string; stage: Stage } | null;
   zone?: { id: string; name: string } | null;
+}
+/**
+ * S-192: a postal or ZIP code of any country (`GET /geo/postal`): its locality, centre and market when the places
+ * provider knows it (`found`), else the code alone.
+ */
+export interface PostalPlace {
+  postalCode: string;
+  found: boolean;
+  city?: string | null;
+  region?: string | null;
+  country?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  resolution?: Resolution | null;
 }
 /** `GET /geo/regions` (S-134): what the app needs of it. */
 export interface Regions {
@@ -66,5 +80,6 @@ export const geoApi = (api: ApiClient) => ({
     api.get<Suggestions>(`/geo/autocomplete?${q({ q: text.trim(), session, lat: near?.lat?.toFixed(5), lng: near?.lng?.toFixed(5) })}`, { auth: 'optional' }),
   place: (placeId: string, session: string) => api.get<Address>(`/geo/places/${encodeURIComponent(placeId)}?${q({ session })}`, { auth: 'optional' }),
   reverse: (lat: number, lng: number) => api.get<Reverse>(`/geo/reverse?${q({ lat: lat.toFixed(5), lng: lng.toFixed(5) })}`, { auth: 'optional' }),
+  postal: (code: string) => api.get<PostalPlace>(`/geo/postal?${q({ code: code.trim() })}`, { auth: 'optional' }),
   joinWaitlist: (regionId: string, email?: string) => api.post<{ joined: boolean }>('/geo/waitlist', { auth: 'optional', json: { regionId, ...(email ? { email } : {}) } }),
 });

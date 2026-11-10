@@ -29,6 +29,13 @@ button, input, select, textarea { font: inherit; }
 .text-muted { color: var(--color-text-muted); }
 :focus { outline: none; }
 :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+/* S-192 (owner: no border lines on links when clicked or hovered): no ring after a mouse or a finger — not even when a
+   script then moves focus (a menu focusing its first item, a dialog handing focus back to its opener). The keyboard
+   keeps every ring (useInputModality: a key press sets data-input="keyboard"). Text fields keep theirs: typing needs
+   to see where the caret is. Touch never flashes the browser's grey tap box either. */
+html[data-input='pointer'] :focus-visible:not(input, textarea, select, [contenteditable]) { outline: none !important; }
+html[data-input='pointer'] :is(.btn, .nl-hhero-dept):focus-visible { box-shadow: none; }
+a, button, [role='button'], [role='menuitem'], [role='tab'], summary, label { -webkit-tap-highlight-color: transparent; }
 /* S-109 (WCAG 2.4.11): a sticky top bar never hides the focused control — the shells publish their height here. */
 html { scroll-padding-top: var(--nl-sticky-top, 0px); }
 /* S-109 (WCAG 2.3.3, reduced motion): no animation or transition when the system asks for less motion. */

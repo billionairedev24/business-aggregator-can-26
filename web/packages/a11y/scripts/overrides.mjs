@@ -16,8 +16,10 @@ const REGION = {
 const merchant = m => ({ ...m, tier: 'trusted', city: 'Calgary', status: 'active', role: 'owner', teamCount: 3, region: REGION });
 
 /** Who is signed in, per app: the sweep switches it (pages/support.ts; the mock api takes POST /__mock/state). */
-export const state = { studio: true, console: true, consumer: false };
+export const state = { studio: true, console: true, consumer: false, visitor: null };
 export const setSignedIn = (app, signedIn) => { state[app] = signedIn; };
+/** S-192: what `GET /api/v1/geo/visitor` answers (the edge's detection); null = nothing detected. */
+export const setVisitor = visitor => { state.visitor = visitor; };
 
 const ADMIN = {
   role: 'admin',
@@ -58,5 +60,15 @@ export const OVERRIDES = {
   ],
   consumer: [
     (m, p) => (p === '/bff/session' && m === 'GET' ? { body: state.consumer ? { user: AMARA, guestId: null } : { user: null, guestId: 'g_a11y_sweep_0000000000' } } : undefined),
+    // S-192: the visitor's detected place (nothing by default, as on a demo without Cloudflare's visitor location headers)
+    (m, p) => (p === '/api/v1/geo/visitor' && m === 'GET' ? { body: state.visitor ?? { source: 'none' } } : undefined),
+    // S-192: a postal or ZIP code of any country — one in a market, the rest kept as typed
+    (m, p) => {
+      if (m !== 'GET' || p.split('?')[0] !== '/api/v1/geo/postal') return undefined;
+      const code = new URL(p, 'http://x').searchParams.get('code') ?? '';
+      return { body: code === 'T2T 0B7'
+        ? { postalCode: code, found: true, city: 'Calgary', region: 'AB', country: 'CA', lat: 51.0379, lng: -114.0898, resolution: { market: { id: 'mkt-calgary', city: 'Calgary', province: 'AB', stage: 'live' }, zone: { id: 'zone-yyc-beltline', name: 'Beltline' }, waitlist: null } }
+        : { postalCode: code, found: false } };
+    },
   ],
 };

@@ -13,11 +13,20 @@ import type { PageHost } from './pages';
  * support mailbox the Help page names (NL_SUPPORT_EMAIL, S-145); unset, Help sends people to Help & cases only.
  * `photosBaseUrl` is where the stock photos' variants are served (NL_PHOTOS_BASE_URL, a CDN; docs/runbooks/photos.md);
  * unset, this site's own /photos/.
+ * S-192: `country` is the footer's country when nothing is known of the visitor (NL_SITE_COUNTRY, ISO 3166-1 alpha-2;
+ * unset = the language alone) and `commonCountries` the location dialog's countries listed first (NL_COMMON_COUNTRIES,
+ * comma-separated codes; unset = a general list, features/location/countries.ts). No country in code.
  */
-export interface PublicConfig { authOrigin: string; siteOrigin: string; legalEntity: string; studioOrigin: string; supportEmail?: string | null; photosBaseUrl?: string | null; page?: PageHost | null }
+export interface PublicConfig { authOrigin: string; siteOrigin: string; legalEntity: string; studioOrigin: string; supportEmail?: string | null; photosBaseUrl?: string | null; page?: PageHost | null; country?: string | null; commonCountries?: readonly string[] | null }
 declare global { interface Window { __NL_CONFIG__?: PublicConfig } }
 
-export const FALLBACK_CONFIG: PublicConfig = { authOrigin: 'http://localhost:9000', siteOrigin: 'http://localhost:3000', legalEntity: brand.legalName, studioOrigin: 'http://localhost:3100', supportEmail: null, photosBaseUrl: null, page: null };
+export const FALLBACK_CONFIG: PublicConfig = { authOrigin: 'http://localhost:9000', siteOrigin: 'http://localhost:3000', legalEntity: brand.legalName, studioOrigin: 'http://localhost:3100', supportEmail: null, photosBaseUrl: null, page: null, country: null, commonCountries: null };
+
+/** "US, ca , gb" → ["US", "CA", "GB"]: two-letter codes only. */
+export function countryList(raw: string | undefined): string[] | null {
+  const codes = (raw ?? '').split(',').map(c => c.trim().toUpperCase()).filter(c => /^[A-Z]{2}$/.test(c));
+  return codes.length ? codes : null;
+}
 
 const PRIVATE_V4 = /^(10\.\d{1,3}|172\.(1[6-9]|2\d|3[01])|192\.168|169\.254)\.\d{1,3}\.\d{1,3}$/;
 const LOOPBACK = /^(localhost|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|\[::1\])$/;

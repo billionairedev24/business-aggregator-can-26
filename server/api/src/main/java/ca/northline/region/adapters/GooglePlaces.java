@@ -161,6 +161,43 @@ class GooglePlaces implements PlacesAutocomplete {
         };
     }
 
+    /**
+     * S-192: Geocoding API {@code GET /maps/api/geocode/json?components=postal_code:{code}[|country:{cc}]} — any
+     * country; the first result's centre, locality, region and country.
+     */
+    @Override
+    public Optional<PlaceParts> postalCode(String code, @Nullable String country, Locale locale) {
+        var components = "postal_code:" + code + (country == null ? "" : "|country:" + country);
+        var query =
+                "?components=" + encode(components) + "&language=" + language(locale) + "&key=" + encode(config.key());
+        JsonNode json;
+        try {
+            json = api.geocode(uri(config.geocodingUrl(), "/maps/api/geocode/json", query));
+        } catch (HttpClientErrorException e) {
+            throw new Unavailable(
+                    "Geocoding API refused the request: " + e.getStatusCode().value(), null);
+        } catch (RestClientException e) {
+            throw new Unavailable("Geocoding API unavailable: " + e.getClass().getSimpleName(), null);
+        }
+        return switch (json.path("status").asString("")) {
+            case "OK" -> {
+                var first = json.path("results").path(0);
+                var loc = first.path("geometry").path("location");
+                yield loc.path("lat").isNumber()
+                        ? Optional.ofNullable(parseLegacy(
+                                first,
+                                new GeoPoint(
+                                        loc.path("lat").asDouble(),
+                                        loc.path("lng").asDouble())))
+                        : Optional.empty();
+            }
+            case "ZERO_RESULTS" -> Optional.empty();
+            default ->
+                throw new Unavailable(
+                        "Geocoding API answered " + json.path("status").asString(""), null);
+        };
+    }
+
     /** One call: 404 / 400 → not found (a stale or forged place id), anything else → {@link Unavailable}. */
     private JsonNode call(String what, Supplier<JsonNode> call) {
         try {

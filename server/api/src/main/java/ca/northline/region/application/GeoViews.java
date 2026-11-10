@@ -104,4 +104,33 @@ public final class GeoViews {
             markets = List.copyOf(markets);
         }
     }
+
+    /**
+     * S-192: a postal or ZIP code as the location dialog saves it. {@code found} = the places provider knew it; then
+     * {@code city} (the locality), {@code region}, {@code country}, the area's centre and what it means for Northline
+     * ({@code resolution}: its market when one covers it). Unknown: the code (and the country asked for) only — the reads
+     * then rank every market (S-190).
+     */
+    public record PostalPlace(
+            String postalCode,
+            boolean found,
+            @Nullable String city,
+            @Nullable String region,
+            @Nullable String country,
+            @Nullable Double lat,
+            @Nullable Double lng,
+            @Nullable Resolution resolution) {}
+
+    /**
+     * S-192: the visitor's place as detected from the request ({@code GET /api/v1/geo/visitor}); every part nullable.
+     * {@code source} = the detector ({@code edge}, {@code geoip}) or {@code none}.
+     */
+    public record Visitor(
+            @Nullable String country,
+            @Nullable String region,
+            @Nullable String city,
+            @Nullable String postalCode,
+            @Nullable Double lat,
+            @Nullable Double lng,
+            String source) {}
 }

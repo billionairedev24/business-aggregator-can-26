@@ -1,6 +1,6 @@
 import { Fragment, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import clsx from 'clsx';
-import { useStickyOffset } from './A11y';
+import { useInputModality, useStickyOffset } from './A11y';
 import { List, ShoppingCartSimple, Tag } from '@phosphor-icons/react';
 import { defineMessages } from './i18n';
 import { Logo } from './Logo';
@@ -68,6 +68,7 @@ export function SiteHeader({ homeHref = '/', location, search, links, shortcuts 
   const [open, setOpen] = useState(false);
   // S-109: focused controls scroll clear of this sticky header (WCAG 2.4.11); the first row tucks above the search
   const tucked = useStickyOffset(ref, undefined, search ? '.nl-site-search' : undefined);
+  useInputModality(); // S-192: focus rings for the keyboard only, never after a click or a tap
   const hasMenu = menu.length > 0 || !!menuExtra;
   const hasNav = links.length > 0 || shortcuts.length > 0 || end.length > 0 || hasMenu;
   const closeOnLink = (e: MouseEvent) => { if ((e.target as HTMLElement).closest('a')) setOpen(false); };

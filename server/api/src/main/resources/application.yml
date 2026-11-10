@@ -380,6 +380,11 @@ northline:
     provider: ${PLACES_PROVIDER:local}
     api-key: ${GOOGLE_MAPS_API_KEY:}
     per-minute: ${PLACES_RATE_LIMIT:60}                   # address lookups per browsing session and minute, per instance
+  # S-192: where a visitor probably is, before they choose (the header's "Deliver to {city}"; docs/runbooks/location.md):
+  # none | edge (Cloudflare's visitor location headers cf-ip*, or X-Geo-*) | geoip (a GeoLite2/GeoIP2 City .mmdb file).
+  visitor-location:
+    detector: ${VISITOR_LOCATION_DETECTOR:none}
+    database: ${VISITOR_LOCATION_DATABASE:}
   # Provider switches (ca.northline.platform) — see docs/runbooks/README.md.
   # Object storage (S-10, ca.northline.shared.storage): local (modules' disk fakes; placeholders under dev; refused
   # under staging/prod) | s3 (AWS S3 or RustFS/MinIO: endpoint + path-style) | gcs | azure (endpoint = account URL).

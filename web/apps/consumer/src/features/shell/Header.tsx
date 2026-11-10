@@ -1,9 +1,11 @@
 import { useRouterState } from '@tanstack/react-router';
-import { Lifebuoy, SignIn, Storefront, Translate, UserPlus } from '@phosphor-icons/react';
+import { BookmarkSimple, CalendarCheck, Heart, Lifebuoy, Receipt, Storefront, Translate, UserCircle } from '@phosphor-icons/react';
 import { AccountMenu, LocationPill, SiteHeader, SiteLink, Skeleton, useLocale, type SiteNavLink } from '@northline/ui';
 import { useCartCount } from '../cart/api';
 import { CUISINES, DEPARTMENTS, SERVICE_CATEGORIES, type Tile } from '../home/catalog';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
+import { countryName } from '../location/countries';
+import { headerPlace } from '../location/sources';
 import type { Scope } from '../search/api';
 import { SiteSearch } from '../search/SiteSearch';
 import { signInHref, useSignOut, useViewer } from '../session/api';
@@ -60,23 +62,38 @@ export function Header() {
   const toggleLocale = () => setLocale(locale === 'fr' ? 'en' : 'fr');
   const language = { key: 'language', label: t('langSwitch'), lang: locale === 'fr' ? 'en-CA' : 'fr-CA', icon: Translate, onSelect: toggleLocale };
   const firstName = user?.firstName?.trim() || undefined;
+  // S-192: Amazon's "Deliver to Amara" over "Calgary T2P 1B5"; "Deliver to" over the detected city or country; else
+  // "Deliver to" over "Choose location". The name only once a place is known.
+  const place = headerPlace(location, code => countryName(code, locale));
+  // a navigation closes the account flyout (S-192)
+  const closeKey = href;
 
   const account = auth ? null
     : loading ? <Skeleton width={120} height={36} radius="var(--radius-control)" />
-    : user ? <AccountArea user={user} onSignOut={() => void signOut('/')} onToggleLocale={toggleLocale} greeting={{ line1: firstName ? t('hello', { name: firstName }) : t('helloSignedIn'), line2: t('accountOrders') }} />
+    : user ? <AccountArea user={user} onSignOut={() => void signOut('/')} onToggleLocale={toggleLocale} closeKey={closeKey} greeting={{ line1: firstName ? t('hello', { name: firstName }) : t('helloSignedIn'), line2: t('accountOrders') }} />
     : (
-      <AccountMenu greeting={{ line1: t('helloGuest'), line2: t('accountOrders') }} sections={[
-        { items: [
-          { key: 'signIn', label: t('signIn'), icon: SignIn, href: signInHref(href) },
-          { key: 'register', label: t('createAccount'), icon: UserPlus, href: signInHref(href, 'register') },
-        ] },
-        { heading: '', items: [language] },
-      ]} />
+      // S-192 (Amazon's flyout, signed out): "Sign in", "New customer? Start here.", then "Your lists" | "Your account"
+      <AccountMenu greeting={{ line1: t('helloGuest'), line2: t('accountOrders') }} layout="columns" closeKey={closeKey}
+        signIn={{ label: t('signIn'), href: signInHref(href), prompt: t('newCustomer'), start: { label: t('startHere'), href: signInHref(href, 'register') } }}
+        sections={[
+          { heading: t('yourLists'), items: [
+            { key: 'favourites', label: t('favourites'), icon: Heart, href: signInHref('/account?tab=favourites') },
+            { key: 'savedForLater', label: t('savedForLater'), icon: BookmarkSimple, href: '/cart' },
+          ] },
+          { heading: t('yourAccountCol'), items: [
+            { key: 'account', label: t('yourAccount'), icon: UserCircle, href: signInHref('/account') },
+            { key: 'orders', label: t('orders'), icon: Receipt, href: signInHref('/account/orders') },
+            { key: 'bookings', label: t('bookings'), icon: CalendarCheck, href: signInHref('/account/orders?tab=bookings') },
+            { key: 'help', label: t('helpLink'), icon: Lifebuoy, href: '/help' },
+            { key: 'sell', label: t('sellOrOffer'), icon: Storefront, href: '/sell' },
+            language,
+          ] },
+        ]} />
     );
 
   return (
     <SiteHeader
-      location={auth ? null : <LocationPill status={location.status} label={location.label} name={firstName} kicker={section === 'services' ? 'near' : 'deliverTo'} onOpen={chooser.show} />}
+      location={auth ? null : <LocationPill status={location.status} label={place} name={place ? firstName : undefined} kicker={section === 'services' ? 'near' : 'deliverTo'} onOpen={chooser.show} />}
       search={auth ? undefined : <SiteSearch variant="header" placeholder={t('search')} scope={scope} initial={typeof searched?.q === 'string' ? searched.q : ''} />}
       links={auth ? [] : links}
       shortcuts={auth ? [] : shortcuts}
