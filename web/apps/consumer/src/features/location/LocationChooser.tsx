@@ -196,10 +196,11 @@ function Applied({ t, p }: { t: T; p: PostalPlace }) {
   const m = p.resolution?.market;
   const served = !!m && (m.stage === 'live' || m.stage === 'pilot');
   const name = p.city ? `${p.city} ${p.postalCode}` : p.postalCode;
+  if (served) return null; // the line at the top already says "Delivering to …"
   return (
     <div className="nl-loc-applied">
-      <p className="nl-loc-note" role="status">{served ? t('appliedServed', { place: name }) : t('appliedElsewhere', { place: name })}</p>
-      {!served && p.resolution?.waitlist ? <Waitlist t={t} resolution={p.resolution} fallback={p.city ?? p.postalCode} /> : null}
+      <p className="nl-loc-note" role="status">{t('appliedElsewhere', { place: name })}</p>
+      {p.resolution?.waitlist ? <Waitlist t={t} resolution={p.resolution} fallback={p.city ?? p.postalCode} /> : null}
     </div>
   );
 }

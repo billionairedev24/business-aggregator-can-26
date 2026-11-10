@@ -57,6 +57,17 @@ class VisitorLocatorsTest {
     }
 
     @Test
+    void utf8HeaderBytesReadAsLatin1AreReadAgain() {
+        var raw = new String("Montréal".getBytes(java.nio.charset.StandardCharsets.UTF_8), java.nio.charset.StandardCharsets.ISO_8859_1);
+        assertThat(new EdgeHeaderLocator()
+                        .locate(headers(Map.of("cf-ipcountry", "CA", "cf-ipcity", raw), "203.0.113.9"))
+                        .map(VisitorPlace::city))
+                .contains("Montréal");
+        assertThat(VisitorParts.utf8("Montréal")).isEqualTo("Montréal");
+        assertThat(VisitorParts.utf8("Zürich")).isEqualTo("Zürich");
+    }
+
+    @Test
     void malformedPartsAreDropped_nothingLeftIsNoGuess() {
         var e = new EdgeHeaderLocator();
         assertThat(e.locate(headers(Map.of("cf-ipcountry", "XX", "cf-ipcity", "<b>x</b>"), "203.0.113.9")))

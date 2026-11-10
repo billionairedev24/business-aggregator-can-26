@@ -198,6 +198,8 @@
 .nl-account-panel-columns .nl-account-section + .nl-account-section { border-left: 1px solid var(--color-border); }
 .nl-account-panel-columns .nl-account-heading { font-size: var(--type-sub); font-weight: var(--weight-bold); letter-spacing: 0; text-transform: none; color: var(--color-text); padding-top: var(--space-2); }
 @media (max-width: 599.98px) {
+  /* phones: the window's width less the gutters, whatever the trigger's place */
+  .nl-account-panel { left: var(--space-4); right: var(--space-4); width: auto; }
   .nl-account-panel-columns .nl-account-sections { grid-template-columns: minmax(0, 1fr); }
   .nl-account-panel-columns .nl-account-section + .nl-account-section { border-left: 0; border-top: 1px solid var(--color-border); margin-top: var(--space-1); }
 }

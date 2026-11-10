@@ -192,7 +192,7 @@ describe('the location dialog (S-192, Amazon’s "Choose your location")', () =>
     const dialog = await openDialog();
     await user().type(within(dialog).getByRole('textbox', { name: 'Postal or ZIP code' }), ' t2t   0b7 ');
     await user().click(within(dialog).getByRole('button', { name: 'Apply' }));
-    expect(await within(dialog).findByText('Delivering to Calgary T2T 0B7.', { selector: '.nl-loc-applied p' })).toBeInTheDocument();
+    expect(await within(dialog).findByText('Delivering to Calgary T2T 0B7.')).toHaveClass('nl-loc-current');
     expect(calls.find(c => c.url.startsWith('/api/v1/geo/postal'))!.url).toBe('/api/v1/geo/postal?code=T2T%200B7');
     expect(saved()).toMatchObject({ postalCode: 'T2T 0B7', locality: 'Calgary', city: 'Calgary', country: 'CA', marketId: 'mkt-calgary', zone: 'Beltline' });
     expect(document.cookie).toContain(`${PLACE_COOKIE}=`);
