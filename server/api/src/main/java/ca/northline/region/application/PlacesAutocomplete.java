@@ -8,7 +8,8 @@ import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Outbound port (S-47): address suggestions, their details and reverse geocoding, restricted to Canada. Chosen by
+ * Outbound port (S-47): address suggestions, their details and reverse geocoding, restricted to Canada (the address
+ * book and the checkout; S-192a widens them), and a postal code of any country (S-192). Chosen by
  * {@code northline.places.provider} ({@code PLACES_PROVIDER}): {@code local} (a fixture list of Canadian addresses) or
  * {@code google} (Places API (New) + Geocoding API with a server-side key, {@code GOOGLE_MAPS_API_KEY}).
  *
@@ -26,6 +27,13 @@ public interface PlacesAutocomplete {
 
     /** The street address (or, failing that, the neighbourhood / city) at a point; empty when nothing is there. */
     Optional<PlaceParts> reverse(GeoPoint point, Locale locale);
+
+    /**
+     * S-192: a postal or ZIP code of any country (the location dialog's "Apply"): the area's centre and its locality,
+     * region and country; {@code country} (ISO 3166-1 alpha-2) narrows it when given. Empty when the provider doesn't
+     * know the code — the dialog then keeps the code alone and the reads rank everything (S-190).
+     */
+    Optional<PlaceParts> postalCode(String code, @Nullable String country, Locale locale);
 
     /** One suggestion: {@code main} = the street address, {@code secondary} = "{city}, {province} {postal code}, Canada". */
     record Prediction(String placeId, String main, String secondary) {}

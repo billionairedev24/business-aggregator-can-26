@@ -308,4 +308,105 @@ class GeoApiTest extends IntegrationTest {
                     .andExpect(jsonPath("$.code").value("region_live"));
         }
     }
+
+    /** S-192: the location dialog's postal / ZIP code (any country) and the visitor's passive guess (edge headers). */
+    @Nested
+    class PostalAndVisitor {
+        @Test
+        void aPostalCodeInAMarketResolvesToIt() throws Exception {
+            mvc.perform(get("/api/v1/geo/postal").param("code", " t2t 0b7 ").header("X-Northline-Guest", guest()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.postalCode").value("T2T 0B7"))
+                    .andExpect(jsonPath("$.found").value(true))
+                    .andExpect(jsonPath("$.city").value("Calgary"))
+                    .andExpect(jsonPath("$.country").value("CA"))
+                    .andExpect(jsonPath("$.lat").value(51.0379))
+                    .andExpect(jsonPath("$.resolution.market.city").value("Calgary"))
+                    .andExpect(jsonPath("$.resolution.market.stage").value("live"));
+        }
+
+        @Test
+        void anyCountrysCodeIsAccepted_unknownOnesAreKeptAsTyped() throws Exception {
+            mvc.perform(get("/api/v1/geo/postal")
+                            .param("code", "90210")
+                            .param("country", "us")
+                            .header("X-Northline-Guest", guest()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.found").value(true))
+                    .andExpect(jsonPath("$.city").value("Beverly Hills"))
+                    .andExpect(jsonPath("$.country").value("US"))
+                    .andExpect(jsonPath("$.resolution.market").value(nullValue()));
+            mvc.perform(get("/api/v1/geo/postal")
+                            .param("code", "10115")
+                            .param("country", "DE")
+                            .header("X-Northline-Guest", guest()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.postalCode").value("10115"))
+                    .andExpect(jsonPath("$.found").value(false))
+                    .andExpect(jsonPath("$.country").value("DE"))
+                    .andExpect(jsonPath("$.city").value(nullValue()))
+                    .andExpect(jsonPath("$.resolution").value(nullValue()));
+        }
+
+        @Test
+        void checksTheCodeAndTheCountry_inBothLanguages() throws Exception {
+            mvc.perform(get("/api/v1/geo/postal").header("X-Northline-Guest", guest()))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.errors[0].field").value("code"))
+                    .andExpect(jsonPath("$.errors[0].message").value("Enter a postal or ZIP code."));
+            mvc.perform(get("/api/v1/geo/postal").param("code", "1234567890123").header("X-Northline-Guest", guest()))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.errors[0].message").value("At most 12 characters."));
+            mvc.perform(get("/api/v1/geo/postal").param("code", "T2T_0B7").header("X-Northline-Guest", guest()))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.errors[0].message").value("Use letters, digits, spaces and hyphens only."));
+            mvc.perform(get("/api/v1/geo/postal")
+                            .param("code", "T2T 0B7")
+                            .param("country", "Canada")
+                            .header("X-Northline-Guest", guest()))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.errors[0].field").value("country"))
+                    .andExpect(jsonPath("$.errors[0].message").value("Choose a country from the list."));
+            mvc.perform(get("/api/v1/geo/postal")
+                            .param("code", "T2T_0B7")
+                            .header("Accept-Language", "fr-CA")
+                            .header("X-Northline-Guest", guest()))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.errors[0].message")
+                            .value("Utilisez seulement des lettres, des chiffres, des espaces et des traits d’union."));
+        }
+
+        @Test
+        void theVisitorsPlaceComesFromCloudflaresHeaders_neverCached() throws Exception {
+            mvc.perform(get("/api/v1/geo/visitor")
+                            .header("cf-ipcountry", "CA")
+                            .header("cf-ipcity", "Calgary")
+                            .header("cf-region-code", "AB")
+                            .header("cf-postal-code", "T2P")
+                            .header("cf-iplatitude", "51.0447")
+                            .header("cf-iplongitude", "-114.0719"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Cache-Control", "no-store"))
+                    .andExpect(jsonPath("$.country").value("CA"))
+                    .andExpect(jsonPath("$.region").value("AB"))
+                    .andExpect(jsonPath("$.city").value("Calgary"))
+                    .andExpect(jsonPath("$.postalCode").value("T2P"))
+                    .andExpect(jsonPath("$.lat").value(51.0447))
+                    .andExpect(jsonPath("$.source").value("edge"));
+        }
+
+        @Test
+        void genericGeoHeadersToo_garbageIsDropped_nothingIsSourceNone() throws Exception {
+            mvc.perform(get("/api/v1/geo/visitor").header("X-Geo-Country", "fr").header("X-Geo-City", "Paris"))
+                    .andExpect(jsonPath("$.country").value("FR"))
+                    .andExpect(jsonPath("$.city").value("Paris"));
+            mvc.perform(get("/api/v1/geo/visitor").header("cf-ipcountry", "XX").header("cf-ipcity", "<script>"))
+                    .andExpect(jsonPath("$.country").value(nullValue()))
+                    .andExpect(jsonPath("$.city").value(nullValue()))
+                    .andExpect(jsonPath("$.source").value("none"));
+            mvc.perform(get("/api/v1/geo/visitor"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.source").value("none"));
+        }
+    }
 }

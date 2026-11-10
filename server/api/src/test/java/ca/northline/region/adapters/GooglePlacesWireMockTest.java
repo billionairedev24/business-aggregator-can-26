@@ -183,6 +183,36 @@ class GooglePlacesWireMockTest {
     }
 
     @Test
+    void aPostalCodeOfAnyCountryIsGeocodedByComponents() {
+        WM.stubFor(get(urlPathEqualTo("/maps/api/geocode/json")).willReturn(okJson("""
+                {"status": "OK", "results": [
+                  {"place_id": "ChIJzip", "formatted_address": "Beverly Hills, CA 90210, USA",
+                   "geometry": {"location": {"lat": 34.1030032, "lng": -118.4104684}},
+                   "address_components": [
+                     {"long_name": "90210", "short_name": "90210", "types": ["postal_code"]},
+                     {"long_name": "Beverly Hills", "short_name": "Beverly Hills", "types": ["locality", "political"]},
+                     {"long_name": "California", "short_name": "CA", "types": ["administrative_area_level_1"]},
+                     {"long_name": "United States", "short_name": "US", "types": ["country", "political"]}]}]}""")));
+        var place = google.postalCode("90210", "US", Locale.CANADA).orElseThrow();
+        assertThat(place.city()).isEqualTo("Beverly Hills");
+        assertThat(place.country()).isEqualTo("US");
+        assertThat(place.postalCode()).isEqualTo("90210");
+        assertThat(place.point().lat()).isEqualTo(34.1030032);
+        WM.verify(getRequestedFor(urlPathEqualTo("/maps/api/geocode/json"))
+                .withQueryParam("components", equalTo("postal_code:90210|country:US"))
+                .withQueryParam("key", equalTo(KEY)));
+
+        WM.stubFor(get(urlPathEqualTo("/maps/api/geocode/json"))
+                .willReturn(okJson("{\"status\": \"ZERO_RESULTS\", \"results\": []}")));
+        assertThat(google.postalCode("00000", null, Locale.CANADA)).isEmpty();
+        WM.stubFor(get(urlPathEqualTo("/maps/api/geocode/json"))
+                .willReturn(aResponse().withStatus(500)));
+        assertThatThrownBy(() -> google.postalCode("90210", null, Locale.CANADA))
+                .isInstanceOf(PlacesAutocomplete.Unavailable.class)
+                .hasMessageNotContaining(KEY);
+    }
+
+    @Test
     void theProviderIsChosenByConfiguration() {
         var config = new PlacesConfig();
         var local = new PlacesProperties(

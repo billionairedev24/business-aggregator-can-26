@@ -1384,6 +1384,35 @@ paths:
       security: []
       tags:
       - geo-controller
+  /api/v1/geo/postal:
+    get:
+      operationId: geoPostal
+      parameters:
+      - in: query
+        name: code
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: country
+        required: false
+        schema:
+          type: string
+      - in: header
+        name: X-Northline-Guest
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PostalPlace"
+          description: OK
+      security: []
+      tags:
+      - geo-controller
   /api/v1/geo/regions:
     get:
       operationId: regionRegions
@@ -1456,6 +1485,19 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/Place"
+          description: OK
+      security: []
+      tags:
+      - geo-controller
+  /api/v1/geo/visitor:
+    get:
+      operationId: geoVisitor
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Visitor"
           description: OK
       security: []
       tags:
@@ -13944,6 +13986,27 @@ components:
           items:
             type: integer
             format: int64
+    PostalPlace:
+      type: object
+      properties:
+        city:
+          type: string
+        country:
+          type: string
+        found:
+          type: boolean
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        postalCode:
+          type: string
+        region:
+          type: string
+        resolution:
+          $ref: "#/components/schemas/Resolution"
     Posted:
       type: object
       properties:
@@ -16264,6 +16327,25 @@ components:
         version:
           type: integer
           format: int32
+    Visitor:
+      type: object
+      properties:
+        city:
+          type: string
+        country:
+          type: string
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        postalCode:
+          type: string
+        region:
+          type: string
+        source:
+          type: string
     Waitlist:
       type: object
       properties:

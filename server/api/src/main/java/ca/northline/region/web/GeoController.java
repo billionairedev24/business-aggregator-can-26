@@ -3,14 +3,20 @@ package ca.northline.region.web;
 import ca.northline.region.application.GeoUseCases.BrowseMarkets;
 import ca.northline.region.application.GeoUseCases.ChooseAddress;
 import ca.northline.region.application.GeoUseCases.JoinWaitlist;
+import ca.northline.region.application.GeoUseCases.LocateVisitor;
+import ca.northline.region.application.GeoUseCases.LookUpPostalCode;
 import ca.northline.region.application.GeoUseCases.NamePlace;
 import ca.northline.region.application.GeoUseCases.SuggestAddresses;
 import ca.northline.region.application.GeoViews;
 import ca.northline.region.application.GeoViews.Address;
 import ca.northline.region.application.GeoViews.Place;
+import ca.northline.region.application.GeoViews.PostalPlace;
 import ca.northline.region.application.GeoViews.Resolution;
 import ca.northline.region.application.GeoViews.Suggestions;
+import ca.northline.region.application.GeoViews.Visitor;
+import ca.northline.region.application.VisitorLocator.VisitorRequest;
 import ca.northline.region.domain.GeoPoint;
+import ca.northline.shared.ClientAddress;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.WebhookRateLimiter;
 import ca.northline.shared.security.MerchantAccess;
@@ -47,6 +53,9 @@ import org.springframework.web.bind.annotation.RestController;
  * GET  /api/v1/geo/reverse?lat=&lng=               {label, city, province, market, zone} — 404 when nothing is there
  * GET  /api/v1/geo/resolve?lat=&lng=               {market, zone, waitlist}
  * POST /api/v1/geo/waitlist {regionId, email?}     201 joined · 200 already on it
+ * GET  /api/v1/geo/postal?code=&country=           S-192: {postalCode, found, city, region, country, lat, lng, resolution}
+ * GET  /api/v1/geo/visitor                         S-192: the visitor's guessed place {country, region, city, postalCode,
+ *                                                  lat, lng, source} (never cached; all null with source "none")
  * </pre>
  */
 @RestController
@@ -58,6 +67,8 @@ class GeoController {
     private final NamePlace name;
     private final BrowseMarkets markets;
     private final JoinWaitlist waitlist;
+    private final LookUpPostalCode postal;
+    private final LocateVisitor visitor;
     private final MerchantAccess access;
     private final WebhookRateLimiter limiter;
 
@@ -67,6 +78,8 @@ class GeoController {
             NamePlace name,
             BrowseMarkets markets,
             JoinWaitlist waitlist,
+            LookUpPostalCode postal,
+            LocateVisitor visitor,
             MerchantAccess access,
             Clock clock,
             @Value("${northline.places.per-minute:60}") int perMinute) {
@@ -75,6 +88,8 @@ class GeoController {
         this.name = name;
         this.markets = markets;
         this.waitlist = waitlist;
+        this.postal = postal;
+        this.visitor = visitor;
         this.access = access;
         this.limiter = new WebhookRateLimiter(perMinute, clock);
     }
@@ -128,6 +143,34 @@ class GeoController {
     @GetMapping("/resolve")
     Resolution resolve(@RequestParam double lat, @RequestParam double lng) {
         return name.resolve(new GeoPoint(lat, lng));
+    }
+
+    /**
+     * S-192: a postal or ZIP code of any country (the location dialog's "Apply"); 422 on a malformed code or country
+     * (validation-rules.md § Location). Counts as an address lookup (the provider bills it).
+     */
+    @GetMapping("/postal")
+    PostalPlace postal(
+            @RequestParam(required = false) @Nullable String code,
+            @RequestParam(required = false) @Nullable String country,
+            @RequestHeader(value = "X-Northline-Guest", required = false) @Nullable String guest,
+            HttpServletRequest request,
+            Locale locale) {
+        limit(guest, request);
+        return postal.lookUp(code, country, locale);
+    }
+
+    /**
+     * S-192: where the visitor probably is, from this request's edge headers or the client's address (the configured
+     * detector, docs/runbooks/location.md). Per visitor: never cached.
+     */
+    @GetMapping("/visitor")
+    ResponseEntity<Visitor> visitor(HttpServletRequest request) {
+        var found = visitor.locate(new VisitorRequest(request::getHeader, ClientAddress.of(request)));
+        var body = found.map(p ->
+                        new Visitor(p.country(), p.region(), p.city(), p.postalCode(), p.lat(), p.lng(), p.source()))
+                .orElseGet(() -> new Visitor(null, null, null, null, null, null, "none"));
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(body);
     }
 
     /** @param email a guest's own address (required without a sign-in); ignored rows never reveal who is listed */
