@@ -58,6 +58,9 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql")
 
     "toolsImplementation"("org.postgresql:postgresql")
+    // S-194: the demo seed hashes the demo accounts' passwords as northline-auth does (Argon2id on BouncyCastle). Only
+    // the tools carry it (/app/tools/lib in the image), never the api's own classpath.
+    "toolsImplementation"(libs.bouncycastle.prov)
     "toolsCompileOnly"(libs.lombok)
     "toolsAnnotationProcessor"(libs.lombok)
     "toolsCompileOnly"(libs.jspecify)
@@ -151,6 +154,23 @@ tasks.register<JavaExec>("seedCategories") {
     dbTool("seed-categories")
 }
 
+// S-194: ./gradlew :api:demoSeed [-Pdemo.reset=true] — the one-click demo data against -Pdb.url (make demo-seed
+// ENV=local runs it with NORTHLINE_DEMO_SEED=true and the demo accounts' credentials in the environment). Photos come
+// straight from the photo library (web/packages/media/source); the image carries a copy in /app/tools/demo-photos.
+tasks.register<JavaExec>("demoSeed") {
+    group = "database"
+    description = "Seeds the demo marketplace (S-194) into -Pdb.url; -Pdemo.reset=true wipes the demo rows first."
+    classpath = tools.runtimeClasspath + sourceSets.main.get().output
+    mainClass.set("ca.northline.tools.demo.DemoSeed")
+    dependsOn(tasks.named("processResources"), tasks.named("toolsClasses"))
+    args(if (providers.gradleProperty("demo.reset").getOrElse("false") == "true") "reset" else "seed")
+    systemProperty("logback.configurationFile", file("src/tools/logback-tools.xml").absolutePath)
+    environment("DB_URL", dbSetting("db.url", "DB_URL", "jdbc:postgresql://localhost:5432/northline"))
+    environment("DB_USER", dbSetting("db.user", "DB_USER", "northline"))
+    environment("DB_PASSWORD", dbSetting("db.password", "DB_PASSWORD", "northline"))
+    environment("DEMO_PHOTOS_DIR", rootProject.file("../web/packages/media/source").absolutePath)
+}
+
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
     // `./gradlew :api:bootRun --args='--spring.profiles.active=local'`
     jvmArgs("-Xmx768m")
@@ -163,7 +183,16 @@ tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
 val jibToolsDir = layout.buildDirectory.dir("jib-tools")
 val jibTools by tasks.registering(Sync::class) {
     from(tools.output.classesDirs) { into("app/tools") }
+    from(tools.output.resourcesDir!!) { into("app/tools") } // S-194: demo-seed/plan.json
     from("src/tools/logback-tools.xml") { into("app/tools") }
+    // S-194: the demo seed's own libraries (BouncyCastle for Argon2id) and the photo library's demo and category photos
+    // (web/packages/media/source, docs/runbooks/photos.md), which the seed uploads to the media store.
+    from(configurations.named("toolsRuntimeClasspath").map { c -> c.filter { it.name.startsWith("bcprov") } }) { into("app/tools/lib") }
+    from(rootProject.file("../web/packages/media/source")) {
+        include("demo/**", "category/**")
+        into("app/tools/demo-photos")
+    }
+    dependsOn(tasks.named("processToolsResources"))
     into(jibToolsDir)
 }
 extensions.configure<com.google.cloud.tools.jib.gradle.JibExtension> {
