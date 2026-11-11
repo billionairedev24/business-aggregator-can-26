@@ -407,8 +407,8 @@ final class DemoBusinesses {
         db.update("""
                 insert into availability.booking_rules (merchant_id, interval_min, buffer_min, min_notice_min, horizon_days, max_jobs_per_day,
                     accept_mode, reschedule_free_min, late_cancel_fee_cents, updated_at)
-                values (?, 30, 15, 60, 30, 8, 'instant', 180, 0, ?)
-                on conflict (merchant_id) do update set accept_mode = 'instant', horizon_days = 30, updated_at = excluded.updated_at
+                values (?, 30, 15, 60, 28, 6, 'instant', 180, 0, ?)
+                on conflict (merchant_id) do update set accept_mode = 'instant', horizon_days = 28, max_jobs_per_day = 6, updated_at = excluded.updated_at
                 """, merchantId, now);
         for (var z : zones.subList(0, Math.min(zones.size(), 6))) {
             db.update(
