@@ -87,8 +87,10 @@ resource "ovh_cloud_project_instance" "box" {
   }
 
   lifecycle {
-    # A newer Ubuntu 24.04 build gets a new image id: never rebuild the server (and its data) for that.
-    ignore_changes = [boot_from]
+    # A newer Ubuntu 24.04 build gets a new image id, and a new deploy key (make ovh-gh-setup after the old one was lost)
+    # changes ssh_key_create: never rebuild the server (and its data) for either. Keys are added on the running server
+    # instead (the workflow's add-ssh-key action, docs/runbooks/ovh.md § Lost the SSH key).
+    ignore_changes = [boot_from, ssh_key_create]
 
     precondition {
       condition     = var.ssh_public_key != ""

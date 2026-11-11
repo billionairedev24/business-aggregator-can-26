@@ -987,6 +987,26 @@ On the VPS: `journalctl -u k3s`, `sudo k3s kubectl …`. `--set observability.co
 one Collector that only logs a summary (nothing to export to). Node and pod usage: `kubectl top` (k3s ships
 metrics-server; on MKS install it if missing).
 
+**Without SSH:** Actions › ovh › `diagnose` prints a read-only report in the run's log (scripts/ovh/diagnose.sh): pods
+and restarts, events the api hasn't handed to Kafka, the worker's search/Kafka/error lines, the search-indexer consumer
+group and Meilisearch's document counts. No secrets are read.
+
+### Lost the SSH key
+
+`.ovh/ovh-vps-deploy-key` deleted from your machine? The pipeline keeps its own copy (secret
+`OVH_VPS_SSH_PRIVATE_KEY`) and the server still accepts it, so nothing needs rebuilding:
+
+```sh
+ssh-keygen -t ed25519 -N '' -C "$(whoami)-northline" -f .ovh/ovh-vps-deploy-key   # a new pair, same path
+cat .ovh/ovh-vps-deploy-key.pub                                                     # copy this one line
+```
+
+Actions › ovh › Run workflow: target `ovh-vps`, action `add-ssh-key`, paste the line into `ssh-public-key` (the `.pub`
+line only, never the private key). The run's summary shows the fingerprint; then `ssh -i .ovh/ovh-vps-deploy-key
+ubuntu@<IPv4>` works again. Keep the pipeline's secret as it is (it still works). Terraform ignores key changes on the
+instance (`ignore_changes = [boot_from, ssh_key_create]`), so a later `make ovh-gh-setup` that stores the new key can't
+rebuild the server.
+
 ## Teardown
 
 ```sh

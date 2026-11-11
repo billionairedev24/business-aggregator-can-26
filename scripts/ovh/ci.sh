@@ -12,6 +12,9 @@
 #       ovh-mks: the runner's address added to api_allowed_cidrs for this run (when a restriction is set), the
 #                kubeconfig from Terraform's output
 #       → KUBECONFIG in $GITHUB_ENV
+#   scripts/ovh/ci.sh add-key TARGET          ovh-vps, after open: appends $NEW_SSH_PUBLIC_KEY (one ssh-ed25519 / ssh-rsa /
+#                                             ecdsa line) to ubuntu's authorized_keys with the pipeline's own key — the
+#                                             way back in when your copy of .ovh/ovh-vps-deploy-key is lost
 #   scripts/ovh/ci.sh close TARGET            undo open: the runner's rule out, tunnel closed, key and kubeconfig gone
 #   scripts/ovh/ci.sh teardown TARGET         before destroy: the releases out of the cluster (ovh-mks: its load
 #                                             balancer and volumes) and the buckets emptied (fake data only)
@@ -209,11 +212,32 @@ teardown() {
   fi
 }
 
+add_key() {
+  [ "$OVH_TARGET" = ovh-vps ] || die "add-ssh-key is for ovh-vps (ovh-mks has no server to log in to)"
+  local key host
+  key=$(printf '%s' "${NEW_SSH_PUBLIC_KEY:-}" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+  [ -n "$key" ] || die "ssh-public-key is empty: paste the whole line of your .pub file (cat .ovh/ovh-vps-deploy-key.pub)"
+  [ "$(printf '%s\n' "$key" | wc -l)" -eq 1 ] || die "ssh-public-key: one line only"
+  printf '%s\n' "$key" | grep -Eq '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)|sk-ssh-ed25519@openssh\.com) [A-Za-z0-9+/=]+( .*)?$' \
+    || die "ssh-public-key doesn't look like a public key (the .pub file's line: 'ssh-ed25519 AAAA… comment'; never the private key)"
+  printf '%s\n' "$key" | ssh-keygen -lf - >/dev/null 2>&1 || die "ssh-public-key: ssh-keygen can't read it"
+  host=$(tf_out vps .ssh)
+  printf '%s\n' "$key" | ssh -o BatchMode=yes "$host" \
+    'umask 077; mkdir -p ~/.ssh; read -r k; grep -qxF "$k" ~/.ssh/authorized_keys 2>/dev/null && echo "already installed" || { printf "%s\n" "$k" >> ~/.ssh/authorized_keys; echo "installed"; }'
+  echo "fingerprint: $(printf '%s\n' "$key" | ssh-keygen -lf - | awk '{ print $2 }')"
+  {
+    echo "**SSH key installed** on \`$host\` — fingerprint \`$(printf '%s\n' "$key" | ssh-keygen -lf - | awk '{ print $2 }')\`."
+    echo
+    echo "From your machine: \`ssh -i .ovh/ovh-vps-deploy-key $host\` (your address must be in OVH_ADMIN_CIDRS when the Network Firewall is on)."
+  } >>"${GITHUB_STEP_SUMMARY:-/dev/null}"
+}
+
 case "$cmd" in
   tfvars) tfvars ;;
   plan-summary) plan_summary "${3:?plan file}" ;;
   open) open "${3:-}" ;;
+  add-key) add_key ;;
   close) close ;;
   teardown) teardown ;;
-  *) die "usage: $0 tfvars|plan-summary|open|close|teardown TARGET …" ;;
+  *) die "usage: $0 tfvars|plan-summary|open|add-key|close|teardown TARGET …" ;;
 esac
