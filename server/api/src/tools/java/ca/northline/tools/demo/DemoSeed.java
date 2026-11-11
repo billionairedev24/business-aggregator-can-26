@@ -49,11 +49,12 @@ public final class DemoSeed {
             throw new IllegalStateException(refusal);
         }
         var summary = run("reset".equals(args[0]), env, Instant.now());
-        System.out.println(summary);
+        new java.io.PrintStream(new java.io.FileOutputStream(java.io.FileDescriptor.out), true, java.nio.charset.StandardCharsets.UTF_8)
+                .println(summary);
         var file = env.get("DEMO_SUMMARY_FILE");
         if (file != null && !file.isBlank()) {
             try {
-                Files.writeString(Path.of(file), summary);
+                Files.writeString(Path.of(file), summary, java.nio.charset.StandardCharsets.UTF_8);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }

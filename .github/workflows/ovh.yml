@@ -21,6 +21,9 @@
 #                         for DNS in the summary
 #   provision-and-deploy  apply, then deploy
 #   down / up             scripts/ovh/scale.sh (apps to 0 and back; ovh-mks also the node pool)
+#   seed-demo             S-194: the one-click demo data after a deploy (scripts/demo/seed-demo.sh: a Job from the api
+#                         image fills the database — every category, verified businesses, accounts, history); reset =
+#                         wipe the demo rows first. Idempotent. Credentials stay in the cluster (make demo-creds).
 #   diagnose              read-only report in the log: pods and restarts, the event outbox, the worker's search
 #                         indexing, Kafka's search-indexer group, Meilisearch counts (scripts/ovh/diagnose.sh)
 #   add-ssh-key           ovh-vps: installs ssh-public-key for ubuntu with the pipeline's own key — the way back in
@@ -45,7 +48,7 @@ on:
         description: What to do
         type: choice
         default: plan
-        options: [plan, apply, deploy, provision-and-deploy, down, up, diagnose, add-ssh-key, destroy]
+        options: [plan, apply, deploy, provision-and-deploy, down, up, seed-demo, diagnose, add-ssh-key, destroy]
       image-tag:
         description: Image tag (empty = the short commit sha of this run)
         type: string
@@ -58,6 +61,10 @@ on:
         description: "add-ssh-key only: the line of your .pub file (ssh-ed25519 AAAA… — never the private key)"
         type: string
         default: ""
+      reset:
+        description: "seed-demo only: wipe the demo data first, then seed again (RESET=true)"
+        type: boolean
+        default: false
       confirm-destroy:
         description: "destroy only: type the target's name (ovh-vps or ovh-mks)"
         type: string
@@ -92,6 +99,7 @@ jobs:
       deploy: ${{ steps.p.outputs.deploy }}
       scale: ${{ steps.p.outputs.scale }}
       ops: ${{ steps.p.outputs.ops }}
+      seed: ${{ steps.p.outputs.seed }}
     steps:
       - id: p
         env:
@@ -111,18 +119,19 @@ jobs:
           if [ -n "$REGISTRY_VAR" ]; then registry=$REGISTRY_VAR login=password
           else registry="ghcr.io/$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')/northline" login=ghcr
           fi
-          provision=false images=false deploy=false scale=false ops=false
+          provision=false images=false deploy=false scale=false ops=false seed=false
           case "$ACTION" in
             (plan | apply | destroy) provision=true ;;
             (deploy) deploy=true ;;
             (provision-and-deploy) provision=true deploy=true ;;
             (down | up) scale=true ;;
             (diagnose | add-ssh-key) ops=true ;;
+            (seed-demo) seed=true ;;
           esac
           if [ "$deploy" = true ] && [ "$BUILD" = true ]; then images=true; fi
           {
             echo "tag=$TAG"; echo "registry=$registry"; echo "registry_server=${registry%%/*}"; echo "login=$login"
-            echo "provision=$provision"; echo "images=$images"; echo "deploy=$deploy"; echo "scale=$scale"; echo "ops=$ops"
+            echo "provision=$provision"; echo "images=$images"; echo "deploy=$deploy"; echo "scale=$scale"; echo "ops=$ops"; echo "seed=$seed"
           } >> "$GITHUB_OUTPUT"
           echo "**$ACTION** on **$TARGET** · images \`$registry/<app>:$TAG\`" >> "$GITHUB_STEP_SUMMARY"
 
@@ -481,6 +490,79 @@ jobs:
       - name: Diagnose (read-only)
         if: inputs.action == 'diagnose'
         run: scripts/ovh/diagnose.sh "$TARGET"
+      - name: Close the runner's access
+        if: always()
+        run: scripts/ovh/ci.sh close "$TARGET"
+
+  # S-194: the one-click demo data. Approval-gated like every job here (the target's Environment). The credentials of
+  # the demo accounts are made in the cluster (secret/northline-demo-accounts) and never reach this log or the summary:
+  # read them with `make demo-creds ENV=<target>` on your machine.
+  seed-demo:
+    name: seed demo data
+    needs: prepare
+    if: needs.prepare.outputs.seed == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: ${{ inputs.target }}
+    permissions:
+      contents: read
+    env:
+      OVH_LOCATION: ${{ vars.OVH_LOCATION || 'us-east-va' }}
+      OVH_ENDPOINT: ${{ vars.OVH_ENDPOINT }}
+      OVH_APPLICATION_KEY: ${{ secrets.OVH_APPLICATION_KEY }}
+      OVH_APPLICATION_SECRET: ${{ secrets.OVH_APPLICATION_SECRET }}
+      OVH_CONSUMER_KEY: ${{ secrets.OVH_CONSUMER_KEY }}
+      OVH_CLIENT_ID: ${{ secrets.OVH_CLIENT_ID }}
+      OVH_CLIENT_SECRET: ${{ secrets.OVH_CLIENT_SECRET }}
+      OVH_SERVICE_NAME: ${{ vars.OVH_SERVICE_NAME }}
+      OVH_DOMAIN: ${{ vars.OVH_DOMAIN }}
+      OVH_BUCKET_SUFFIX: ${{ vars.OVH_BUCKET_SUFFIX }}
+      OVH_TFVARS: ${{ vars.OVH_TFVARS }}
+      OVH_SERVER: ${{ vars.OVH_SERVER }}
+      OVH_INSTANCE_FLAVOR: ${{ vars.OVH_INSTANCE_FLAVOR }}
+      OVH_SSH_PUBLIC_KEY: ${{ vars.OVH_SSH_PUBLIC_KEY }}
+      OVH_VPS_SERVICE_NAME: ${{ vars.OVH_VPS_SERVICE_NAME }}
+      OVH_ADMIN_CIDRS: ${{ vars.OVH_ADMIN_CIDRS }}
+      OVH_EDGE_FIREWALL: ${{ vars.OVH_EDGE_FIREWALL }}
+      OVH_API_ALLOWED_CIDRS: ${{ vars.OVH_API_ALLOWED_CIDRS }}
+      OVH_NODE_COUNT: ${{ vars.OVH_NODE_COUNT }}
+      OVH_NODE_FLAVOR: ${{ vars.OVH_NODE_FLAVOR }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      TF_STATE_ACCESS_KEY: ${{ secrets.TF_STATE_ACCESS_KEY }}
+      TF_STATE_SECRET_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
+      OVH_VPS_SSH_PRIVATE_KEY: ${{ secrets.OVH_VPS_SSH_PRIVATE_KEY }}
+      OVH_VPS_KNOWN_HOSTS: ${{ secrets.OVH_VPS_KNOWN_HOSTS }}
+      RESET: ${{ inputs.reset }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+      - name: State keys
+        run: scripts/ovh/tf-state.sh keys "$TARGET"
+      - name: Terraform variables and state
+        run: |
+          scripts/ovh/ci.sh tfvars "$TARGET"
+          scripts/ovh/tf-state.sh init "$TARGET"
+      - name: Cluster access
+        run: scripts/ovh/ci.sh open "$TARGET" kubeconfig
+      - name: Seed the demo data (a Job from the deployed api image)
+        run: |
+          flag=""
+          [ "$RESET" = true ] && flag=--reset
+          DEMO_SUMMARY_FILE="$RUNNER_TEMP/demo-summary.md" scripts/demo/seed-demo.sh "$TARGET" ${flag:+"$flag"}
+          {
+            cat "$RUNNER_TEMP/demo-summary.md"
+            echo
+            echo "**Credentials** of the demo accounts are in the cluster only (secret/northline-demo-accounts). On your machine:"
+            echo
+            echo '```sh'
+            echo "make demo-creds ENV=$TARGET    # email, password, a current authenticator code and the key of each account"
+            echo '```'
+            echo
+            echo "Search results catch up within a minute or two (the worker's reconcile sweep). Runbook: docs/runbooks/demo.md § One-click demo data."
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Close the runner's access
         if: always()
         run: scripts/ovh/ci.sh close "$TARGET"

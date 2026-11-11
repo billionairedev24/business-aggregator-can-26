@@ -91,6 +91,16 @@ ovh-tf-init: ## terraform init of the target's root; with TF_STATE_BUCKET (+ TF_
 demo-data: ## Demo marketplace through the product (ENV=local|dryrun|ovh-vps|ovh-mks; RESET=1 / RESET=all; ONLY=bakery,wine) — docs/runbooks/demo.md
 	$(ROOT)/scripts/demo-data.sh --env $(or $(ENV),local) $(if $(filter all,$(RESET)),--reset-all,$(if $(RESET),--reset)) $(if $(ONLY),--only $(ONLY))
 
+# S-194: the one-click demo data (docs/runbooks/demo.md § One-click demo data) — straight into the database, no manual
+# prerequisite; on OVHcloud the pipeline's action seed-demo runs the same script.
+.PHONY: demo-seed
+demo-seed: ## One-click full demo data (ENV=local|ovh-vps|ovh-mks; RESET=true wipes the demo rows first) — docs/runbooks/demo.md
+	$(ROOT)/scripts/demo/seed-demo.sh $(or $(ENV),local) $(if $(filter true 1 yes,$(RESET)),--reset)
+
+.PHONY: demo-creds
+demo-creds: ## The demo accounts: email, password, a current authenticator code and key (ENV=local|ovh-vps|ovh-mks; your terminal only)
+	$(ROOT)/scripts/demo/demo-creds.sh $(or $(ENV),local)
+
 .PHONY: demo-data-test
 demo-data-test: ## The demo plan's rules (counts, references, no place names) and the driver's helpers (node --test)
 	cd $(ROOT) && node --test scripts/demo/demo-data.test.mjs
