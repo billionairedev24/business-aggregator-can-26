@@ -12379,3 +12379,93 @@ and "Add visitor location headers" is on — then Full (strict) and a reachable 
 - No IP detection in the consumer app.
 - No arrow or dim backdrop on the account flyout.
 - S-192a, as listed above.
+
+## 2026-11-10 — S-194 One-click full demo data
+
+Owner, 2026-11-10: "A lot of items still show no data. Please we need to be able to test this end to end." The OVH
+demo (`ovh-vps`, namespace `northline-dryrun`) starts with an empty database, and `make demo-data` needs a Mailpit
+inbox, Stripe test keys and Stripe's hosted pages, a console admin made by hand with an authenticator, the market set
+live in the console, and then makes only 11 businesses (most categories said "0 verified providers").
+
+**Approach: a dedicated seed tool in the api's tools, run as a one-off Job from the deployed api image.**
+`ca.northline.tools.demo.DemoSeed` (`server/api/src/tools`, shipped in `/app/tools` like DbTool, never on the api's
+classpath) writes a whole marketplace in one transaction from `demo-seed/plan.json`. Considered and rejected:
+- *Enabling the dev seed (`db/seed-dev`) for demos behind a flag.* Its personas' passwords and TOTP keys are published
+  in the repository (README, V101/V381/V416 comments), it names one city and province throughout, it covers a handful of
+  categories, and its files are versioned migrations interleaved with the real ones (V100–V488) — applying them to a
+  migrated demo database needs out-of-order Flyway against a deployed database, which S-16's guard exists to prevent.
+- *A server-side fast path in `make demo-data`.* The product's own flows are what need the manual prerequisites; a fast
+  path would still have to sign people up and approve them, or bypass the same tables anyway.
+
+**Decisions.**
+- **Guard:** refused without `NORTHLINE_DEMO_SEED=true` (set only by the seed Job and `make demo-seed`, never by the
+  chart) and under any `staging`/`prod`/`production`/`live` profile or `NORTHLINE_ENVIRONMENT` (`DemoGuard`). The
+  dry run's `dev` profile and `dryrun` environment are allowed.
+- **Triggers and migrations:** nothing bypassed — the seed writes through every constraint and V016's triggers
+  (category limits: provider 10, seller 5, kitchen 3; principal role per structure; section kinds per page). No
+  migration added or edited.
+- **Idempotent by key:** every id is `01JDEM` + 20 Crockford characters of SHA-256 of a stable key
+  (`merchant:bakery`, `listing:bakery.sourdough`), so a re-run upserts the same rows and moves time-relative rows
+  (today's jobs, tonight's run, open quote requests) to the new "now"; reviews are immutable (V073) and stay.
+- **Reset:** deletes every row whose `id` or any `*_id`/`created_by`-style column holds a demo id, in passes until
+  nothing more goes (so it also removes what people did with demo accounts through the product). Kept by design:
+  `payments.ledger_entries` and `developer.audit_log` (append-only triggers), the event outbox. Credentials survive a
+  reset (`ROTATE=1` makes new ones).
+- **Coverage:** 79 businesses — 45 providers, 23 shops, 11 kitchens — so every one of the 162 leaf categories
+  (`db/seed/categories.json`) has a live, approved, priced listing from an active business with a published page;
+  several in the main ones (3 bakeries, 3 grocers, 2 butchers, 3 mechanics, 3 house cleaners, 3 barbers, 3 tutors,
+  3 plumbers, 11 kitchens). Restricted shops (alcohol, tobacco) get an approved licence; kitchens with alcohol a
+  licence too.
+- **Verified without Stripe:** every checklist item is `verified` (kyc, registry, GST, licences for regulated
+  categories, insurance, bank, MFA…), the merchant `active` and approved — nothing waits on Stripe's hosted pages.
+  With no `STRIPE_SECRET_KEY` the deploy already uses the fake gateway and the local identity and age fakes; checkout
+  and booking were completed end to end on it locally.
+- **Market, region-neutral:** `DEMO_MARKET`, else the first market of `REGION_DEFAULT_PROVINCE`/`SEARCH_DEFAULT_MARKET`,
+  else of the first live province — set `live` with its province; when it has no delivery or service zones, five are
+  drawn around its centre ("Central/North/East/South/West", named after the market's city). Businesses and addresses
+  are points around the centre; the city and province come from the market row. Pages work with no location and
+  "near {city}" (S-190/S-192).
+- **Postal codes:** the checkout needs one on the customers' addresses. `plan.json` holds one per province (format
+  data: only the province's letter matters); `DEMO_POSTAL_CODE` overrides.
+- **Ratings:** generated reviews are 4–5 stars so no business falls under the trust rating floor (4.2, S-93), which
+  hid 21 businesses in the first local run.
+- **Photos:** the photo library's JPEGs (`web/packages/media/source/demo` and `category`, copied into the image at
+  `/app/tools/demo-photos`) are written to the media store at the key a real upload gets (`catalogue/<merchant>/<media>.jpg`
+  in S3; the local folder locally) and recorded in `catalogue.media`; a listing without its own demo slot gets its
+  category's photo. The three categories the library leaves on the designed fallback (insurance broker, tobacco & vape,
+  cannabis accessories) show the photo well. Dish photos stay drawn (no public URL yet, photos.md § 7).
+- **Accounts and secrets:** six accounts (admin with every console role, trust & safety reviewer, the owner of six
+  businesses of every type, an applicant with none, two customers with addresses). Passwords and base32 TOTP keys are
+  made by `scripts/demo/seed-demo.sh` (Node's CSPRNG) once: on OVHcloud straight into the Secret
+  `northline-demo-accounts` (never in the repository, an artifact or a log), locally `.demo/local-accounts.env`
+  (mode 600, git-ignored). The Job reads them as environment variables; DemoSeed hashes the password as northline-auth
+  does (Argon2id, `{argon2}`; BouncyCastle only in `/app/tools/lib`) and seals the key with auth's `TOTP_KEY` (taken
+  from the auth Deployment's env). No second-factor bypass was added. `make demo-creds ENV=…` reads them (over
+  `ssh -i .ovh/ovh-vps-deploy-key ubuntu@<IPv4>` for ovh-vps; `kubectl` for ovh-mks) and prints email, password, a
+  current code and the key — refused with `CI` set.
+- **Pipeline:** `ovh.yml` action `seed-demo` (manual, approval-gated by the target's Environment, `reset` input),
+  rebased onto #263's `diagnose`/`add-ssh-key`. The Job is built from the live api Deployment (image, env, volumes) with
+  labels `app.kubernetes.io/part-of=northline` (the data services' network policies) and its own component, so no
+  Service selects it. The run summary is the tool's Markdown (counts per department, accounts' emails and apps) plus
+  how to get the credentials. Search catches up through the worker's reconcile sweep; no reindex step.
+
+**Checked.** `DemoSeedTest` (Testcontainers PostGIS, production migrations only): every category covered, market
+live, accounts open with the handed-in credentials, a re-run changes no counts, reset removes every demo row, missing
+credentials stop before writing; guard and id tests. Locally against a production-migrated Postgres (no dev seed) with
+the api, auth and each BFF/web app one at a time (`-Xmx512m`): consumer home, Shop, departments, the carpet &
+upholstery category ("2 verified providers", priced) and its providers, a provider page, Food and a kitchen menu, a
+product — with no location and near the market's city; the demo customer's orders and bookings; add to cart →
+checkout on the fake gateway → "your order is placed"; a barber booking → "Booked … held in escrow"; the Studio
+dashboards of the owner's tutoring, mechanic, bakery and kitchen businesses ("Needs you now": quote request, a dispute
+to resolve, orders to pack for tonight's run, low stock); the console's verification (1 waiting), disputes (1 for an
+agent) and vetting (1 flagged) queues. actionlint clean.
+
+**Not done / open.**
+- Not run against a real OVHcloud cluster (none exists yet): the Job manifest, the Secret and `demo-creds` over SSH were
+  exercised only as far as `actionlint`, bash 3.2 parsing and reading the chart; the S3 photo path is code-reviewed, not
+  run (locally the media store is a folder).
+- Search (Meilisearch) and the worker were not running locally; the search page itself was not checked.
+- The backlog file is LF on develop (no CRLF anywhere), so the S-194 row is LF to match.
+- Earnings history is written as released escrows (12 weeks) for the owner's businesses; payouts are not seeded.
+- Still needs Stripe or a person: real payouts and Stripe dashboards; onboarding a new business (the applicant) is the
+  product's flow and needs a person for the console approval.
