@@ -1,0 +1,4218 @@
+{
+ "$comment": "S-194 one-click demo data (docs/runbooks/demo.md § One-click demo data). Read by ca.northline.tools.demo.DemoSeed. Every business, person and listing is FAKE. No place names (region-neutral): the city, province, zones and coordinates come from the configured default market. Prices in cents (CAD), durations in minutes. Keys are stable: ids are derived from them, so a re-run updates instead of duplicating. `photo` is a slot of the photo library (web/packages/media, docs/runbooks/photos.md); a listing without one gets its category's photo; `owner` = the demo owner account, otherwise the business has its own (sign-in-less) owner. `hours` (kitchens) are the opening hours every day in the market's time zone.",
+ "accounts": {
+  "admin": {
+   "first": "Alex",
+   "last": "Demo-Admin",
+   "email": "admin@demo.northline.test",
+   "roles": [
+    "staff",
+    "admin",
+    "trust_safety",
+    "dispatch",
+    "finance",
+    "support",
+    "support_lead",
+    "analyst",
+    "privacy",
+    "merchant_success"
+   ],
+   "app": "console",
+   "role": "console admin with every role"
+  },
+  "reviewer": {
+   "first": "Casey",
+   "last": "Demo-Reviewer",
+   "email": "reviewer@demo.northline.test",
+   "roles": [
+    "staff",
+    "trust_safety"
+   ],
+   "app": "console",
+   "role": "trust & safety reviewer"
+  },
+  "owner": {
+   "first": "Morgan",
+   "last": "Demo-Owner",
+   "email": "owner@demo.northline.test",
+   "app": "studio",
+   "role": "owns a provider, a seller and a kitchen (and more)"
+  },
+  "applicant": {
+   "first": "Riley",
+   "last": "Demo-Applicant",
+   "email": "applicant@demo.northline.test",
+   "app": "studio",
+   "role": "new account with no business yet"
+  },
+  "customer": {
+   "first": "Jordan",
+   "last": "Demo-Shopper",
+   "email": "shopper@demo.northline.test",
+   "app": "consumer",
+   "role": "customer with past orders, bookings and reviews",
+   "address": {
+    "street": "120 Main Street",
+    "label": "Home"
+   }
+  },
+  "customer2": {
+   "first": "Avery",
+   "last": "Demo-Customer",
+   "email": "avery@demo.northline.test",
+   "app": "consumer",
+   "role": "second customer",
+   "address": {
+    "street": "48 Park Avenue",
+    "unit": "Apt 3",
+    "label": "Home"
+   }
+  }
+ },
+ "postalCodes": {
+  "$comment": "A postal code in each province for the demo customers' addresses (the checkout needs one); the seed takes the market's province's (DEMO_POSTAL_CODE overrides). Format data, not places: only the province's letter is meaningful.",
+  "AB": "T2P 0A1",
+  "BC": "V6B 0A1",
+  "MB": "R3C 0A1",
+  "NB": "E1C 0A1",
+  "NL": "A1C 0A1",
+  "NS": "B3H 0A1",
+  "NT": "X1A 0A1",
+  "NU": "X0A 0A1",
+  "ON": "M5V 0A1",
+  "PE": "C1A 0A1",
+  "QC": "H2Y 0A1",
+  "SK": "S4P 0A1",
+  "YT": "Y1A 0A1"
+ },
+ "reviewers": [
+  "Priya K.",
+  "Marc-André L.",
+  "Sofia R.",
+  "Daniel O.",
+  "Mei W.",
+  "Tom B.",
+  "Aisha N.",
+  "Luc P.",
+  "Grace H.",
+  "Omar S.",
+  "Hannah V.",
+  "Kenji T."
+ ],
+ "applications": [
+  {
+   "key": "application",
+   "type": "seller",
+   "name": "Prairie Honey Co.",
+   "categories": [
+    "shop.food-and-grocery.groceries"
+   ],
+   "about": "Raw honey and beeswax candles from 40 hives.",
+   "colour": "#F9A825"
+  }
+ ],
+ "businesses": [
+  {
+   "key": "mechanic",
+   "type": "provider",
+   "name": "Roadside Wrench Mobile Mechanics",
+   "categories": [
+    "service.automotive.mobile-mechanic",
+    "service.automotive.oil-change-and-fluids",
+    "service.automotive.brakes-and-suspension",
+    "service.automotive.tire-change-and-storage"
+   ],
+   "colour": "#2F5D3A",
+   "tier": "master",
+   "tagline": "Licensed mobile mechanics — we come to your driveway",
+   "about": "Red Seal technicians who fix most cars where they are parked: oil, brakes, diagnostics and seasonal tire swaps, with an itemized quote before any extra work.",
+   "listings": [
+    {
+     "key": "diag",
+     "title": "Diagnostic scan",
+     "priceCents": 12000,
+     "durationMin": 60,
+     "text": "OBD-II scan, live data review and a plain-language diagnosis, credited against the repair if you book it.",
+     "category": "service.automotive.mobile-mechanic"
+    },
+    {
+     "key": "oil",
+     "title": "Synthetic oil & filter change",
+     "priceCents": 8900,
+     "durationMin": 45,
+     "text": "Up to 5 L of full synthetic oil, an OEM-spec filter, fluid top-up and a 12-point check.",
+     "category": "service.automotive.oil-change-and-fluids"
+    },
+    {
+     "key": "brakes",
+     "title": "Brake inspection",
+     "priceCents": 8900,
+     "durationMin": 60,
+     "text": "Pads, rotors, calipers and lines checked on all four wheels, with a written report and photos.",
+     "category": "service.automotive.brakes-and-suspension"
+    },
+    {
+     "key": "pads",
+     "title": "Front brake pads replaced",
+     "priceCents": 24900,
+     "durationMin": 90,
+     "text": "Ceramic pads fitted, calipers cleaned and lubricated, test drive included. Rotors quoted separately.",
+     "category": "service.automotive.brakes-and-suspension"
+    },
+    {
+     "key": "tires",
+     "title": "Seasonal tire swap",
+     "priceCents": 9900,
+     "durationMin": 60,
+     "text": "Swap four mounted wheels, torque to spec and set the pressures.",
+     "category": "service.automotive.tire-change-and-storage"
+    }
+   ],
+   "owner": "owner"
+  },
+  {
+   "key": "cleaning",
+   "type": "provider",
+   "name": "Sparkle & Shine Home Cleaning",
+   "categories": [
+    "service.cleaning-and-property.house-cleaning",
+    "service.cleaning-and-property.move-in-move-out-clean"
+   ],
+   "colour": "#0277BD",
+   "tier": "master",
+   "tagline": "Insured, background-checked cleaners — book in 60 seconds",
+   "about": "A team of insured, background-checked cleaners. Bring nothing: we arrive with eco-friendly supplies and a checklist for every room.",
+   "listings": [
+    {
+     "key": "standard",
+     "title": "Standard home clean",
+     "priceCents": 13900,
+     "durationMin": 120,
+     "text": "Kitchen, bathrooms, dusting, floors and a tidy-up of every room, up to 3 bedrooms.",
+     "photo": "demo/listing/cleaning.standard"
+    },
+    {
+     "key": "deep",
+     "title": "Deep clean",
+     "priceCents": 26900,
+     "durationMin": 240,
+     "text": "Everything in the standard clean plus inside the oven and fridge, baseboards, cabinet fronts and windowsills.",
+     "photo": "demo/listing/cleaning.deep"
+    },
+    {
+     "key": "moveout",
+     "title": "Move-out clean",
+     "priceCents": 32900,
+     "durationMin": 300,
+     "text": "Empty-home clean to landlord standard: inside cupboards, appliances and closets.",
+     "photo": "demo/listing/cleaning.moveout",
+     "category": "service.cleaning-and-property.move-in-move-out-clean"
+    }
+   ],
+   "photo": "demo/merchant/cleaning",
+   "owner": "owner"
+  },
+  {
+   "key": "autocare",
+   "type": "provider",
+   "name": "Northgate Auto Care",
+   "categories": [
+    "service.automotive.mobile-mechanic",
+    "service.automotive.pre-purchase-inspection",
+    "service.automotive.battery-boost-and-replacement"
+   ],
+   "colour": "#37474F",
+   "tier": "trusted",
+   "tagline": "Inspections and repairs you can see",
+   "about": "A small garage that sends photos of every worn part before fixing it. Pre-purchase inspections, batteries and general repair.",
+   "listings": [
+    {
+     "key": "ppi",
+     "title": "Pre-purchase inspection",
+     "priceCents": 16000,
+     "durationMin": 90,
+     "text": "150-point inspection at the seller's location, road test, scan and a photo report within 24 hours.",
+     "category": "service.automotive.pre-purchase-inspection"
+    },
+    {
+     "key": "battery",
+     "title": "Battery test & replacement",
+     "priceCents": 5900,
+     "durationMin": 30,
+     "text": "Load test, terminal clean and a new battery fitted if needed (battery priced separately).",
+     "category": "service.automotive.battery-boost-and-replacement"
+    },
+    {
+     "key": "checkup",
+     "title": "Check-engine light diagnosis",
+     "priceCents": 9900,
+     "durationMin": 60,
+     "text": "Scan, inspection and a written diagnosis with a fixed-price repair quote.",
+     "category": "service.automotive.mobile-mechanic"
+    }
+   ]
+  },
+  {
+   "key": "autoglow",
+   "type": "provider",
+   "name": "Gleam Mobile Detailing",
+   "categories": [
+    "service.automotive.detailing",
+    "service.automotive.windshield-repair"
+   ],
+   "colour": "#00695C",
+   "tier": "trusted",
+   "tagline": "Showroom shine at your door",
+   "about": "Mobile detailing with our own water and power: interiors, ceramic wax and windshield chip repair.",
+   "listings": [
+    {
+     "key": "interior",
+     "title": "Interior detail",
+     "priceCents": 14900,
+     "durationMin": 120,
+     "text": "Vacuum, shampoo of seats and mats, plastics cleaned and conditioned, windows inside."
+    },
+    {
+     "key": "full",
+     "title": "Full detail, inside and out",
+     "priceCents": 24900,
+     "durationMin": 210,
+     "text": "Hand wash, clay bar, one-step polish and wax plus the interior detail."
+    },
+    {
+     "key": "chip",
+     "title": "Windshield chip repair",
+     "priceCents": 6900,
+     "durationMin": 30,
+     "text": "Resin repair of up to two chips smaller than a coin, usually covered by insurance.",
+     "category": "service.automotive.windshield-repair"
+    }
+   ]
+  },
+  {
+   "key": "roadside",
+   "type": "provider",
+   "name": "Second Wind Roadside",
+   "categories": [
+    "service.automotive.towing-and-roadside",
+    "service.automotive.battery-boost-and-replacement",
+    "service.automotive.ev-charger-install"
+   ],
+   "colour": "#BF360C",
+   "tier": "trusted",
+   "tagline": "Boosts, lockouts and tows, day and night",
+   "about": "Roadside help within the hour: battery boosts, lockouts, flat tires and local tows. We also install home EV chargers.",
+   "listings": [
+    {
+     "key": "boost",
+     "title": "Battery boost",
+     "priceCents": 6500,
+     "durationMin": 30,
+     "text": "We come to you and boost your battery, then test the charging system.",
+     "category": "service.automotive.battery-boost-and-replacement"
+    },
+    {
+     "key": "tow",
+     "title": "Local tow (up to 20 km)",
+     "priceCents": 14900,
+     "durationMin": 60,
+     "text": "Flatbed tow to the garage of your choice within 20 km.",
+     "category": "service.automotive.towing-and-roadside"
+    },
+    {
+     "key": "ev",
+     "title": "Level 2 EV charger install",
+     "priceCents": 89900,
+     "durationMin": 240,
+     "text": "Install of a customer-supplied Level 2 charger up to 10 m from the panel, permit included.",
+     "category": "service.automotive.ev-charger-install"
+    }
+   ]
+  },
+  {
+   "key": "plumber",
+   "type": "provider",
+   "name": "True Flow Plumbing",
+   "categories": [
+    "service.home-trades.plumber",
+    "service.home-trades.hot-water-tank",
+    "service.home-trades.gas-fitter"
+   ],
+   "colour": "#1565C0",
+   "tier": "master",
+   "tagline": "Licensed plumbers, upfront prices",
+   "about": "Journeyman plumbers and gas fitters for leaks, drains, fixtures and hot water tanks. Flat prices quoted before we start.",
+   "listings": [
+    {
+     "key": "drain",
+     "title": "Drain unclogging",
+     "priceCents": 14900,
+     "durationMin": 60,
+     "text": "Kitchen, bathroom or floor drain cleared with a snake; camera inspection quoted if needed.",
+     "category": "service.home-trades.plumber"
+    },
+    {
+     "key": "faucet",
+     "title": "Faucet or toilet install",
+     "priceCents": 17900,
+     "durationMin": 90,
+     "text": "Remove the old fixture and install yours, with new supply lines and a leak test.",
+     "category": "service.home-trades.plumber"
+    },
+    {
+     "key": "tank",
+     "title": "Hot water tank flush & check",
+     "priceCents": 12900,
+     "durationMin": 60,
+     "text": "Drain and flush the tank, test the relief valve and the anode.",
+     "category": "service.home-trades.hot-water-tank"
+    },
+    {
+     "key": "gas",
+     "title": "Gas line for a range or BBQ",
+     "priceCents": 39900,
+     "durationMin": 180,
+     "text": "A new gas line up to 6 m with a shut-off valve, permit and inspection included.",
+     "category": "service.home-trades.gas-fitter"
+    }
+   ]
+  },
+  {
+   "key": "plumber2",
+   "type": "provider",
+   "name": "Pipe Dream Plumbing & Heating",
+   "categories": [
+    "service.home-trades.plumber",
+    "service.home-trades.hvac-and-furnace"
+   ],
+   "colour": "#0D47A1",
+   "tier": "trusted",
+   "tagline": "Same-day plumbing and furnace service",
+   "about": "A family plumbing and heating company: same-day service calls, furnace tune-ups and water heater swaps.",
+   "listings": [
+    {
+     "key": "call",
+     "title": "Plumbing service call (first hour)",
+     "priceCents": 12900,
+     "durationMin": 60,
+     "text": "A licensed plumber on site for the first hour; parts quoted in the app.",
+     "pricing": "hourly",
+     "category": "service.home-trades.plumber"
+    },
+    {
+     "key": "tuneup",
+     "title": "Furnace tune-up",
+     "priceCents": 13900,
+     "durationMin": 60,
+     "text": "Clean, inspect and test the furnace, filter replaced, carbon-monoxide check.",
+     "category": "service.home-trades.hvac-and-furnace"
+    },
+    {
+     "key": "sump",
+     "title": "Sump pump check",
+     "priceCents": 9900,
+     "durationMin": 45,
+     "text": "Test the pump, float and check valve, clean the pit.",
+     "category": "service.home-trades.plumber"
+    }
+   ]
+  },
+  {
+   "key": "plumber3",
+   "type": "provider",
+   "name": "Copperline Plumbing",
+   "categories": [
+    "service.home-trades.plumber"
+   ],
+   "colour": "#4527A0",
+   "tier": "registered",
+   "tagline": "Small plumbing jobs, done tidy",
+   "about": "A two-person shop for small plumbing jobs: leaky taps, running toilets, garburators and shut-off valves.",
+   "listings": [
+    {
+     "key": "tap",
+     "title": "Leaky tap repair",
+     "priceCents": 9900,
+     "durationMin": 45,
+     "text": "Cartridge or washer replaced on one tap, parts included for common brands."
+    },
+    {
+     "key": "toilet",
+     "title": "Running toilet repair",
+     "priceCents": 9900,
+     "durationMin": 45,
+     "text": "Fill valve and flapper replaced, tank adjusted."
+    },
+    {
+     "key": "garburator",
+     "title": "Garburator install",
+     "priceCents": 18900,
+     "durationMin": 90,
+     "text": "Install of a customer-supplied garburator, wiring to an existing outlet."
+    }
+   ]
+  },
+  {
+   "key": "electric",
+   "type": "provider",
+   "name": "Bright Spark Electric",
+   "categories": [
+    "service.home-trades.electrician",
+    "service.home-trades.appliance-repair"
+   ],
+   "colour": "#F9A825",
+   "tier": "master",
+   "tagline": "Master electricians for homes and small shops",
+   "about": "Licensed electricians for lights, outlets, panels and appliance hook-ups, with permits pulled for you.",
+   "listings": [
+    {
+     "key": "fixture",
+     "title": "Light fixture install",
+     "priceCents": 14900,
+     "durationMin": 60,
+     "text": "Remove the old fixture and install yours (up to 3 m ceiling)."
+    },
+    {
+     "key": "outlet",
+     "title": "New outlet or USB outlet",
+     "priceCents": 12900,
+     "durationMin": 60,
+     "text": "Add or replace an outlet on an existing circuit, tested and labelled."
+    },
+    {
+     "key": "appliance",
+     "title": "Appliance diagnosis",
+     "priceCents": 9900,
+     "durationMin": 60,
+     "text": "Washer, dryer, dishwasher or range diagnosed, repair quoted before work.",
+     "category": "service.home-trades.appliance-repair"
+    }
+   ]
+  },
+  {
+   "key": "handyman",
+   "type": "provider",
+   "name": "Fix-It Pro Handyman",
+   "categories": [
+    "service.home-trades.handyman",
+    "service.home-trades.drywall-and-taping",
+    "service.home-trades.carpentry-and-finishing"
+   ],
+   "colour": "#F57F17",
+   "tier": "trusted",
+   "tagline": "Small jobs done right, upfront prices",
+   "about": "Two handymen with a van full of tools: mounting, assembly, drywall patches and odd jobs.",
+   "listings": [
+    {
+     "key": "tv",
+     "title": "TV wall mounting",
+     "priceCents": 14900,
+     "durationMin": 90,
+     "text": "Mount a TV up to 75 inches on drywall or brick, level it and tidy the cables.",
+     "photo": "demo/listing/handyman.tv"
+    },
+    {
+     "key": "assembly",
+     "title": "Furniture assembly, up to 3 items",
+     "priceCents": 12900,
+     "durationMin": 120,
+     "text": "Flat-pack furniture assembled and anchored, packaging taken away.",
+     "photo": "demo/listing/handyman.assembly"
+    },
+    {
+     "key": "drywall",
+     "title": "Drywall patch and paint",
+     "priceCents": 17500,
+     "durationMin": 120,
+     "text": "Patch up to three holes, sand, prime and paint to match.",
+     "photo": "demo/listing/handyman.drywall",
+     "category": "service.home-trades.drywall-and-taping"
+    },
+    {
+     "key": "hourly",
+     "title": "Handyman by the hour",
+     "priceCents": 8500,
+     "durationMin": 60,
+     "text": "Odd jobs from your list, billed by the hour.",
+     "pricing": "hourly",
+     "photo": "demo/listing/handyman.hourly"
+    },
+    {
+     "key": "trim",
+     "title": "Baseboard & trim install (one room)",
+     "priceCents": 34900,
+     "durationMin": 300,
+     "text": "New baseboards and door casing in one room, caulked and ready to paint.",
+     "category": "service.home-trades.carpentry-and-finishing"
+    }
+   ],
+   "photo": "demo/merchant/handyman"
+  },
+  {
+   "key": "painters",
+   "type": "provider",
+   "name": "Brushstroke Painters",
+   "categories": [
+    "service.home-trades.painting",
+    "service.home-trades.drywall-and-taping",
+    "service.home-trades.flooring-and-tile"
+   ],
+   "colour": "#6D4C41",
+   "tier": "trusted",
+   "tagline": "Clean lines, no mess",
+   "about": "Interior and exterior painters who move the furniture, protect the floors and clean up every day.",
+   "listings": [
+    {
+     "key": "room",
+     "title": "Paint one room",
+     "priceCents": 44900,
+     "durationMin": 360,
+     "text": "Walls of a room up to 4 × 4 m, two coats, paint included.",
+     "category": "service.home-trades.painting"
+    },
+    {
+     "key": "ceiling",
+     "title": "Ceiling repaint",
+     "priceCents": 29900,
+     "durationMin": 240,
+     "text": "One ceiling, stain-block primer and two coats of flat white.",
+     "category": "service.home-trades.painting"
+    },
+    {
+     "key": "tile",
+     "title": "Backsplash tiling",
+     "priceCents": 59900,
+     "durationMin": 480,
+     "text": "Up to 3 m² of backsplash tile set and grouted (tile supplied by you).",
+     "category": "service.home-trades.flooring-and-tile"
+    }
+   ]
+  },
+  {
+   "key": "exterior",
+   "type": "provider",
+   "name": "Summit Roofing & Exteriors",
+   "categories": [
+    "service.home-trades.roofing",
+    "service.home-trades.eavestrough",
+    "service.home-trades.siding-and-exterior"
+   ],
+   "colour": "#455A64",
+   "tier": "trusted",
+   "tagline": "Roofs, gutters and siding, warrantied",
+   "about": "Roof repairs, eavestrough cleaning and siding patches with a 5-year workmanship warranty.",
+   "listings": [
+    {
+     "key": "inspect",
+     "title": "Roof inspection",
+     "priceCents": 19900,
+     "durationMin": 90,
+     "text": "A full roof walk with photos of every problem and a written estimate.",
+     "category": "service.home-trades.roofing"
+    },
+    {
+     "key": "gutter",
+     "title": "Eavestrough cleaning",
+     "priceCents": 17900,
+     "durationMin": 120,
+     "text": "Clear and flush the eavestroughs and downspouts of a detached house.",
+     "category": "service.home-trades.eavestrough"
+    },
+    {
+     "key": "siding",
+     "title": "Siding repair (per section)",
+     "priceCents": 24900,
+     "durationMin": 180,
+     "text": "Replace a damaged vinyl siding section up to 3 m.",
+     "category": "service.home-trades.siding-and-exterior"
+    }
+   ]
+  },
+  {
+   "key": "yardbuild",
+   "type": "provider",
+   "name": "Timberline Decks & Fences",
+   "categories": [
+    "service.home-trades.fencing-and-decks",
+    "service.home-trades.concrete-and-paving",
+    "service.home-trades.foundation-and-waterproofing"
+   ],
+   "colour": "#795548",
+   "tier": "trusted",
+   "tagline": "Decks, fences and concrete built to last",
+   "about": "A small crew building decks, fences and patios, and sealing foundations against water.",
+   "listings": [
+    {
+     "key": "fencefix",
+     "title": "Fence repair (one panel)",
+     "priceCents": 29900,
+     "durationMin": 180,
+     "text": "Replace one fence panel and post, stained to match.",
+     "category": "service.home-trades.fencing-and-decks"
+    },
+    {
+     "key": "deckseal",
+     "title": "Deck clean & stain",
+     "priceCents": 49900,
+     "durationMin": 360,
+     "text": "Wash, sand and stain a deck up to 20 m².",
+     "category": "service.home-trades.fencing-and-decks"
+    },
+    {
+     "key": "crack",
+     "title": "Foundation crack injection",
+     "priceCents": 59900,
+     "durationMin": 240,
+     "text": "Seal one foundation crack up to 3 m with polyurethane injection.",
+     "category": "service.home-trades.foundation-and-waterproofing"
+    },
+    {
+     "key": "pad",
+     "title": "Concrete pad (shed or AC)",
+     "priceCents": 79900,
+     "durationMin": 480,
+     "text": "Form and pour a concrete pad up to 3 × 3 m.",
+     "category": "service.home-trades.concrete-and-paving"
+    }
+   ]
+  },
+  {
+   "key": "homeservices",
+   "type": "provider",
+   "name": "Keystone Home Services",
+   "categories": [
+    "service.home-trades.garage-doors",
+    "service.home-trades.locksmith",
+    "service.home-trades.home-inspector"
+   ],
+   "colour": "#283593",
+   "tier": "trusted",
+   "tagline": "Doors, locks and inspections",
+   "about": "Garage door tune-ups, rekeys and certified home inspections from one licensed team.",
+   "listings": [
+    {
+     "key": "garage",
+     "title": "Garage door tune-up",
+     "priceCents": 12900,
+     "durationMin": 60,
+     "text": "Lubricate, balance and adjust the door and opener, safety sensors tested.",
+     "category": "service.home-trades.garage-doors"
+    },
+    {
+     "key": "rekey",
+     "title": "Rekey locks (up to 3)",
+     "priceCents": 13900,
+     "durationMin": 60,
+     "text": "Rekey up to three locks to one new key, two keys included.",
+     "category": "service.home-trades.locksmith"
+    },
+    {
+     "key": "inspection",
+     "title": "Home inspection (up to 2,500 sq ft)",
+     "priceCents": 49900,
+     "durationMin": 180,
+     "text": "A full pre-purchase home inspection with a same-day report.",
+     "category": "service.home-trades.home-inspector"
+    }
+   ]
+  },
+  {
+   "key": "cleaning2",
+   "type": "provider",
+   "name": "Fresh Start Cleaners",
+   "categories": [
+    "service.cleaning-and-property.house-cleaning",
+    "service.cleaning-and-property.window-cleaning"
+   ],
+   "colour": "#00838F",
+   "tier": "trusted",
+   "tagline": "Weekly and one-time cleans",
+   "about": "Friendly cleaners for weekly, biweekly and one-time cleans, plus interior windows.",
+   "listings": [
+    {
+     "key": "weekly",
+     "title": "Weekly clean (2 bedrooms)",
+     "priceCents": 11900,
+     "durationMin": 120,
+     "text": "Our regular clean for a 2-bedroom home, the same cleaner every week."
+    },
+    {
+     "key": "onetime",
+     "title": "One-time clean (3 bedrooms)",
+     "priceCents": 15900,
+     "durationMin": 150,
+     "text": "A full clean of a 3-bedroom home before guests arrive."
+    },
+    {
+     "key": "windows",
+     "title": "Interior window cleaning",
+     "priceCents": 9900,
+     "durationMin": 90,
+     "text": "Up to 15 windows cleaned inside, tracks and sills wiped.",
+     "category": "service.cleaning-and-property.window-cleaning"
+    }
+   ]
+  },
+  {
+   "key": "cleaning3",
+   "type": "provider",
+   "name": "Maple Maids",
+   "categories": [
+    "service.cleaning-and-property.house-cleaning",
+    "service.cleaning-and-property.move-in-move-out-clean"
+   ],
+   "colour": "#AD1457",
+   "tier": "registered",
+   "tagline": "Eco-friendly cleaning, every time",
+   "about": "Plant-based products, reusable cloths and a satisfaction guarantee on every clean.",
+   "listings": [
+    {
+     "key": "eco",
+     "title": "Eco clean (up to 3 bedrooms)",
+     "priceCents": 14900,
+     "durationMin": 150,
+     "text": "A full home clean with plant-based products only."
+    },
+    {
+     "key": "movein",
+     "title": "Move-in clean",
+     "priceCents": 29900,
+     "durationMin": 270,
+     "text": "Cupboards, appliances and closets cleaned before you unpack.",
+     "category": "service.cleaning-and-property.move-in-move-out-clean"
+    }
+   ]
+  },
+  {
+   "key": "carpet",
+   "type": "provider",
+   "name": "Deep Pile Carpet & Upholstery Care",
+   "categories": [
+    "service.cleaning-and-property.carpet-and-upholstery",
+    "service.cleaning-and-property.duct-cleaning"
+   ],
+   "colour": "#5E35B1",
+   "tier": "master",
+   "tagline": "Hot-water extraction, dry in hours",
+   "about": "Truck-mounted hot-water extraction for carpets, rugs and upholstery, plus furnace duct cleaning.",
+   "listings": [
+    {
+     "key": "rooms",
+     "title": "Carpet cleaning, 3 rooms",
+     "priceCents": 17900,
+     "durationMin": 120,
+     "text": "Pre-treat, hot-water extraction and grooming of three rooms up to 15 m² each."
+    },
+    {
+     "key": "sofa",
+     "title": "Sofa cleaning (3 seats)",
+     "priceCents": 14900,
+     "durationMin": 90,
+     "text": "Fabric-safe deep clean of a three-seat sofa, cushions included."
+    },
+    {
+     "key": "stairs",
+     "title": "Stairs & hallway",
+     "priceCents": 9900,
+     "durationMin": 60,
+     "text": "Up to 14 stairs and a hallway cleaned and deodorized."
+    },
+    {
+     "key": "ducts",
+     "title": "Duct cleaning (whole house)",
+     "priceCents": 34900,
+     "durationMin": 180,
+     "text": "All supply and return ducts cleaned with a negative-air machine, furnace blower included.",
+     "category": "service.cleaning-and-property.duct-cleaning"
+    }
+   ]
+  },
+  {
+   "key": "carpet2",
+   "type": "provider",
+   "name": "Spotless Steam Carpet Co.",
+   "categories": [
+    "service.cleaning-and-property.carpet-and-upholstery"
+   ],
+   "colour": "#7B1FA2",
+   "tier": "registered",
+   "tagline": "Pet stains and odours gone",
+   "about": "A carpet specialist for pet stains, odours and area rugs, with a re-clean guarantee.",
+   "listings": [
+    {
+     "key": "pet",
+     "title": "Pet stain & odour treatment (per room)",
+     "priceCents": 7900,
+     "durationMin": 45,
+     "text": "Enzyme treatment and extraction of pet stains in one room."
+    },
+    {
+     "key": "rug",
+     "title": "Area rug cleaning",
+     "priceCents": 8900,
+     "durationMin": 60,
+     "text": "On-site cleaning of an area rug up to 2.5 × 3.5 m."
+    }
+   ]
+  },
+  {
+   "key": "outdoor",
+   "type": "provider",
+   "name": "Greenleaf Lawn & Landscape",
+   "categories": [
+    "service.cleaning-and-property.lawn-and-yard",
+    "service.cleaning-and-property.landscaping",
+    "service.cleaning-and-property.tree-service",
+    "service.cleaning-and-property.snow-removal"
+   ],
+   "colour": "#2E7D32",
+   "tier": "trusted",
+   "tagline": "Lawns, gardens and snow, all year",
+   "about": "Mowing, spring and fall clean-ups, planting, small tree work and winter snow clearing.",
+   "listings": [
+    {
+     "key": "mow",
+     "title": "Lawn mowing & trimming",
+     "priceCents": 4900,
+     "durationMin": 45,
+     "text": "Mow, trim and blow a standard lot.",
+     "category": "service.cleaning-and-property.lawn-and-yard"
+    },
+    {
+     "key": "cleanup",
+     "title": "Yard clean-up",
+     "priceCents": 19900,
+     "durationMin": 180,
+     "text": "Leaves, branches and beds cleared, waste taken away.",
+     "category": "service.cleaning-and-property.lawn-and-yard"
+    },
+    {
+     "key": "planting",
+     "title": "Garden bed planting",
+     "priceCents": 29900,
+     "durationMin": 240,
+     "text": "Prepare and plant one garden bed up to 6 m² (plants extra).",
+     "category": "service.cleaning-and-property.landscaping"
+    },
+    {
+     "key": "prune",
+     "title": "Tree pruning (one tree)",
+     "priceCents": 24900,
+     "durationMin": 120,
+     "text": "Prune one tree up to 8 m, branches chipped and removed.",
+     "category": "service.cleaning-and-property.tree-service"
+    },
+    {
+     "key": "snow",
+     "title": "Snow clearing (per visit)",
+     "priceCents": 4500,
+     "durationMin": 30,
+     "text": "Driveway and walks cleared after a snowfall, ice melt included.",
+     "category": "service.cleaning-and-property.snow-removal"
+    }
+   ]
+  },
+  {
+   "key": "haulers",
+   "type": "provider",
+   "name": "Two Trucks Moving & Junk Removal",
+   "categories": [
+    "service.cleaning-and-property.movers",
+    "service.cleaning-and-property.junk-removal"
+   ],
+   "colour": "#E65100",
+   "tier": "trusted",
+   "tagline": "Movers and haulers by the hour",
+   "about": "Two movers and a 20-foot truck by the hour, and junk removal by the load.",
+   "listings": [
+    {
+     "key": "move",
+     "title": "Two movers & a truck (per hour)",
+     "priceCents": 14900,
+     "durationMin": 60,
+     "text": "Two movers and a truck, blankets and dollies included, 3-hour minimum.",
+     "pricing": "hourly",
+     "category": "service.cleaning-and-property.movers"
+    },
+    {
+     "key": "junk",
+     "title": "Junk removal, quarter load",
+     "priceCents": 14900,
+     "durationMin": 60,
+     "text": "We load and take away up to a quarter truck of junk.",
+     "category": "service.cleaning-and-property.junk-removal"
+    },
+    {
+     "key": "junkfull",
+     "title": "Junk removal, full load",
+     "priceCents": 49900,
+     "durationMin": 120,
+     "text": "A full truck of junk loaded, hauled and recycled where possible.",
+     "category": "service.cleaning-and-property.junk-removal"
+    }
+   ]
+  },
+  {
+   "key": "property",
+   "type": "provider",
+   "name": "Clearview Property Care",
+   "categories": [
+    "service.cleaning-and-property.pressure-washing",
+    "service.cleaning-and-property.pest-control",
+    "service.cleaning-and-property.pool-and-hot-tub-service",
+    "service.cleaning-and-property.property-management",
+    "service.cleaning-and-property.window-cleaning"
+   ],
+   "colour": "#0097A7",
+   "tier": "trusted",
+   "tagline": "Exterior care for homes and rentals",
+   "about": "Pressure washing, licensed pest control, hot tub service and light property management for rentals.",
+   "listings": [
+    {
+     "key": "wash",
+     "title": "Driveway pressure wash",
+     "priceCents": 17900,
+     "durationMin": 90,
+     "text": "Driveway and front walk pressure washed and degreased.",
+     "category": "service.cleaning-and-property.pressure-washing"
+    },
+    {
+     "key": "pests",
+     "title": "Ant & spider treatment",
+     "priceCents": 15900,
+     "durationMin": 60,
+     "text": "Licensed interior and perimeter treatment, 60-day guarantee.",
+     "category": "service.cleaning-and-property.pest-control"
+    },
+    {
+     "key": "hottub",
+     "title": "Hot tub service",
+     "priceCents": 12900,
+     "durationMin": 60,
+     "text": "Drain, clean, refill and balance a hot tub, filter rinsed.",
+     "category": "service.cleaning-and-property.pool-and-hot-tub-service"
+    },
+    {
+     "key": "rental",
+     "title": "Rental turnover inspection",
+     "priceCents": 9900,
+     "durationMin": 60,
+     "text": "A photo inspection of a rental between tenants with a punch list.",
+     "category": "service.cleaning-and-property.property-management"
+    },
+    {
+     "key": "exterior",
+     "title": "Exterior window cleaning",
+     "priceCents": 19900,
+     "durationMin": 120,
+     "text": "Up to 20 exterior windows washed by hand, screens included.",
+     "category": "service.cleaning-and-property.window-cleaning"
+    }
+   ]
+  },
+  {
+   "key": "events",
+   "type": "provider",
+   "name": "Golden Hour Photo & Events",
+   "categories": [
+    "service.events-and-hospitality.photographer",
+    "service.events-and-hospitality.dj",
+    "service.events-and-hospitality.videographer",
+    "service.events-and-hospitality.photo-booth"
+   ],
+   "colour": "#C62828",
+   "tier": "trusted",
+   "tagline": "Photography and DJ sets for the moments that matter",
+   "about": "A photographer and a DJ who work weddings, birthdays and corporate events, with edited photos within a week.",
+   "listings": [
+    {
+     "key": "portrait",
+     "title": "Portrait session, 60 minutes",
+     "priceCents": 22500,
+     "durationMin": 60,
+     "text": "One location, up to three outfits and 25 edited photos.",
+     "photo": "demo/listing/events.portrait"
+    },
+    {
+     "key": "coverage",
+     "title": "Event photography, 3 hours",
+     "priceCents": 65000,
+     "durationMin": 180,
+     "text": "Three hours of event coverage and 150 edited photos.",
+     "photo": "demo/listing/events.coverage"
+    },
+    {
+     "key": "dj",
+     "title": "Party DJ, 4 hours",
+     "priceCents": 80000,
+     "durationMin": 240,
+     "text": "Sound system, lights and a DJ for up to 120 guests.",
+     "photo": "demo/listing/events.dj",
+     "category": "service.events-and-hospitality.dj"
+    },
+    {
+     "key": "video",
+     "title": "Highlight video",
+     "priceCents": 95000,
+     "durationMin": 240,
+     "text": "Four hours of filming edited into a 3-minute highlight film.",
+     "category": "service.events-and-hospitality.videographer"
+    },
+    {
+     "key": "booth",
+     "title": "Photo booth, 3 hours",
+     "priceCents": 59900,
+     "durationMin": 180,
+     "text": "Open-air photo booth with props, unlimited prints and an online gallery.",
+     "category": "service.events-and-hospitality.photo-booth"
+    }
+   ],
+   "photo": "demo/merchant/events"
+  },
+  {
+   "key": "catering",
+   "type": "provider",
+   "name": "Saffron Table Catering",
+   "categories": [
+    "service.events-and-hospitality.catering-server-staff",
+    "service.events-and-hospitality.bartender",
+    "service.events-and-hospitality.cocktail-and-mocktail-bar"
+   ],
+   "colour": "#E65100",
+   "tier": "trusted",
+   "tagline": "Buffets and canapés for 10 to 200 guests",
+   "about": "A catering team with servers and licensed bartenders for offices, weddings and parties.",
+   "listings": [
+    {
+     "key": "lunch",
+     "title": "Office lunch buffet (up to 20 guests)",
+     "priceCents": 42000,
+     "durationMin": 120,
+     "text": "Two mains, two salads and dessert, set up and cleared.",
+     "photo": "demo/listing/catering.lunch"
+    },
+    {
+     "key": "canapes",
+     "title": "Canapé reception (up to 40 guests)",
+     "priceCents": 68000,
+     "durationMin": 180,
+     "text": "Eight kinds of canapés passed by our servers.",
+     "photo": "demo/listing/catering.canapes"
+    },
+    {
+     "key": "server",
+     "title": "Event server, hourly",
+     "priceCents": 3800,
+     "durationMin": 240,
+     "text": "A uniformed server for your event, 4-hour minimum.",
+     "pricing": "hourly",
+     "photo": "demo/listing/catering.server"
+    },
+    {
+     "key": "bar",
+     "title": "Mocktail & cocktail bar, 4 hours",
+     "priceCents": 89900,
+     "durationMin": 240,
+     "text": "A mobile bar with a licensed bartender, garnishes and glassware (drinks supplied by you).",
+     "category": "service.events-and-hospitality.cocktail-and-mocktail-bar"
+    },
+    {
+     "key": "bartender",
+     "title": "Licensed bartender, hourly",
+     "priceCents": 4500,
+     "durationMin": 240,
+     "text": "A ProServe-certified bartender, 4-hour minimum.",
+     "pricing": "hourly",
+     "category": "service.events-and-hospitality.bartender"
+    }
+   ],
+   "photo": "demo/merchant/catering"
+  },
+  {
+   "key": "planners",
+   "type": "provider",
+   "name": "Petal & Plan Events",
+   "categories": [
+    "service.events-and-hospitality.event-planner",
+    "service.events-and-hospitality.wedding-planner",
+    "service.events-and-hospitality.florist",
+    "service.events-and-hospitality.balloon-and-decor",
+    "service.events-and-hospitality.rentals-tents-tables-chairs"
+   ],
+   "colour": "#D81B60",
+   "tier": "trusted",
+   "tagline": "Planning, flowers and decor in one place",
+   "about": "Event and wedding planning with our own florist, balloon decor and rentals.",
+   "listings": [
+    {
+     "key": "dayof",
+     "title": "Day-of wedding coordination",
+     "priceCents": 120000,
+     "durationMin": 600,
+     "text": "Timeline, vendor calls and a coordinator on the day for up to 10 hours.",
+     "category": "service.events-and-hospitality.wedding-planner"
+    },
+    {
+     "key": "party",
+     "title": "Party planning consultation",
+     "priceCents": 9900,
+     "durationMin": 60,
+     "text": "A one-hour plan for your party: venue, menu, decor and budget.",
+     "category": "service.events-and-hospitality.event-planner"
+    },
+    {
+     "key": "centrepieces",
+     "title": "Table centrepieces (set of 10)",
+     "priceCents": 45000,
+     "durationMin": 120,
+     "text": "Ten fresh seasonal centrepieces delivered and set.",
+     "category": "service.events-and-hospitality.florist"
+    },
+    {
+     "key": "balloons",
+     "title": "Balloon garland, 3 m",
+     "priceCents": 22500,
+     "durationMin": 90,
+     "text": "An organic balloon garland in your colours, installed on site.",
+     "category": "service.events-and-hospitality.balloon-and-decor"
+    },
+    {
+     "key": "tent",
+     "title": "Tent, tables & chairs for 40",
+     "priceCents": 69900,
+     "durationMin": 180,
+     "text": "A 6 × 9 m tent, five tables and 40 chairs delivered, set and picked up.",
+     "category": "service.events-and-hospitality.rentals-tents-tables-chairs"
+    }
+   ]
+  },
+  {
+   "key": "entertainers",
+   "type": "provider",
+   "name": "Spotlight Entertainers",
+   "categories": [
+    "service.events-and-hospitality.live-music",
+    "service.events-and-hospitality.mc-host",
+    "service.events-and-hospitality.kids-party-entertainer"
+   ],
+   "colour": "#FF6F00",
+   "tier": "trusted",
+   "tagline": "Live music, hosts and kids' entertainers",
+   "about": "Acoustic duos, a bilingual MC and a magician-clown for kids' parties.",
+   "listings": [
+    {
+     "key": "duo",
+     "title": "Acoustic duo, 2 sets",
+     "priceCents": 59900,
+     "durationMin": 120,
+     "text": "Two 45-minute acoustic sets of covers, sound included.",
+     "category": "service.events-and-hospitality.live-music"
+    },
+    {
+     "key": "mc",
+     "title": "Bilingual MC, evening",
+     "priceCents": 45000,
+     "durationMin": 240,
+     "text": "An MC in English and French for your wedding or gala.",
+     "category": "service.events-and-hospitality.mc-host"
+    },
+    {
+     "key": "magic",
+     "title": "Kids' magic show, 45 minutes",
+     "priceCents": 24900,
+     "durationMin": 45,
+     "text": "Magic, balloon animals and games for up to 20 kids.",
+     "category": "service.events-and-hospitality.kids-party-entertainer"
+    }
+   ]
+  },
+  {
+   "key": "barber",
+   "type": "provider",
+   "name": "Fade Room Barbers",
+   "categories": [
+    "service.personal-care-and-wellness.barber-and-hair"
+   ],
+   "colour": "#37474F",
+   "tier": "master",
+   "tagline": "Classic cuts and hot-towel shaves",
+   "about": "A neighbourhood barbershop: classic cuts, skin fades and hot-towel shaves, booked to the minute.",
+   "listings": [
+    {
+     "key": "cut",
+     "title": "Classic haircut",
+     "priceCents": 3500,
+     "durationMin": 30,
+     "text": "Scissor or clipper cut, wash and style.",
+     "photo": "demo/listing/barber.cut"
+    },
+    {
+     "key": "fade",
+     "title": "Skin fade",
+     "priceCents": 4000,
+     "durationMin": 45,
+     "text": "Skin fade with a detailed line-up.",
+     "photo": "demo/listing/barber.fade"
+    },
+    {
+     "key": "beard",
+     "title": "Beard trim and line-up",
+     "priceCents": 2500,
+     "durationMin": 20,
+     "text": "Beard shaped, lined and oiled.",
+     "photo": "demo/listing/barber.beard"
+    },
+    {
+     "key": "shave",
+     "title": "Hot-towel shave",
+     "priceCents": 4500,
+     "durationMin": 45,
+     "text": "Straight-razor shave with hot towels and balm.",
+     "photo": "demo/listing/barber.shave"
+    }
+   ],
+   "photo": "demo/merchant/barber"
+  },
+  {
+   "key": "barber2",
+   "type": "provider",
+   "name": "Sharp Corner Barbershop",
+   "categories": [
+    "service.personal-care-and-wellness.barber-and-hair"
+   ],
+   "colour": "#263238",
+   "tier": "trusted",
+   "tagline": "Walk-in quality, booked online",
+   "about": "Barbers for every hair type, open early and late on weekdays.",
+   "listings": [
+    {
+     "key": "cut",
+     "title": "Men's cut",
+     "priceCents": 3000,
+     "durationMin": 30,
+     "text": "Cut and style."
+    },
+    {
+     "key": "kids",
+     "title": "Kids' cut (under 12)",
+     "priceCents": 2200,
+     "durationMin": 20,
+     "text": "A patient cut for kids under 12."
+    },
+    {
+     "key": "combo",
+     "title": "Cut & beard combo",
+     "priceCents": 5000,
+     "durationMin": 50,
+     "text": "Haircut plus beard trim and line-up."
+    }
+   ]
+  },
+  {
+   "key": "barber3",
+   "type": "provider",
+   "name": "Mane Street Hair Studio",
+   "categories": [
+    "service.personal-care-and-wellness.barber-and-hair",
+    "service.personal-care-and-wellness.mobile-hair-and-makeup"
+   ],
+   "colour": "#880E4F",
+   "tier": "registered",
+   "tagline": "Cuts, colour and event styling",
+   "about": "A hair studio for cuts and colour, with stylists who come to you for weddings and events.",
+   "listings": [
+    {
+     "key": "womens",
+     "title": "Women's cut & blow-dry",
+     "priceCents": 6500,
+     "durationMin": 60,
+     "text": "Consultation, wash, cut and blow-dry."
+    },
+    {
+     "key": "colour",
+     "title": "Root colour",
+     "priceCents": 8500,
+     "durationMin": 90,
+     "text": "Single-process root colour with a gloss."
+    },
+    {
+     "key": "event",
+     "title": "Event hair & makeup (on location)",
+     "priceCents": 18500,
+     "durationMin": 120,
+     "text": "Hair and makeup at your location for one person.",
+     "category": "service.personal-care-and-wellness.mobile-hair-and-makeup"
+    }
+   ]
+  },
+  {
+   "key": "spa",
+   "type": "provider",
+   "name": "Willow Wellness Studio",
+   "categories": [
+    "service.personal-care-and-wellness.massage-therapist",
+    "service.personal-care-and-wellness.esthetician",
+    "service.personal-care-and-wellness.nail-technician"
+   ],
+   "colour": "#6A1B9A",
+   "tier": "master",
+   "tagline": "Registered massage, facials and nails",
+   "about": "Registered massage therapists, estheticians and a nail technician in one calm studio.",
+   "listings": [
+    {
+     "key": "massage60",
+     "title": "Registered massage, 60 minutes",
+     "priceCents": 11000,
+     "durationMin": 60,
+     "text": "A 60-minute massage by a registered massage therapist, receipt for insurance.",
+     "category": "service.personal-care-and-wellness.massage-therapist"
+    },
+    {
+     "key": "facial",
+     "title": "Signature facial",
+     "priceCents": 9500,
+     "durationMin": 60,
+     "text": "Cleanse, exfoliation, extraction, mask and massage.",
+     "category": "service.personal-care-and-wellness.esthetician"
+    },
+    {
+     "key": "mani",
+     "title": "Gel manicure",
+     "priceCents": 5000,
+     "durationMin": 45,
+     "text": "Shape, cuticle care and a gel polish.",
+     "category": "service.personal-care-and-wellness.nail-technician"
+    }
+   ]
+  },
+  {
+   "key": "fitness",
+   "type": "provider",
+   "name": "Peak Form Coaching",
+   "categories": [
+    "service.personal-care-and-wellness.personal-trainer",
+    "service.personal-care-and-wellness.yoga-pilates-instructor",
+    "service.personal-care-and-wellness.nutritionist",
+    "service.personal-care-and-wellness.registered-dietitian",
+    "service.personal-care-and-wellness.physiotherapist"
+   ],
+   "colour": "#00796B",
+   "tier": "trusted",
+   "tagline": "Training, movement and nutrition",
+   "about": "Personal trainers, a yoga teacher, a registered dietitian and a physiotherapist under one roof.",
+   "listings": [
+    {
+     "key": "pt",
+     "title": "Personal training session",
+     "priceCents": 8000,
+     "durationMin": 60,
+     "text": "A one-on-one session at your home, a park or our studio.",
+     "category": "service.personal-care-and-wellness.personal-trainer"
+    },
+    {
+     "key": "yoga",
+     "title": "Private yoga class",
+     "priceCents": 9000,
+     "durationMin": 60,
+     "text": "A private yoga or mat Pilates class for up to 3 people.",
+     "category": "service.personal-care-and-wellness.yoga-pilates-instructor"
+    },
+    {
+     "key": "meal",
+     "title": "Nutrition coaching session",
+     "priceCents": 7500,
+     "durationMin": 60,
+     "text": "Habits, meal plans and a grocery list that fit your week.",
+     "category": "service.personal-care-and-wellness.nutritionist"
+    },
+    {
+     "key": "rd",
+     "title": "Registered dietitian consult",
+     "priceCents": 12000,
+     "durationMin": 60,
+     "text": "An assessment by a registered dietitian, receipt for insurance.",
+     "category": "service.personal-care-and-wellness.registered-dietitian"
+    },
+    {
+     "key": "physio",
+     "title": "Physiotherapy assessment",
+     "priceCents": 11500,
+     "durationMin": 60,
+     "text": "Assessment and first treatment by a registered physiotherapist.",
+     "category": "service.personal-care-and-wellness.physiotherapist"
+    }
+   ]
+  },
+  {
+   "key": "care",
+   "type": "provider",
+   "name": "Gentle Hands Home Care",
+   "categories": [
+    "service.personal-care-and-wellness.home-care-aide",
+    "service.personal-care-and-wellness.doula"
+   ],
+   "colour": "#8D6E63",
+   "tier": "trusted",
+   "tagline": "Care at home, from newborns to elders",
+   "about": "Home care aides for seniors and certified doulas for new families.",
+   "listings": [
+    {
+     "key": "aide",
+     "title": "Home care visit, 3 hours",
+     "priceCents": 10500,
+     "durationMin": 180,
+     "text": "Companionship, light housekeeping and meal prep for 3 hours.",
+     "category": "service.personal-care-and-wellness.home-care-aide"
+    },
+    {
+     "key": "postpartum",
+     "title": "Postpartum doula visit",
+     "priceCents": 15000,
+     "durationMin": 240,
+     "text": "A 4-hour visit: feeding support, rest, meals and baby care.",
+     "category": "service.personal-care-and-wellness.doula"
+    }
+   ]
+  },
+  {
+   "key": "pets",
+   "type": "provider",
+   "name": "Happy Tails Pet Care",
+   "categories": [
+    "service.pets.dog-walker",
+    "service.pets.pet-sitter",
+    "service.pets.pet-taxi"
+   ],
+   "colour": "#558B2F",
+   "tier": "trusted",
+   "tagline": "Walks, sits and rides for your pets",
+   "about": "Insured dog walkers and pet sitters, and a pet taxi to the vet or groomer.",
+   "listings": [
+    {
+     "key": "walk",
+     "title": "30-minute dog walk",
+     "priceCents": 2500,
+     "durationMin": 30,
+     "text": "A solo walk with a photo update.",
+     "category": "service.pets.dog-walker"
+    },
+    {
+     "key": "sit",
+     "title": "Pet sitting visit",
+     "priceCents": 3000,
+     "durationMin": 45,
+     "text": "Feeding, litter or yard, play and meds at your home.",
+     "category": "service.pets.pet-sitter"
+    },
+    {
+     "key": "taxi",
+     "title": "Pet taxi (one way)",
+     "priceCents": 3500,
+     "durationMin": 45,
+     "text": "A ride for one pet in a secured crate, within the city.",
+     "category": "service.pets.pet-taxi"
+    }
+   ]
+  },
+  {
+   "key": "grooming",
+   "type": "provider",
+   "name": "Sudsy Paws Grooming & Training",
+   "categories": [
+    "service.pets.dog-grooming",
+    "service.pets.dog-training"
+   ],
+   "colour": "#9E9D24",
+   "tier": "trusted",
+   "tagline": "Mobile grooming and positive training",
+   "about": "A grooming van that parks at your door, and a certified trainer for puppies and manners.",
+   "listings": [
+    {
+     "key": "groom",
+     "title": "Full groom (medium dog)",
+     "priceCents": 9500,
+     "durationMin": 90,
+     "text": "Bath, blow-dry, haircut, nails and ears.",
+     "category": "service.pets.dog-grooming"
+    },
+    {
+     "key": "nails",
+     "title": "Nail trim",
+     "priceCents": 2500,
+     "durationMin": 15,
+     "text": "Nail trim and file.",
+     "category": "service.pets.dog-grooming"
+    },
+    {
+     "key": "puppy",
+     "title": "Puppy training session",
+     "priceCents": 8500,
+     "durationMin": 60,
+     "text": "A private session at home: sit, stay, leash and crate.",
+     "category": "service.pets.dog-training"
+    }
+   ]
+  },
+  {
+   "key": "tutoring",
+   "type": "provider",
+   "name": "Bright Minds Tutoring",
+   "categories": [
+    "service.education-and-coaching.tutor-k-12",
+    "service.education-and-coaching.test-prep"
+   ],
+   "colour": "#6A1B9A",
+   "tier": "master",
+   "tagline": "Certified teachers, grades 1 to 12",
+   "about": "Certified teachers who tutor math, reading and science at home or online.",
+   "listings": [
+    {
+     "key": "math",
+     "title": "Math tutoring, 60 minutes",
+     "priceCents": 6500,
+     "durationMin": 60,
+     "text": "One-on-one math help that follows the class curriculum.",
+     "photo": "demo/listing/tutoring.math"
+    },
+    {
+     "key": "reading",
+     "title": "Reading and writing, 60 minutes",
+     "priceCents": 6000,
+     "durationMin": 60,
+     "text": "Reading comprehension, writing and spelling.",
+     "photo": "demo/listing/tutoring.reading"
+    },
+    {
+     "key": "exam",
+     "title": "Exam prep session, 90 minutes",
+     "priceCents": 9500,
+     "durationMin": 90,
+     "text": "Review and practice tests before a final exam.",
+     "photo": "demo/listing/tutoring.exam",
+     "category": "service.education-and-coaching.test-prep"
+    }
+   ],
+   "photo": "demo/merchant/tutoring",
+   "owner": "owner"
+  },
+  {
+   "key": "tutoring2",
+   "type": "provider",
+   "name": "Study Hall Tutors",
+   "categories": [
+    "service.education-and-coaching.tutor-k-12",
+    "service.education-and-coaching.tutor-post-secondary"
+   ],
+   "colour": "#4A148C",
+   "tier": "registered",
+   "tagline": "University students who teach well",
+   "about": "Top university students tutoring high-school and first-year courses.",
+   "listings": [
+    {
+     "key": "hs",
+     "title": "High-school tutoring, 60 minutes",
+     "priceCents": 5000,
+     "durationMin": 60,
+     "text": "Math, chemistry, physics or English."
+    },
+    {
+     "key": "uni",
+     "title": "First-year university tutoring, 60 minutes",
+     "priceCents": 6500,
+     "durationMin": 60,
+     "text": "Calculus, statistics, chemistry or economics.",
+     "category": "service.education-and-coaching.tutor-post-secondary"
+    }
+   ]
+  },
+  {
+   "key": "tutoring3",
+   "type": "provider",
+   "name": "Lighthouse Learning Centre",
+   "categories": [
+    "service.education-and-coaching.tutor-k-12",
+    "service.education-and-coaching.language-lessons"
+   ],
+   "colour": "#1A237E",
+   "tier": "trusted",
+   "tagline": "Small-group and private tutoring",
+   "about": "A learning centre with French immersion support and language lessons for adults.",
+   "listings": [
+    {
+     "key": "french",
+     "title": "French immersion homework help",
+     "priceCents": 5500,
+     "durationMin": 60,
+     "text": "Homework help in French for immersion students."
+    },
+    {
+     "key": "group",
+     "title": "Small-group math (4 students)",
+     "priceCents": 3500,
+     "durationMin": 60,
+     "text": "Weekly small-group math for grades 4 to 9, price per student."
+    },
+    {
+     "key": "esl",
+     "title": "Adult language lesson",
+     "priceCents": 5000,
+     "durationMin": 60,
+     "text": "Conversation-first English or French lessons for adults.",
+     "category": "service.education-and-coaching.language-lessons"
+    }
+   ]
+  },
+  {
+   "key": "music",
+   "type": "provider",
+   "name": "Keys & Strings Music Studio",
+   "categories": [
+    "service.education-and-coaching.music-lessons"
+   ],
+   "colour": "#AD1457",
+   "tier": "trusted",
+   "tagline": "Piano, guitar and voice for every age",
+   "about": "Conservatory-trained teachers for piano, guitar and voice, from first lessons to exams.",
+   "listings": [
+    {
+     "key": "piano30",
+     "title": "Piano lesson, 30 minutes",
+     "priceCents": 3800,
+     "durationMin": 30,
+     "text": "A private piano lesson for beginners.",
+     "photo": "demo/listing/music.piano30"
+    },
+    {
+     "key": "piano60",
+     "title": "Piano lesson, 60 minutes",
+     "priceCents": 7000,
+     "durationMin": 60,
+     "text": "A private piano lesson for intermediate and exam students.",
+     "photo": "demo/listing/music.piano60"
+    },
+    {
+     "key": "guitar",
+     "title": "Guitar lesson, 45 minutes",
+     "priceCents": 5200,
+     "durationMin": 45,
+     "text": "Acoustic or electric guitar, chords to solos.",
+     "photo": "demo/listing/music.guitar"
+    }
+   ],
+   "photo": "demo/merchant/music"
+  },
+  {
+   "key": "coaching",
+   "type": "provider",
+   "name": "Next Chapter Coaching",
+   "categories": [
+    "service.education-and-coaching.career-coach",
+    "service.education-and-coaching.life-coach",
+    "service.education-and-coaching.driving-instructor",
+    "service.education-and-coaching.swim-instructor"
+   ],
+   "colour": "#00838F",
+   "tier": "trusted",
+   "tagline": "Coaching for work, life and the road",
+   "about": "Career and life coaches, a licensed driving instructor and swim lessons for kids and adults.",
+   "listings": [
+    {
+     "key": "resume",
+     "title": "Resume & interview coaching",
+     "priceCents": 12000,
+     "durationMin": 90,
+     "text": "Rewrite your resume and practise interviews for your next role.",
+     "category": "service.education-and-coaching.career-coach"
+    },
+    {
+     "key": "life",
+     "title": "Life coaching session",
+     "priceCents": 9000,
+     "durationMin": 60,
+     "text": "A coaching session on goals, habits and balance.",
+     "category": "service.education-and-coaching.life-coach"
+    },
+    {
+     "key": "drive",
+     "title": "Driving lesson, 90 minutes",
+     "priceCents": 9500,
+     "durationMin": 90,
+     "text": "In-car lesson with a licensed instructor, pick-up at home.",
+     "category": "service.education-and-coaching.driving-instructor"
+    },
+    {
+     "key": "swim",
+     "title": "Private swim lesson, 30 minutes",
+     "priceCents": 4500,
+     "durationMin": 30,
+     "text": "A private swim lesson at a partner pool.",
+     "category": "service.education-and-coaching.swim-instructor"
+    }
+   ]
+  },
+  {
+   "key": "ledger",
+   "type": "provider",
+   "name": "Ledger & Co. Bookkeeping",
+   "categories": [
+    "service.professional.accountant-bookkeeper",
+    "service.professional.tax-preparer"
+   ],
+   "colour": "#33691E",
+   "tier": "trusted",
+   "tagline": "Books and taxes, done on time",
+   "about": "CPA-led bookkeeping for small businesses and personal tax returns.",
+   "listings": [
+    {
+     "key": "tax",
+     "title": "Personal tax return",
+     "priceCents": 12000,
+     "durationMin": 60,
+     "text": "Preparation and e-filing of one personal return, slips and credits.",
+     "category": "service.professional.tax-preparer"
+    },
+    {
+     "key": "books",
+     "title": "Monthly bookkeeping (small business)",
+     "priceCents": 25000,
+     "durationMin": 120,
+     "text": "Monthly reconciliation and reports for up to 100 transactions.",
+     "category": "service.professional.accountant-bookkeeper"
+    }
+   ]
+  },
+  {
+   "key": "advisors",
+   "type": "provider",
+   "name": "Harbour Advisors",
+   "categories": [
+    "service.professional.mortgage-broker",
+    "service.professional.real-estate-agent",
+    "service.professional.insurance-broker"
+   ],
+   "colour": "#004D40",
+   "tier": "trusted",
+   "tagline": "Mortgages, homes and insurance",
+   "about": "Licensed mortgage, real estate and insurance advisors for first-time buyers.",
+   "listings": [
+    {
+     "key": "mortgage",
+     "title": "Mortgage pre-approval consult",
+     "durationMin": 60,
+     "text": "A one-hour consultation and pre-approval application (no fee to you).",
+     "category": "service.professional.mortgage-broker",
+     "pricing": "quote"
+    },
+    {
+     "key": "cma",
+     "title": "Home value assessment",
+     "durationMin": 60,
+     "text": "A comparative market analysis of your home.",
+     "category": "service.professional.real-estate-agent",
+     "pricing": "quote"
+    },
+    {
+     "key": "insurance",
+     "title": "Home & auto insurance review",
+     "priceCents": 4900,
+     "durationMin": 45,
+     "text": "A review of your policies with quotes from several insurers.",
+     "category": "service.professional.insurance-broker"
+    },
+    {
+     "key": "renewal",
+     "title": "Mortgage renewal strategy session",
+     "priceCents": 9900,
+     "durationMin": 60,
+     "text": "Compare your renewal offer with other lenders and a fixed-or-variable plan.",
+     "category": "service.professional.mortgage-broker"
+    },
+    {
+     "key": "firsthome",
+     "title": "First-home buyer workshop (private)",
+     "priceCents": 9900,
+     "durationMin": 90,
+     "text": "A private 90-minute session: budget, mortgage, offers and closing costs.",
+     "category": "service.professional.real-estate-agent"
+    }
+   ]
+  },
+  {
+   "key": "legal",
+   "type": "provider",
+   "name": "Clearpath Legal & Language Services",
+   "categories": [
+    "service.professional.notary",
+    "service.professional.legal-document-services",
+    "service.professional.translator",
+    "service.professional.immigration-consultant"
+   ],
+   "colour": "#3E2723",
+   "tier": "trusted",
+   "tagline": "Notary, documents, translation and immigration",
+   "about": "A notary public, certified translators and a licensed immigration consultant in one office.",
+   "listings": [
+    {
+     "key": "notary",
+     "title": "Notarize a document",
+     "priceCents": 4500,
+     "durationMin": 20,
+     "text": "Notarization of one document with ID check.",
+     "category": "service.professional.notary"
+    },
+    {
+     "key": "will",
+     "title": "Simple will package",
+     "priceCents": 35000,
+     "durationMin": 90,
+     "text": "A simple will, power of attorney and personal directive.",
+     "category": "service.professional.legal-document-services"
+    },
+    {
+     "key": "translate",
+     "title": "Certified translation (per page)",
+     "priceCents": 4500,
+     "durationMin": 30,
+     "text": "Certified translation of one page, English ↔ French and other languages.",
+     "category": "service.professional.translator"
+    },
+    {
+     "key": "pr",
+     "title": "Immigration consultation",
+     "priceCents": 15000,
+     "durationMin": 60,
+     "text": "A one-hour consultation on your options with a licensed consultant.",
+     "category": "service.professional.immigration-consultant"
+    }
+   ]
+  },
+  {
+   "key": "tech",
+   "type": "provider",
+   "name": "ByteFix Tech Help",
+   "categories": [
+    "service.tech-and-digital.computer-repair",
+    "service.tech-and-digital.phone-and-tablet-repair",
+    "service.tech-and-digital.home-network-and-wi-fi",
+    "service.tech-and-digital.it-support-for-small-business"
+   ],
+   "colour": "#1565C0",
+   "tier": "trusted",
+   "tagline": "Computers, phones and Wi-Fi fixed",
+   "about": "Friendly technicians for slow laptops, cracked screens, dead spots and small-office IT.",
+   "listings": [
+    {
+     "key": "tuneup",
+     "title": "Laptop tune-up",
+     "priceCents": 8900,
+     "durationMin": 60,
+     "text": "Clean-up, updates, malware scan and a speed check.",
+     "category": "service.tech-and-digital.computer-repair"
+    },
+    {
+     "key": "screen",
+     "title": "Phone screen replacement",
+     "priceCents": 14900,
+     "durationMin": 60,
+     "text": "Screen replaced for common models, 90-day warranty.",
+     "category": "service.tech-and-digital.phone-and-tablet-repair"
+    },
+    {
+     "key": "wifi",
+     "title": "Wi-Fi dead-spot fix",
+     "priceCents": 12900,
+     "durationMin": 90,
+     "text": "Survey and set-up of a mesh network (hardware extra).",
+     "category": "service.tech-and-digital.home-network-and-wi-fi"
+    },
+    {
+     "key": "it",
+     "title": "Small-office IT support, hourly",
+     "priceCents": 9500,
+     "durationMin": 60,
+     "text": "On-site help with computers, printers, email and backups.",
+     "pricing": "hourly",
+     "category": "service.tech-and-digital.it-support-for-small-business"
+    }
+   ]
+  },
+  {
+   "key": "smarthome",
+   "type": "provider",
+   "name": "Wired Home Installs",
+   "categories": [
+    "service.tech-and-digital.smart-home-install",
+    "service.tech-and-digital.tv-mounting"
+   ],
+   "colour": "#5D4037",
+   "tier": "trusted",
+   "tagline": "Smart homes and mounted TVs",
+   "about": "Doorbells, thermostats, cameras and TV mounts installed and set up on your phone.",
+   "listings": [
+    {
+     "key": "doorbell",
+     "title": "Video doorbell install",
+     "priceCents": 9900,
+     "durationMin": 60,
+     "text": "Install and set-up of a customer-supplied video doorbell.",
+     "category": "service.tech-and-digital.smart-home-install"
+    },
+    {
+     "key": "thermostat",
+     "title": "Smart thermostat install",
+     "priceCents": 11900,
+     "durationMin": 60,
+     "text": "Install and set-up of a smart thermostat, C-wire adapter if needed.",
+     "category": "service.tech-and-digital.smart-home-install"
+    },
+    {
+     "key": "mount",
+     "title": "TV mount & soundbar",
+     "priceCents": 16900,
+     "durationMin": 90,
+     "text": "Mount a TV and soundbar, cables hidden in a raceway.",
+     "category": "service.tech-and-digital.tv-mounting"
+    }
+   ]
+  },
+  {
+   "key": "studio",
+   "type": "provider",
+   "name": "Pixel & Page Studio",
+   "categories": [
+    "service.tech-and-digital.web-design",
+    "service.tech-and-digital.photography-editing"
+   ],
+   "colour": "#C2185B",
+   "tier": "registered",
+   "tagline": "Websites and photo editing for small business",
+   "about": "A two-person studio building small-business websites and editing product photos.",
+   "listings": [
+    {
+     "key": "site",
+     "title": "One-page website",
+     "priceCents": 79900,
+     "durationMin": 480,
+     "text": "A one-page website with your logo, hours and booking link.",
+     "category": "service.tech-and-digital.web-design"
+    },
+    {
+     "key": "edit",
+     "title": "Product photo editing (20 photos)",
+     "priceCents": 9900,
+     "durationMin": 120,
+     "text": "Background removal and colour correction of 20 product photos.",
+     "category": "service.tech-and-digital.photography-editing"
+    }
+   ]
+  },
+  {
+   "key": "family",
+   "type": "provider",
+   "name": "Little Hands Family Help",
+   "categories": [
+    "service.childcare-and-family.babysitter",
+    "service.childcare-and-family.nanny",
+    "service.childcare-and-family.newborn-care",
+    "service.childcare-and-family.senior-companionship",
+    "service.childcare-and-family.errand-and-shopping-help"
+   ],
+   "colour": "#EF6C00",
+   "tier": "trusted",
+   "tagline": "Screened sitters, nannies and helpers",
+   "about": "Vulnerable-sector-checked babysitters, nannies, newborn care and companions for seniors.",
+   "listings": [
+    {
+     "key": "sitter",
+     "title": "Evening babysitter, 4 hours",
+     "priceCents": 8000,
+     "durationMin": 240,
+     "text": "A screened, first-aid-certified sitter for up to 3 kids.",
+     "category": "service.childcare-and-family.babysitter"
+    },
+    {
+     "key": "nanny",
+     "title": "Nanny day, 8 hours",
+     "priceCents": 18000,
+     "durationMin": 480,
+     "text": "A full day of care by an experienced nanny.",
+     "category": "service.childcare-and-family.nanny"
+    },
+    {
+     "key": "newborn",
+     "title": "Overnight newborn care",
+     "priceCents": 22000,
+     "durationMin": 600,
+     "text": "An overnight newborn care specialist so you can sleep.",
+     "category": "service.childcare-and-family.newborn-care"
+    },
+    {
+     "key": "companion",
+     "title": "Senior companionship visit, 2 hours",
+     "priceCents": 6000,
+     "durationMin": 120,
+     "text": "Conversation, a walk, games and a light meal.",
+     "category": "service.childcare-and-family.senior-companionship"
+    },
+    {
+     "key": "errands",
+     "title": "Errands & grocery run",
+     "priceCents": 4500,
+     "durationMin": 90,
+     "text": "Groceries, pharmacy and errands for you or a parent.",
+     "category": "service.childcare-and-family.errand-and-shopping-help"
+    }
+   ]
+  },
+  {
+   "key": "bakery",
+   "type": "seller",
+   "name": "Hearth & Crumb Bakery",
+   "categories": [
+    "shop.food-and-grocery.bakery"
+   ],
+   "colour": "#A0522D",
+   "tier": "master",
+   "tagline": "Naturally leavened bread, baked before sunrise",
+   "about": "A neighbourhood bakery: long-fermented sourdough, butter pastries and seasonal pies, baked every morning in small batches.",
+   "listings": [
+    {
+     "key": "sourdough",
+     "title": "Country sourdough loaf",
+     "priceCents": 900,
+     "stock": 30,
+     "unit": "900 g",
+     "text": "A 900 g round with a crackly crust and an open crumb, fermented for 36 hours.",
+     "photo": "demo/listing/bakery.sourdough"
+    },
+    {
+     "key": "croissants",
+     "title": "Butter croissants, 4-pack",
+     "priceCents": 1200,
+     "stock": 24,
+     "unit": "4 pack",
+     "text": "Laminated with cultured butter, baked this morning.",
+     "photo": "demo/listing/bakery.croissants"
+    },
+    {
+     "key": "cinnamon",
+     "title": "Cinnamon buns, box of 6",
+     "priceCents": 1800,
+     "stock": 3,
+     "unit": "box of 6",
+     "text": "Brown-butter cinnamon buns with cream-cheese glaze.",
+     "photo": "demo/listing/bakery.cinnamon"
+    },
+    {
+     "key": "baguette",
+     "title": "Classic baguette",
+     "priceCents": 450,
+     "stock": 40,
+     "unit": "each",
+     "text": "Baked twice a day.",
+     "photo": "demo/listing/bakery.baguette"
+    },
+    {
+     "key": "pie",
+     "title": "Apple crumble pie",
+     "priceCents": 2400,
+     "stock": 8,
+     "unit": "9 inch",
+     "text": "Local apples under an oat crumble, serves 8.",
+     "photo": "demo/listing/bakery.pie"
+    }
+   ],
+   "photo": "demo/merchant/bakery",
+   "owner": "owner",
+   "sameDayCutoff": "17:45"
+  },
+  {
+   "key": "bakery2",
+   "type": "seller",
+   "name": "Rise & Shine Bakehouse",
+   "categories": [
+    "shop.food-and-grocery.bakery"
+   ],
+   "colour": "#8D6E63",
+   "tier": "trusted",
+   "tagline": "Breads and pastries, all made here",
+   "about": "Rye, seeded loaves and morning pastries from a tiny corner bakehouse.",
+   "listings": [
+    {
+     "key": "rye",
+     "title": "Dark rye loaf",
+     "priceCents": 850,
+     "stock": 15,
+     "unit": "700 g",
+     "text": "Dense, tangy 70 % rye with caraway."
+    },
+    {
+     "key": "seeded",
+     "title": "Seeded multigrain loaf",
+     "priceCents": 950,
+     "stock": 18,
+     "unit": "800 g",
+     "text": "Flax, sunflower and pumpkin seeds."
+    },
+    {
+     "key": "muffins",
+     "title": "Blueberry muffins, 4-pack",
+     "priceCents": 1100,
+     "stock": 20,
+     "unit": "4 pack",
+     "text": "Wild blueberries and a crumble top."
+    }
+   ]
+  },
+  {
+   "key": "bakery3",
+   "type": "seller",
+   "name": "Golden Crust Patisserie",
+   "categories": [
+    "shop.food-and-grocery.bakery",
+    "shop.food-and-grocery.coffee-and-tea"
+   ],
+   "colour": "#FFB300",
+   "tier": "registered",
+   "tagline": "French pastries and celebration cakes",
+   "about": "A patisserie for macarons, tarts and cakes to order.",
+   "listings": [
+    {
+     "key": "macarons",
+     "title": "Macarons, box of 12",
+     "priceCents": 2400,
+     "stock": 12,
+     "unit": "box of 12",
+     "text": "Twelve macarons in six flavours."
+    },
+    {
+     "key": "tart",
+     "title": "Lemon tart",
+     "priceCents": 2800,
+     "stock": 6,
+     "unit": "8 inch",
+     "text": "Shortbread crust and a sharp lemon curd."
+    },
+    {
+     "key": "cake",
+     "title": "Chocolate celebration cake",
+     "priceCents": 4500,
+     "stock": 4,
+     "unit": "8 inch",
+     "text": "Three layers of chocolate sponge and ganache, serves 12."
+    }
+   ]
+  },
+  {
+   "key": "grocer",
+   "type": "seller",
+   "name": "Green Basket Grocer",
+   "categories": [
+    "shop.food-and-grocery.produce",
+    "shop.food-and-grocery.groceries",
+    "shop.food-and-grocery.dairy-and-eggs"
+   ],
+   "colour": "#2E7D32",
+   "tier": "master",
+   "tagline": "Fresh produce and pantry staples, delivered today",
+   "about": "An independent grocer with local produce, eggs and pantry staples on today's pooled run.",
+   "listings": [
+    {
+     "key": "eggs",
+     "title": "Free-range eggs, dozen",
+     "priceCents": 749,
+     "stock": 60,
+     "unit": "dozen",
+     "text": "Large brown free-range eggs.",
+     "photo": "demo/listing/grocer.eggs",
+     "category": "shop.food-and-grocery.dairy-and-eggs"
+    },
+    {
+     "key": "apples",
+     "title": "Honeycrisp apples, 1 kg bag",
+     "priceCents": 699,
+     "stock": 45,
+     "unit": "1 kg",
+     "text": "Crisp, sweet and juicy.",
+     "photo": "demo/listing/grocer.apples",
+     "category": "shop.food-and-grocery.produce"
+    },
+    {
+     "key": "greens",
+     "title": "Organic salad greens, 250 g",
+     "priceCents": 549,
+     "stock": 35,
+     "unit": "250 g",
+     "text": "Washed and ready to eat.",
+     "photo": "demo/listing/grocer.greens",
+     "category": "shop.food-and-grocery.produce"
+    },
+    {
+     "key": "rice",
+     "title": "Basmati rice, 1 kg",
+     "priceCents": 649,
+     "stock": 25,
+     "unit": "1 kg",
+     "text": "Aged long-grain basmati.",
+     "photo": "demo/listing/grocer.rice",
+     "category": "shop.food-and-grocery.groceries"
+    },
+    {
+     "key": "honey",
+     "title": "Wildflower honey, 500 g",
+     "priceCents": 1299,
+     "stock": 20,
+     "unit": "500 g",
+     "text": "Raw wildflower honey from local hives.",
+     "photo": "demo/listing/grocer.honey",
+     "category": "shop.food-and-grocery.groceries"
+    },
+    {
+     "key": "oatmilk",
+     "title": "Oat milk, barista edition 1 L",
+     "priceCents": 499,
+     "stock": 50,
+     "unit": "1 L",
+     "text": "Froths like dairy.",
+     "photo": "demo/listing/grocer.oatmilk",
+     "category": "shop.food-and-grocery.dairy-and-eggs"
+    }
+   ],
+   "photo": "demo/merchant/grocer",
+   "sameDayCutoff": "17:45"
+  },
+  {
+   "key": "grocer2",
+   "type": "seller",
+   "name": "Corner Fresh Market",
+   "categories": [
+    "shop.food-and-grocery.groceries",
+    "shop.food-and-grocery.produce",
+    "shop.food-and-grocery.frozen"
+   ],
+   "colour": "#558B2F",
+   "tier": "trusted",
+   "tagline": "Your neighbourhood market",
+   "about": "Everyday groceries, fruit and veg, and freezer staples.",
+   "listings": [
+    {
+     "key": "pasta",
+     "title": "Durum spaghetti, 900 g",
+     "priceCents": 349,
+     "stock": 40,
+     "unit": "900 g",
+     "text": "Bronze-cut durum wheat pasta.",
+     "category": "shop.food-and-grocery.groceries"
+    },
+    {
+     "key": "tomatoes",
+     "title": "Vine tomatoes, 1 kg",
+     "priceCents": 599,
+     "stock": 30,
+     "unit": "1 kg",
+     "text": "Ripe on the vine.",
+     "category": "shop.food-and-grocery.produce"
+    },
+    {
+     "key": "berries",
+     "title": "Frozen mixed berries, 1.5 kg",
+     "priceCents": 1299,
+     "stock": 20,
+     "unit": "1.5 kg",
+     "text": "Strawberries, blueberries and raspberries.",
+     "category": "shop.food-and-grocery.frozen"
+    },
+    {
+     "key": "pizza",
+     "title": "Frozen margherita pizza",
+     "priceCents": 899,
+     "stock": 25,
+     "unit": "each",
+     "text": "Stone-baked crust, ready in 12 minutes.",
+     "category": "shop.food-and-grocery.frozen"
+    }
+   ]
+  },
+  {
+   "key": "grocer3",
+   "type": "seller",
+   "name": "Spice Route Market",
+   "categories": [
+    "shop.food-and-grocery.specialty-and-international",
+    "shop.food-and-grocery.groceries"
+   ],
+   "colour": "#D84315",
+   "tier": "trusted",
+   "tagline": "Spices and pantry from around the world",
+   "about": "South Asian, Middle Eastern and East Asian pantry staples and freshly ground spices.",
+   "listings": [
+    {
+     "key": "garam",
+     "title": "Garam masala, 200 g",
+     "priceCents": 599,
+     "stock": 30,
+     "unit": "200 g",
+     "text": "Ground in-house every week."
+    },
+    {
+     "key": "chickpeas",
+     "title": "Dried chickpeas, 2 kg",
+     "priceCents": 899,
+     "stock": 25,
+     "unit": "2 kg",
+     "text": "Kabuli chickpeas.",
+     "category": "shop.food-and-grocery.groceries"
+    },
+    {
+     "key": "kimchi",
+     "title": "Napa cabbage kimchi, 500 g",
+     "priceCents": 899,
+     "stock": 18,
+     "unit": "500 g",
+     "text": "Fermented in small batches."
+    },
+    {
+     "key": "tahini",
+     "title": "Tahini, 454 g",
+     "priceCents": 799,
+     "stock": 22,
+     "unit": "454 g",
+     "text": "Stone-ground sesame."
+    }
+   ]
+  },
+  {
+   "key": "butcher",
+   "type": "seller",
+   "name": "Prime Cut Butchers",
+   "categories": [
+    "shop.food-and-grocery.butcher"
+   ],
+   "colour": "#B71C1C",
+   "tier": "master",
+   "tagline": "Local beef, pork and chicken, cut to order",
+   "about": "A whole-animal butcher shop with dry-aged beef and house sausages.",
+   "listings": [
+    {
+     "key": "ribeye",
+     "title": "Ribeye steak, AAA",
+     "priceCents": 2400,
+     "stock": 14,
+     "unit": "340 g",
+     "text": "Dry-aged 28 days."
+    },
+    {
+     "key": "thighs",
+     "title": "Chicken thighs, bone-in",
+     "priceCents": 1100,
+     "stock": 20,
+     "unit": "1 kg",
+     "text": "Air-chilled, bone-in, skin-on."
+    },
+    {
+     "key": "sausage",
+     "title": "House pork sausages, 6",
+     "priceCents": 1200,
+     "stock": 16,
+     "unit": "6 pack",
+     "text": "Garlic and fennel."
+    },
+    {
+     "key": "ground",
+     "title": "Lean ground beef",
+     "priceCents": 1300,
+     "stock": 25,
+     "unit": "1 kg",
+     "text": "Ground fresh every morning."
+    }
+   ]
+  },
+  {
+   "key": "butcher2",
+   "type": "seller",
+   "name": "Halal Meat & Deli",
+   "categories": [
+    "shop.food-and-grocery.butcher",
+    "shop.food-and-grocery.specialty-and-international"
+   ],
+   "colour": "#4E342E",
+   "tier": "trusted",
+   "tagline": "Halal meats and a full deli",
+   "about": "Certified halal beef, lamb and chicken, plus deli and pantry items.",
+   "listings": [
+    {
+     "key": "lamb",
+     "title": "Lamb shoulder chops",
+     "priceCents": 1899,
+     "stock": 12,
+     "unit": "1 kg",
+     "text": "Certified halal."
+    },
+    {
+     "key": "kebab",
+     "title": "Chicken kebab skewers, 6",
+     "priceCents": 1499,
+     "stock": 15,
+     "unit": "6 pack",
+     "text": "Marinated in yogurt and spices."
+    },
+    {
+     "key": "dates",
+     "title": "Medjool dates, 1 kg",
+     "priceCents": 1499,
+     "stock": 20,
+     "unit": "1 kg",
+     "text": "Soft and sweet.",
+     "category": "shop.food-and-grocery.specialty-and-international"
+    }
+   ]
+  },
+  {
+   "key": "coffee",
+   "type": "seller",
+   "name": "Daily Grind Coffee Roasters",
+   "categories": [
+    "shop.food-and-grocery.coffee-and-tea"
+   ],
+   "colour": "#5D4037",
+   "tier": "trusted",
+   "tagline": "Small-batch coffee, roasted this week",
+   "about": "A micro-roaster with single origins, house blends and loose-leaf tea.",
+   "listings": [
+    {
+     "key": "house",
+     "title": "House blend whole bean, 340 g",
+     "priceCents": 1795,
+     "stock": 40,
+     "unit": "340 g",
+     "text": "Chocolate, caramel and a little citrus.",
+     "photo": "demo/listing/coffee.house"
+    },
+    {
+     "key": "espresso",
+     "title": "Espresso blend, 340 g",
+     "priceCents": 1895,
+     "stock": 30,
+     "unit": "340 g",
+     "text": "Rich and syrupy.",
+     "photo": "demo/listing/coffee.espresso"
+    },
+    {
+     "key": "decaf",
+     "title": "Swiss water decaf, 340 g",
+     "priceCents": 1895,
+     "stock": 15,
+     "unit": "340 g",
+     "text": "Chemical-free decaf.",
+     "photo": "demo/listing/coffee.decaf"
+    },
+    {
+     "key": "tea",
+     "title": "Earl Grey loose-leaf tea, 250 g",
+     "priceCents": 1950,
+     "stock": 25,
+     "unit": "250 g",
+     "text": "Black tea with bergamot.",
+     "photo": "demo/listing/coffee.tea"
+    }
+   ],
+   "photo": "demo/merchant/coffee"
+  },
+  {
+   "key": "pharmacy",
+   "type": "seller",
+   "name": "Willow Pharmacy & Wellness",
+   "categories": [
+    "shop.health-and-beauty.pharmacy-otc",
+    "shop.health-and-beauty.vitamins-and-supplements",
+    "shop.health-and-beauty.baby-care",
+    "shop.health-and-beauty.cosmetics-and-skincare"
+   ],
+   "colour": "#00897B",
+   "tier": "trusted",
+   "tagline": "Over-the-counter care, delivered",
+   "about": "An independent pharmacy for cold remedies, vitamins, baby care and skin care.",
+   "listings": [
+    {
+     "key": "cold",
+     "title": "Cold & flu relief, 24 caplets",
+     "priceCents": 1299,
+     "stock": 30,
+     "unit": "24 caplets",
+     "text": "Daytime, non-drowsy.",
+     "category": "shop.health-and-beauty.pharmacy-otc"
+    },
+    {
+     "key": "vitd",
+     "title": "Vitamin D3 1000 IU, 180 softgels",
+     "priceCents": 1199,
+     "stock": 40,
+     "unit": "180 softgels",
+     "text": "NPN-licensed.",
+     "category": "shop.health-and-beauty.vitamins-and-supplements"
+    },
+    {
+     "key": "diapers",
+     "title": "Diapers, size 3, 84 count",
+     "priceCents": 3499,
+     "stock": 15,
+     "unit": "84 count",
+     "text": "Hypoallergenic, wetness indicator.",
+     "category": "shop.health-and-beauty.baby-care"
+    },
+    {
+     "key": "spf",
+     "title": "Mineral sunscreen SPF 50, 100 mL",
+     "priceCents": 2199,
+     "stock": 20,
+     "unit": "100 mL",
+     "text": "Fragrance-free, reef-friendly.",
+     "category": "shop.health-and-beauty.cosmetics-and-skincare"
+    }
+   ]
+  },
+  {
+   "key": "beauty",
+   "type": "seller",
+   "name": "Glow Botanicals",
+   "categories": [
+    "shop.health-and-beauty.cosmetics-and-skincare"
+   ],
+   "colour": "#F06292",
+   "tier": "registered",
+   "tagline": "Small-batch skin care",
+   "about": "Handmade soaps, balms and serums with simple ingredients.",
+   "listings": [
+    {
+     "key": "soap",
+     "title": "Oat & honey soap bar",
+     "priceCents": 900,
+     "stock": 40,
+     "unit": "120 g",
+     "text": "Cold-process, unscented."
+    },
+    {
+     "key": "serum",
+     "title": "Vitamin C serum, 30 mL",
+     "priceCents": 3400,
+     "stock": 15,
+     "unit": "30 mL",
+     "text": "Brightening, with hyaluronic acid."
+    },
+    {
+     "key": "balm",
+     "title": "Lip balm trio",
+     "priceCents": 1500,
+     "stock": 25,
+     "unit": "3 × 4.5 g",
+     "text": "Beeswax and shea butter."
+    }
+   ]
+  },
+  {
+   "key": "home",
+   "type": "seller",
+   "name": "Hearth & Home Goods",
+   "categories": [
+    "shop.home.home-and-kitchen",
+    "shop.home.bedding-and-bath",
+    "shop.home.decor",
+    "shop.home.cleaning-supplies"
+   ],
+   "colour": "#6D4C41",
+   "tier": "trusted",
+   "tagline": "Useful, lovely things for the home",
+   "about": "Kitchenware, linens, decor and refillable cleaning supplies.",
+   "listings": [
+    {
+     "key": "skillet",
+     "title": "Cast iron skillet, 10 inch",
+     "priceCents": 4900,
+     "stock": 12,
+     "unit": "10 inch",
+     "text": "Pre-seasoned, oven-safe.",
+     "category": "shop.home.home-and-kitchen"
+    },
+    {
+     "key": "towels",
+     "title": "Cotton bath towels, set of 2",
+     "priceCents": 3900,
+     "stock": 15,
+     "unit": "set of 2",
+     "text": "600 gsm long-staple cotton.",
+     "category": "shop.home.bedding-and-bath"
+    },
+    {
+     "key": "vase",
+     "title": "Stoneware vase",
+     "priceCents": 3200,
+     "stock": 10,
+     "unit": "20 cm",
+     "text": "Hand-thrown, speckled glaze.",
+     "category": "shop.home.decor"
+    },
+    {
+     "key": "cleaner",
+     "title": "All-purpose cleaner refill, 1 L",
+     "priceCents": 1200,
+     "stock": 30,
+     "unit": "1 L",
+     "text": "Plant-based, refill your bottle.",
+     "category": "shop.home.cleaning-supplies"
+    }
+   ]
+  },
+  {
+   "key": "furniture",
+   "type": "seller",
+   "name": "Oak & Iron Furniture",
+   "categories": [
+    "shop.home.furniture",
+    "shop.home.decor"
+   ],
+   "colour": "#3E2723",
+   "tier": "trusted",
+   "tagline": "Solid wood furniture, made locally",
+   "about": "Tables, benches and shelves built from solid wood in our workshop.",
+   "listings": [
+    {
+     "key": "bench",
+     "title": "Solid oak entry bench",
+     "priceCents": 34900,
+     "stock": 4,
+     "unit": "120 cm",
+     "text": "Oil-finished white oak.",
+     "category": "shop.home.furniture"
+    },
+    {
+     "key": "shelf",
+     "title": "Floating shelf, walnut",
+     "priceCents": 8900,
+     "stock": 10,
+     "unit": "90 cm",
+     "text": "Hidden bracket included.",
+     "category": "shop.home.furniture"
+    },
+    {
+     "key": "mirror",
+     "title": "Round wall mirror",
+     "priceCents": 12900,
+     "stock": 6,
+     "unit": "70 cm",
+     "text": "Black steel frame.",
+     "category": "shop.home.decor"
+    }
+   ]
+  },
+  {
+   "key": "garden",
+   "type": "seller",
+   "name": "Root & Bloom Garden Supply",
+   "categories": [
+    "shop.home.garden",
+    "shop.kids-gifts-and-hobbies.pet-supplies"
+   ],
+   "colour": "#43A047",
+   "tier": "trusted",
+   "tagline": "Plants, soil and garden tools",
+   "about": "Houseplants, potting soil, seeds and tools, plus pet supplies.",
+   "listings": [
+    {
+     "key": "monstera",
+     "title": "Monstera plant, 6 inch pot",
+     "priceCents": 3200,
+     "stock": 10,
+     "unit": "6 inch",
+     "text": "A healthy, easy-care houseplant.",
+     "category": "shop.home.garden"
+    },
+    {
+     "key": "soil",
+     "title": "Organic potting mix, 25 L",
+     "priceCents": 1499,
+     "stock": 25,
+     "unit": "25 L",
+     "text": "With compost and perlite.",
+     "category": "shop.home.garden"
+    },
+    {
+     "key": "kibble",
+     "title": "Grain-free dog food, 5 kg",
+     "priceCents": 4999,
+     "stock": 12,
+     "unit": "5 kg",
+     "text": "Salmon and sweet potato.",
+     "category": "shop.kids-gifts-and-hobbies.pet-supplies"
+    },
+    {
+     "key": "catnip",
+     "title": "Catnip toy trio",
+     "priceCents": 1200,
+     "stock": 20,
+     "unit": "3 pack",
+     "text": "Organic catnip, hand-sewn.",
+     "category": "shop.kids-gifts-and-hobbies.pet-supplies"
+    }
+   ]
+  },
+  {
+   "key": "hardware",
+   "type": "seller",
+   "name": "Main Street Hardware",
+   "categories": [
+    "shop.hardware-and-auto.hardware",
+    "shop.hardware-and-auto.tools",
+    "shop.hardware-and-auto.paint",
+    "shop.hardware-and-auto.plumbing-and-electrical-supply"
+   ],
+   "colour": "#F57C00",
+   "tier": "master",
+   "tagline": "The hardware store you remember",
+   "about": "Fasteners, tools, paint and plumbing and electrical parts, with advice from people who use them.",
+   "listings": [
+    {
+     "key": "drill",
+     "title": "Cordless drill kit, 20 V",
+     "priceCents": 12900,
+     "stock": 8,
+     "unit": "kit",
+     "text": "Two batteries, charger and case.",
+     "category": "shop.hardware-and-auto.tools"
+    },
+    {
+     "key": "screws",
+     "title": "Deck screws, 1 kg",
+     "priceCents": 2499,
+     "stock": 30,
+     "unit": "1 kg",
+     "text": "Coated #8 × 2½ in.",
+     "category": "shop.hardware-and-auto.hardware"
+    },
+    {
+     "key": "paint",
+     "title": "Interior paint, eggshell, 3.78 L",
+     "priceCents": 5999,
+     "stock": 20,
+     "unit": "3.78 L",
+     "text": "Low-VOC, tinted to order.",
+     "category": "shop.hardware-and-auto.paint"
+    },
+    {
+     "key": "tape",
+     "title": "Painter's tape, 3 pack",
+     "priceCents": 1599,
+     "stock": 40,
+     "unit": "3 pack",
+     "text": "Clean removal for 14 days.",
+     "category": "shop.hardware-and-auto.paint"
+    },
+    {
+     "key": "pex",
+     "title": "PEX pipe, ½ in × 30 m",
+     "priceCents": 3999,
+     "stock": 15,
+     "unit": "30 m",
+     "text": "For hot and cold water lines.",
+     "category": "shop.hardware-and-auto.plumbing-and-electrical-supply"
+    }
+   ]
+  },
+  {
+   "key": "autoparts",
+   "type": "seller",
+   "name": "Roadside Wrench Parts",
+   "categories": [
+    "shop.hardware-and-auto.auto-parts",
+    "shop.hardware-and-auto.tires"
+   ],
+   "colour": "#3B4A5A",
+   "tier": "trusted",
+   "tagline": "Parts & tires, same-day delivery",
+   "about": "OEM and aftermarket parts, fluids and tires on today's pooled run.",
+   "listings": [
+    {
+     "key": "pads",
+     "title": "Ceramic brake pads (front)",
+     "priceCents": 6800,
+     "stock": 14,
+     "unit": "set",
+     "text": "Low-dust ceramic pads for most cars.",
+     "category": "shop.hardware-and-auto.auto-parts"
+    },
+    {
+     "key": "oil",
+     "title": "Synthetic oil 5W-30, 5 L",
+     "priceCents": 4200,
+     "stock": 3,
+     "unit": "5 L",
+     "text": "Full synthetic, dexos approved.",
+     "category": "shop.hardware-and-auto.auto-parts",
+     "compareAtCents": 4899
+    },
+    {
+     "key": "wipers",
+     "title": "Beam wiper blades, 22 in",
+     "priceCents": 1900,
+     "stock": 22,
+     "unit": "each",
+     "text": "All-season beam blade.",
+     "category": "shop.hardware-and-auto.auto-parts"
+    },
+    {
+     "key": "tire",
+     "title": "All-weather tire 215/60R16",
+     "priceCents": 15900,
+     "stock": 16,
+     "unit": "each",
+     "text": "Three-peak mountain snowflake rated.",
+     "category": "shop.hardware-and-auto.tires"
+    }
+   ],
+   "owner": "owner"
+  },
+  {
+   "key": "apparel",
+   "type": "seller",
+   "name": "Thread & Needle Clothing Co.",
+   "categories": [
+    "shop.apparel.clothing",
+    "shop.apparel.accessories",
+    "shop.apparel.kids-clothing"
+   ],
+   "colour": "#5C6BC0",
+   "tier": "trusted",
+   "tagline": "Everyday clothes, made to last",
+   "about": "Basics and outerwear for adults and kids, ethically made in Canada.",
+   "listings": [
+    {
+     "key": "hoodie",
+     "title": "Heavyweight hoodie",
+     "priceCents": 7900,
+     "stock": 20,
+     "unit": "S–XXL",
+     "text": "Brushed cotton fleece.",
+     "category": "shop.apparel.clothing"
+    },
+    {
+     "key": "toque",
+     "title": "Merino toque",
+     "priceCents": 3500,
+     "stock": 25,
+     "unit": "one size",
+     "text": "Soft merino wool.",
+     "category": "shop.apparel.accessories"
+    },
+    {
+     "key": "kids",
+     "title": "Kids' rain jacket",
+     "priceCents": 5500,
+     "stock": 12,
+     "unit": "2–10 years",
+     "text": "Waterproof, reflective trim.",
+     "category": "shop.apparel.kids-clothing"
+    }
+   ]
+  },
+  {
+   "key": "footwear",
+   "type": "seller",
+   "name": "Stride Footwear & Workwear",
+   "categories": [
+    "shop.apparel.footwear",
+    "shop.apparel.workwear"
+   ],
+   "colour": "#424242",
+   "tier": "trusted",
+   "tagline": "Boots and workwear for real work",
+   "about": "CSA-approved safety boots, winter boots and hard-wearing workwear.",
+   "listings": [
+    {
+     "key": "boots",
+     "title": "CSA steel-toe work boots",
+     "priceCents": 18900,
+     "stock": 10,
+     "unit": "sizes 7–13",
+     "text": "Waterproof, green-patch rated.",
+     "category": "shop.apparel.footwear"
+    },
+    {
+     "key": "winter",
+     "title": "Insulated winter boots",
+     "priceCents": 15900,
+     "stock": 12,
+     "unit": "sizes 5–12",
+     "text": "Rated to −40 °C.",
+     "category": "shop.apparel.footwear"
+    },
+    {
+     "key": "vest",
+     "title": "Hi-vis safety vest",
+     "priceCents": 2900,
+     "stock": 30,
+     "unit": "M–XXL",
+     "text": "Class 2 reflective.",
+     "category": "shop.apparel.workwear"
+    },
+    {
+     "key": "gloves",
+     "title": "Insulated work gloves",
+     "priceCents": 2400,
+     "stock": 25,
+     "unit": "M–XL",
+     "text": "Waterproof leather palm.",
+     "category": "shop.apparel.workwear"
+    }
+   ]
+  },
+  {
+   "key": "electronics",
+   "type": "seller",
+   "name": "Circuit City Electronics",
+   "categories": [
+    "shop.electronics.electronics",
+    "shop.electronics.phones-and-accessories",
+    "shop.electronics.computers",
+    "shop.electronics.small-appliances"
+   ],
+   "colour": "#1E88E5",
+   "tier": "trusted",
+   "tagline": "Gadgets, computers and small appliances",
+   "about": "Headphones, chargers, laptops and kitchen appliances with local warranty support.",
+   "listings": [
+    {
+     "key": "earbuds",
+     "title": "Wireless earbuds",
+     "priceCents": 7900,
+     "stock": 20,
+     "unit": "each",
+     "text": "Noise cancelling, 24 h with the case.",
+     "category": "shop.electronics.electronics"
+    },
+    {
+     "key": "charger",
+     "title": "USB-C fast charger, 65 W",
+     "priceCents": 4900,
+     "stock": 30,
+     "unit": "each",
+     "text": "Charges a laptop and a phone at once.",
+     "category": "shop.electronics.phones-and-accessories"
+    },
+    {
+     "key": "case",
+     "title": "Phone case, clear",
+     "priceCents": 2400,
+     "stock": 40,
+     "unit": "each",
+     "text": "Drop-tested to 3 m.",
+     "category": "shop.electronics.phones-and-accessories"
+    },
+    {
+     "key": "laptop",
+     "title": "14-inch laptop, 16 GB",
+     "priceCents": 89900,
+     "stock": 5,
+     "unit": "each",
+     "text": "16 GB RAM, 512 GB SSD.",
+     "category": "shop.electronics.computers"
+    },
+    {
+     "key": "kettle",
+     "title": "Electric kettle, 1.7 L",
+     "priceCents": 4900,
+     "stock": 15,
+     "unit": "1.7 L",
+     "text": "Variable temperature.",
+     "category": "shop.electronics.small-appliances"
+    }
+   ]
+  },
+  {
+   "key": "toys",
+   "type": "seller",
+   "name": "Little Sprouts Toys & Books",
+   "categories": [
+    "shop.kids-gifts-and-hobbies.toys",
+    "shop.kids-gifts-and-hobbies.kids",
+    "shop.kids-gifts-and-hobbies.books-and-stationery"
+   ],
+   "colour": "#FB8C00",
+   "tier": "trusted",
+   "tagline": "Wooden toys, games and picture books",
+   "about": "Safety-tested toys, puzzles and books for babies to tweens.",
+   "listings": [
+    {
+     "key": "rings",
+     "title": "Wooden stacking rings",
+     "priceCents": 2400,
+     "stock": 12,
+     "unit": "each",
+     "text": "Maple, non-toxic finish.",
+     "category": "shop.kids-gifts-and-hobbies.toys"
+    },
+    {
+     "key": "puzzle",
+     "title": "Floor puzzle, 48 pieces",
+     "priceCents": 2200,
+     "stock": 15,
+     "unit": "48 pieces",
+     "text": "Big pieces for small hands.",
+     "category": "shop.kids-gifts-and-hobbies.kids"
+    },
+    {
+     "key": "book",
+     "title": "Picture book bundle (3)",
+     "priceCents": 3600,
+     "stock": 10,
+     "unit": "3 books",
+     "text": "Three award-winning picture books.",
+     "category": "shop.kids-gifts-and-hobbies.books-and-stationery"
+    },
+    {
+     "key": "journal",
+     "title": "Dot-grid journal, A5",
+     "priceCents": 2200,
+     "stock": 20,
+     "unit": "A5",
+     "text": "Lay-flat binding, 160 pages.",
+     "category": "shop.kids-gifts-and-hobbies.books-and-stationery"
+    }
+   ]
+  },
+  {
+   "key": "gifts",
+   "type": "seller",
+   "name": "Makers' Corner Gifts & Sport",
+   "categories": [
+    "shop.kids-gifts-and-hobbies.gifts-and-crafts",
+    "shop.kids-gifts-and-hobbies.sporting-goods"
+   ],
+   "colour": "#8E24AA",
+   "tier": "registered",
+   "tagline": "Local makers and outdoor gear",
+   "about": "Gifts from local makers and gear for the trail and the rink.",
+   "listings": [
+    {
+     "key": "candle",
+     "title": "Soy candle, cedar & smoke",
+     "priceCents": 2800,
+     "stock": 20,
+     "unit": "250 g",
+     "text": "Hand-poured, 50-hour burn.",
+     "category": "shop.kids-gifts-and-hobbies.gifts-and-crafts"
+    },
+    {
+     "key": "mug",
+     "title": "Hand-thrown mug",
+     "priceCents": 3400,
+     "stock": 12,
+     "unit": "350 mL",
+     "text": "Each one a little different.",
+     "category": "shop.kids-gifts-and-hobbies.gifts-and-crafts"
+    },
+    {
+     "key": "bottle",
+     "title": "Insulated water bottle, 1 L",
+     "priceCents": 3900,
+     "stock": 20,
+     "unit": "1 L",
+     "text": "Cold for 24 hours.",
+     "category": "shop.kids-gifts-and-hobbies.sporting-goods"
+    },
+    {
+     "key": "stick",
+     "title": "Youth hockey stick",
+     "priceCents": 6900,
+     "stock": 8,
+     "unit": "youth",
+     "text": "Mid-kick, 40 flex.",
+     "category": "shop.kids-gifts-and-hobbies.sporting-goods"
+    }
+   ]
+  },
+  {
+   "key": "wine",
+   "type": "seller",
+   "name": "Cellar Door Wine & Spirits",
+   "categories": [
+    "shop.restricted.alcohol"
+   ],
+   "colour": "#7B1F3A",
+   "tier": "trusted",
+   "tagline": "Wine, craft beer and cider — ID checked at the door",
+   "about": "A licensed wine shop with local craft beer and cider. ID is checked at checkout and at the door.",
+   "listings": [
+    {
+     "key": "red",
+     "title": "Cabernet Sauvignon red wine, 750 mL",
+     "priceCents": 2299,
+     "stock": 24,
+     "unit": "750 mL",
+     "text": "Blackcurrant and cedar.",
+     "photo": "demo/listing/wine.red"
+    },
+    {
+     "key": "white",
+     "title": "Riesling white wine, 750 mL",
+     "priceCents": 1899,
+     "stock": 24,
+     "unit": "750 mL",
+     "text": "Off-dry, green apple and lime.",
+     "photo": "demo/listing/wine.white"
+    },
+    {
+     "key": "beer",
+     "title": "Craft pale ale, 6 × 355 mL",
+     "priceCents": 1649,
+     "stock": 30,
+     "unit": "6 × 355 mL",
+     "text": "Citrusy and crisp.",
+     "photo": "demo/listing/wine.beer"
+    },
+    {
+     "key": "cider",
+     "title": "Dry apple cider, 4 × 473 mL",
+     "priceCents": 1399,
+     "stock": 20,
+     "unit": "4 × 473 mL",
+     "text": "Dry and sparkling.",
+     "photo": "demo/listing/wine.cider"
+    }
+   ],
+   "photo": "demo/merchant/wine",
+   "licence": "alcohol"
+  },
+  {
+   "key": "smoke",
+   "type": "seller",
+   "name": "Ember Tobacco & Accessories",
+   "categories": [
+    "shop.restricted.tobacco-and-vape",
+    "shop.restricted.cannabis-accessories"
+   ],
+   "colour": "#546E7A",
+   "tier": "registered",
+   "tagline": "Adults only — ID checked at checkout and the door",
+   "about": "A licensed tobacconist with lighters, papers and storage accessories. Adults only.",
+   "listings": [
+    {
+     "key": "lighter",
+     "title": "Refillable butane lighter",
+     "priceCents": 2400,
+     "stock": 15,
+     "unit": "each",
+     "text": "Windproof jet flame.",
+     "category": "shop.restricted.tobacco-and-vape"
+    },
+    {
+     "key": "papers",
+     "title": "Rolling papers, 50 booklets",
+     "priceCents": 2900,
+     "stock": 20,
+     "unit": "50 booklets",
+     "text": "Unbleached, slow burning.",
+     "category": "shop.restricted.cannabis-accessories"
+    },
+    {
+     "key": "jar",
+     "title": "Airtight storage jar",
+     "priceCents": 1900,
+     "stock": 18,
+     "unit": "250 mL",
+     "text": "UV-blocking glass with a smell-proof seal.",
+     "category": "shop.restricted.cannabis-accessories"
+    }
+   ],
+   "licence": "tobacco"
+  },
+  {
+   "key": "pho",
+   "type": "kitchen",
+   "name": "Little Saigon Pho House",
+   "categories": [
+    "food.format.restaurant-dine-in-and-takeout",
+    "food.service.caterer"
+   ],
+   "colour": "#9A4A1F",
+   "tier": "master",
+   "tagline": "Vietnamese · broth simmered 18 hours",
+   "about": "A family-run Vietnamese kitchen: pho, bun and banh mi, with halal beef and a vegan broth.",
+   "listings": [],
+   "owner": "owner",
+   "cuisines": [
+    "vietnamese"
+   ],
+   "hours": "11:00-22:00",
+   "menu": [
+    {
+     "name": "Starters",
+     "items": [
+      {
+       "name": "Spring rolls (4)",
+       "priceCents": 900,
+       "text": "Pork and shrimp, nuoc cham.",
+       "allergens": [
+        "shellfish",
+        "wheat"
+       ],
+       "dietary": []
+      },
+      {
+       "name": "Fresh salad rolls (2)",
+       "priceCents": 800,
+       "text": "Shrimp, herbs and peanut sauce.",
+       "allergens": [
+        "peanuts",
+        "shellfish"
+       ],
+       "dietary": []
+      }
+     ]
+    },
+    {
+     "name": "Pho & noodles",
+     "items": [
+      {
+       "name": "Pho dac biet",
+       "priceCents": 1700,
+       "text": "Rare beef, brisket and meatballs in an 18-hour broth.",
+       "allergens": [],
+       "dietary": [
+        "popular"
+       ]
+      },
+      {
+       "name": "Vegan pho",
+       "priceCents": 1600,
+       "text": "Mushroom broth, tofu and greens.",
+       "allergens": [
+        "soy"
+       ],
+       "dietary": [
+        "vegan"
+       ]
+      },
+      {
+       "name": "Bun bo Hue",
+       "priceCents": 1800,
+       "text": "Spicy lemongrass beef noodle soup.",
+       "allergens": [
+        "shellfish"
+       ],
+       "dietary": [
+        "spicy"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Banh mi",
+     "items": [
+      {
+       "name": "Grilled pork banh mi",
+       "priceCents": 1100,
+       "text": "Lemongrass pork, pickles and cilantro.",
+       "allergens": [
+        "wheat",
+        "eggs"
+       ],
+       "dietary": []
+      },
+      {
+       "name": "Tofu banh mi",
+       "priceCents": 1000,
+       "text": "Five-spice tofu and pickles.",
+       "allergens": [
+        "wheat",
+        "soy"
+       ],
+       "dietary": [
+        "vegan"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Drinks",
+     "items": [
+      {
+       "name": "Vietnamese iced coffee",
+       "priceCents": 550,
+       "text": "Strong drip coffee and condensed milk.",
+       "allergens": [
+        "milk"
+       ],
+       "dietary": []
+      },
+      {
+       "name": "Fresh lime soda",
+       "priceCents": 450,
+       "text": "Lime, soda and a little sugar.",
+       "allergens": [],
+       "dietary": [
+        "vegan"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "pizza",
+   "type": "kitchen",
+   "name": "Forno Rosso Pizzeria",
+   "categories": [
+    "food.format.restaurant-dine-in-and-takeout",
+    "food.format.takeout-only"
+   ],
+   "colour": "#C62828",
+   "tier": "master",
+   "tagline": "Wood-fired pizza, 90 seconds at 485 °C",
+   "about": "Naples-style pizza from a wood-fired oven, with fresh pasta and tiramisu.",
+   "listings": [],
+   "cuisines": [
+    "pizza",
+    "italian"
+   ],
+   "hours": "00:00-24:00",
+   "menu": [
+    {
+     "name": "Pizza",
+     "items": [
+      {
+       "name": "Margherita",
+       "priceCents": 1600,
+       "text": "San Marzano tomato, fior di latte and basil.",
+       "allergens": [
+        "wheat",
+        "milk"
+       ],
+       "dietary": [
+        "vegetarian",
+        "popular"
+       ]
+      },
+      {
+       "name": "Diavola",
+       "priceCents": 1900,
+       "text": "Spicy salami, chili oil.",
+       "allergens": [
+        "wheat",
+        "milk"
+       ],
+       "dietary": [
+        "spicy"
+       ]
+      },
+      {
+       "name": "Funghi",
+       "priceCents": 1800,
+       "text": "Roasted mushrooms, garlic and thyme.",
+       "allergens": [
+        "wheat",
+        "milk"
+       ],
+       "dietary": [
+        "vegetarian"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Pasta",
+     "items": [
+      {
+       "name": "Cacio e pepe",
+       "priceCents": 1700,
+       "text": "Fresh tonnarelli, pecorino and black pepper.",
+       "allergens": [
+        "wheat",
+        "milk",
+        "eggs"
+       ],
+       "dietary": [
+        "vegetarian"
+       ]
+      },
+      {
+       "name": "Rigatoni alla vodka",
+       "priceCents": 1800,
+       "text": "Tomato, cream and chili.",
+       "allergens": [
+        "wheat",
+        "milk"
+       ],
+       "dietary": []
+      }
+     ]
+    },
+    {
+     "name": "Dessert",
+     "items": [
+      {
+       "name": "Tiramisu",
+       "priceCents": 900,
+       "text": "Mascarpone, espresso and cocoa.",
+       "allergens": [
+        "eggs",
+        "milk",
+        "wheat"
+       ],
+       "dietary": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "curry",
+   "type": "kitchen",
+   "name": "Masala Junction",
+   "categories": [
+    "food.format.restaurant-dine-in-and-takeout",
+    "food.service.caterer",
+    "food.format.grocery-with-hot-counter"
+   ],
+   "colour": "#EF6C00",
+   "tier": "trusted",
+   "tagline": "North Indian curries and tandoor",
+   "about": "Curries, biryani and fresh naan from the tandoor, with a hot counter and catering trays.",
+   "listings": [],
+   "cuisines": [
+    "indian"
+   ],
+   "hours": "11:30-22:30",
+   "menu": [
+    {
+     "name": "Curries",
+     "items": [
+      {
+       "name": "Butter chicken",
+       "priceCents": 1800,
+       "text": "Tandoori chicken in a tomato and butter sauce.",
+       "allergens": [
+        "milk"
+       ],
+       "dietary": [
+        "popular"
+       ]
+      },
+      {
+       "name": "Chana masala",
+       "priceCents": 1500,
+       "text": "Chickpeas in an onion-tomato gravy.",
+       "allergens": [],
+       "dietary": [
+        "vegan"
+       ]
+      },
+      {
+       "name": "Lamb rogan josh",
+       "priceCents": 2100,
+       "text": "Slow-cooked lamb with Kashmiri chili.",
+       "allergens": [
+        "milk"
+       ],
+       "dietary": [
+        "spicy"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "From the tandoor",
+     "items": [
+      {
+       "name": "Garlic naan",
+       "priceCents": 400,
+       "text": "Brushed with garlic butter.",
+       "allergens": [
+        "wheat",
+        "milk"
+       ],
+       "dietary": [
+        "vegetarian"
+       ]
+      },
+      {
+       "name": "Chicken tikka",
+       "priceCents": 1600,
+       "text": "Yogurt-marinated, charred.",
+       "allergens": [
+        "milk"
+       ],
+       "dietary": []
+      }
+     ]
+    },
+    {
+     "name": "Rice",
+     "items": [
+      {
+       "name": "Vegetable biryani",
+       "priceCents": 1600,
+       "text": "Basmati rice layered with vegetables and saffron.",
+       "allergens": [
+        "milk",
+        "tree_nuts"
+       ],
+       "dietary": [
+        "vegetarian"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "ramen",
+   "type": "kitchen",
+   "name": "Night Owl Ramen",
+   "categories": [
+    "food.format.ghost-kitchen",
+    "food.format.takeout-only"
+   ],
+   "colour": "#212121",
+   "tier": "trusted",
+   "tagline": "Ramen until late, every night",
+   "about": "A delivery-first ramen kitchen: tonkotsu, shoyu and a rich miso, open around the clock.",
+   "listings": [],
+   "cuisines": [
+    "ramen"
+   ],
+   "hours": "00:00-24:00",
+   "menu": [
+    {
+     "name": "Ramen",
+     "items": [
+      {
+       "name": "Tonkotsu ramen",
+       "priceCents": 1800,
+       "text": "Pork bone broth, chashu, egg and scallions.",
+       "allergens": [
+        "wheat",
+        "eggs",
+        "soy",
+        "sesame"
+       ],
+       "dietary": [
+        "popular"
+       ]
+      },
+      {
+       "name": "Spicy miso ramen",
+       "priceCents": 1800,
+       "text": "Miso broth, ground pork and chili oil.",
+       "allergens": [
+        "wheat",
+        "soy",
+        "sesame"
+       ],
+       "dietary": [
+        "spicy"
+       ]
+      },
+      {
+       "name": "Shoyu veggie ramen",
+       "priceCents": 1600,
+       "text": "Soy-dashi broth, tofu and greens.",
+       "allergens": [
+        "wheat",
+        "soy"
+       ],
+       "dietary": [
+        "vegan"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Sides",
+     "items": [
+      {
+       "name": "Gyoza (6)",
+       "priceCents": 900,
+       "text": "Pork and cabbage, pan-fried.",
+       "allergens": [
+        "wheat",
+        "soy"
+       ],
+       "dietary": []
+      },
+      {
+       "name": "Karaage",
+       "priceCents": 1100,
+       "text": "Japanese fried chicken, kewpie mayo.",
+       "allergens": [
+        "wheat",
+        "eggs",
+        "soy"
+       ],
+       "dietary": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "diner",
+   "type": "kitchen",
+   "name": "Maple Leaf Diner",
+   "categories": [
+    "food.format.restaurant-dine-in-and-takeout",
+    "food.format.food-truck"
+   ],
+   "colour": "#B71C1C",
+   "tier": "trusted",
+   "tagline": "Burgers, poutine and all-day breakfast",
+   "about": "A classic diner with a food truck on weekends: smash burgers, poutine and breakfast all day.",
+   "listings": [],
+   "cuisines": [
+    "canadian"
+   ],
+   "hours": "07:00-23:00",
+   "menu": [
+    {
+     "name": "Breakfast",
+     "items": [
+      {
+       "name": "Diner breakfast",
+       "priceCents": 1500,
+       "text": "Two eggs, bacon, hash browns and toast.",
+       "allergens": [
+        "eggs",
+        "wheat"
+       ],
+       "dietary": []
+      },
+      {
+       "name": "Buttermilk pancakes",
+       "priceCents": 1300,
+       "text": "Three pancakes with maple syrup.",
+       "allergens": [
+        "eggs",
+        "milk",
+        "wheat"
+       ],
+       "dietary": [
+        "vegetarian"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Burgers & poutine",
+     "items": [
+      {
+       "name": "Double smash burger",
+       "priceCents": 1700,
+       "text": "Two patties, cheddar, pickles and sauce.",
+       "allergens": [
+        "wheat",
+        "milk",
+        "eggs",
+        "mustard"
+       ],
+       "dietary": [
+        "popular"
+       ]
+      },
+      {
+       "name": "Classic poutine",
+       "priceCents": 1200,
+       "text": "Fries, cheese curds and gravy.",
+       "allergens": [
+        "milk",
+        "wheat"
+       ],
+       "dietary": [
+        "vegetarian"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Shakes",
+     "items": [
+      {
+       "name": "Vanilla milkshake",
+       "priceCents": 750,
+       "text": "Hand-spun.",
+       "allergens": [
+        "milk"
+       ],
+       "dietary": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "injera",
+   "type": "kitchen",
+   "name": "Habesha Kitchen",
+   "categories": [
+    "food.format.home-based-food-business"
+   ],
+   "colour": "#6D4C41",
+   "tier": "registered",
+   "tagline": "Ethiopian stews and injera",
+   "about": "Home-style Ethiopian cooking from a licensed home kitchen: doro wat, misir and fresh injera.",
+   "listings": [],
+   "cuisines": [
+    "ethiopian"
+   ],
+   "hours": "12:00-21:00",
+   "menu": [
+    {
+     "name": "Platters",
+     "items": [
+      {
+       "name": "Veggie combo platter",
+       "priceCents": 2000,
+       "text": "Five vegetable stews on injera.",
+       "allergens": [
+        "wheat"
+       ],
+       "dietary": [
+        "vegan",
+        "popular"
+       ]
+      },
+      {
+       "name": "Doro wat platter",
+       "priceCents": 2200,
+       "text": "Spiced chicken stew with egg, on injera.",
+       "allergens": [
+        "wheat",
+        "eggs"
+       ],
+       "dietary": [
+        "spicy"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Extras",
+     "items": [
+      {
+       "name": "Extra injera",
+       "priceCents": 300,
+       "text": "One fresh injera.",
+       "allergens": [
+        "wheat"
+       ],
+       "dietary": [
+        "vegan"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "tacos",
+   "type": "kitchen",
+   "name": "La Lupita Taqueria",
+   "categories": [
+    "food.format.food-truck",
+    "food.format.takeout-only"
+   ],
+   "colour": "#2E7D32",
+   "tier": "trusted",
+   "tagline": "Street tacos on hand-pressed tortillas",
+   "about": "A taco truck and takeout window: al pastor, birria and fish tacos on fresh corn tortillas.",
+   "listings": [],
+   "cuisines": [
+    "mexican"
+   ],
+   "hours": "11:00-23:00",
+   "menu": [
+    {
+     "name": "Tacos",
+     "items": [
+      {
+       "name": "Al pastor tacos (3)",
+       "priceCents": 1300,
+       "text": "Marinated pork, pineapple and salsa verde.",
+       "allergens": [],
+       "dietary": [
+        "popular"
+       ]
+      },
+      {
+       "name": "Birria tacos (3) with consommé",
+       "priceCents": 1600,
+       "text": "Slow-braised beef, cheese and dipping broth.",
+       "allergens": [
+        "milk"
+       ],
+       "dietary": []
+      },
+      {
+       "name": "Baja fish tacos (3)",
+       "priceCents": 1500,
+       "text": "Battered fish, slaw and chipotle crema.",
+       "allergens": [
+        "fish",
+        "wheat",
+        "milk",
+        "eggs"
+       ],
+       "dietary": []
+      }
+     ]
+    },
+    {
+     "name": "Sides",
+     "items": [
+      {
+       "name": "Elote",
+       "priceCents": 600,
+       "text": "Grilled corn, crema and cotija.",
+       "allergens": [
+        "milk"
+       ],
+       "dietary": [
+        "vegetarian"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "mezze",
+   "type": "kitchen",
+   "name": "Cedar & Sumac",
+   "categories": [
+    "food.format.restaurant-dine-in-and-takeout",
+    "food.service.juice-and-smoothies"
+   ],
+   "colour": "#00796B",
+   "tier": "trusted",
+   "tagline": "Lebanese mezze, shawarma and fresh juice",
+   "about": "Shawarma, falafel and mezze platters, with fresh-pressed juices and smoothies.",
+   "listings": [],
+   "cuisines": [
+    "middle_eastern"
+   ],
+   "hours": "10:00-22:00",
+   "menu": [
+    {
+     "name": "Mezze",
+     "items": [
+      {
+       "name": "Hummus & warm pita",
+       "priceCents": 900,
+       "text": "Tahini, olive oil and sumac.",
+       "allergens": [
+        "sesame",
+        "wheat"
+       ],
+       "dietary": [
+        "vegan"
+       ]
+      },
+      {
+       "name": "Falafel plate",
+       "priceCents": 1400,
+       "text": "Six falafel, salad and garlic sauce.",
+       "allergens": [
+        "sesame",
+        "wheat"
+       ],
+       "dietary": [
+        "vegan",
+        "popular"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Shawarma",
+     "items": [
+      {
+       "name": "Chicken shawarma wrap",
+       "priceCents": 1300,
+       "text": "Garlic toum, pickles and fries.",
+       "allergens": [
+        "wheat",
+        "eggs"
+       ],
+       "dietary": []
+      },
+      {
+       "name": "Beef shawarma plate",
+       "priceCents": 1800,
+       "text": "Rice, salad, tahini and pita.",
+       "allergens": [
+        "sesame",
+        "wheat"
+       ],
+       "dietary": []
+      }
+     ]
+    },
+    {
+     "name": "Juice & smoothies",
+     "items": [
+      {
+       "name": "Green juice",
+       "priceCents": 800,
+       "text": "Kale, cucumber, apple and ginger.",
+       "allergens": [],
+       "dietary": [
+        "vegan"
+       ]
+      },
+      {
+       "name": "Mango smoothie",
+       "priceCents": 750,
+       "text": "Mango, banana and yogurt.",
+       "allergens": [
+        "milk"
+       ],
+       "dietary": [
+        "vegetarian"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "sweets",
+   "type": "kitchen",
+   "name": "Sugar & Spoon Dessert Bar",
+   "categories": [
+    "food.service.coffee-and-dessert",
+    "food.service.bakery"
+   ],
+   "colour": "#EC407A",
+   "tier": "registered",
+   "tagline": "Cakes, gelato and coffee until midnight",
+   "about": "A dessert bar with cake slices, gelato, cookies and espresso drinks.",
+   "listings": [],
+   "cuisines": [
+    "dessert"
+   ],
+   "hours": "12:00-24:00",
+   "menu": [
+    {
+     "name": "Cakes & cookies",
+     "items": [
+      {
+       "name": "Chocolate fudge cake slice",
+       "priceCents": 850,
+       "text": "Three layers, ganache.",
+       "allergens": [
+        "eggs",
+        "milk",
+        "wheat"
+       ],
+       "dietary": [
+        "vegetarian",
+        "popular"
+       ]
+      },
+      {
+       "name": "Brown butter cookies (4)",
+       "priceCents": 900,
+       "text": "Sea salt and dark chocolate.",
+       "allergens": [
+        "eggs",
+        "milk",
+        "wheat"
+       ],
+       "dietary": [
+        "vegetarian"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Gelato",
+     "items": [
+      {
+       "name": "Pistachio gelato, pint",
+       "priceCents": 1200,
+       "text": "Made in-house.",
+       "allergens": [
+        "milk",
+        "tree_nuts"
+       ],
+       "dietary": [
+        "vegetarian"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Coffee",
+     "items": [
+      {
+       "name": "Oat latte",
+       "priceCents": 600,
+       "text": "Double shot.",
+       "allergens": [],
+       "dietary": [
+        "vegan"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "mealprep",
+   "type": "kitchen",
+   "name": "Fuel Box Meal Prep",
+   "categories": [
+    "food.service.meal-prep-weekly-plans",
+    "food.format.ghost-kitchen"
+   ],
+   "colour": "#43A047",
+   "tier": "trusted",
+   "tagline": "Chef-made meals for your week",
+   "about": "Weekly meal plans and single meals, balanced and ready in two minutes.",
+   "listings": [],
+   "cuisines": [
+    "meal_kits",
+    "other"
+   ],
+   "hours": "08:00-20:00",
+   "menu": [
+    {
+     "name": "Single meals",
+     "items": [
+      {
+       "name": "Chicken, rice & broccoli",
+       "priceCents": 1300,
+       "text": "Grilled chicken, jasmine rice and broccoli.",
+       "allergens": [
+        "soy"
+       ],
+       "dietary": [
+        "gluten_free",
+        "popular"
+       ]
+      },
+      {
+       "name": "Turkey chili",
+       "priceCents": 1200,
+       "text": "Beans, peppers and a little heat.",
+       "allergens": [],
+       "dietary": [
+        "gluten_free",
+        "spicy"
+       ]
+      },
+      {
+       "name": "Tofu power bowl",
+       "priceCents": 1250,
+       "text": "Quinoa, roasted veg and tahini.",
+       "allergens": [
+        "soy",
+        "sesame"
+       ],
+       "dietary": [
+        "vegan"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Weekly plans",
+     "items": [
+      {
+       "name": "5-meal plan",
+       "priceCents": 5900,
+       "text": "Five chef-chosen meals for the week.",
+       "allergens": [
+        "soy",
+        "milk"
+       ],
+       "dietary": []
+      },
+      {
+       "name": "10-meal plan",
+       "priceCents": 10900,
+       "text": "Ten meals, two a day for five days.",
+       "allergens": [
+        "soy",
+        "milk"
+       ],
+       "dietary": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "brewpub",
+   "type": "kitchen",
+   "name": "Copper Kettle Brewpub",
+   "categories": [
+    "food.service.alcohol-with-food",
+    "food.format.restaurant-dine-in-and-takeout"
+   ],
+   "colour": "#795548",
+   "tier": "registered",
+   "tagline": "Pub food and house beer to go",
+   "about": "A brewpub kitchen: wings, fish and chips and house beer with your meal (ID checked at the door).",
+   "listings": [],
+   "cuisines": [
+    "canadian",
+    "other"
+   ],
+   "hours": "11:00-23:00",
+   "licence": "alcohol",
+   "menu": [
+    {
+     "name": "Pub food",
+     "items": [
+      {
+       "name": "Fish & chips",
+       "priceCents": 1900,
+       "text": "Beer-battered cod, fries and tartar sauce.",
+       "allergens": [
+        "fish",
+        "wheat",
+        "eggs"
+       ],
+       "dietary": [
+        "popular"
+       ]
+      },
+      {
+       "name": "Chicken wings (1 lb)",
+       "priceCents": 1600,
+       "text": "Salt & pepper or hot.",
+       "allergens": [],
+       "dietary": [
+        "spicy"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "Beer to go",
+     "items": [
+      {
+       "name": "House lager, 4 × 473 mL",
+       "priceCents": 1600,
+       "text": "Crisp and clean.",
+       "allergens": [
+        "wheat"
+       ],
+       "dietary": [
+        "alcohol"
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
