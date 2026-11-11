@@ -199,6 +199,7 @@ description `terraform-state` and later runs adopt that user. Still no bucket to
 |---|---|---|---|---|
 | 1 | `ovh-vps` | `plan` | — | approve the run (*Review deployments* › `ovh-vps` › Approve); the state bucket is created (versioned) if missing; the summary lists what would be created: the instance, 2 buckets, 2 S3 users |
 | 2 | `ovh-vps` | `provision-and-deploy` | `build-images` on | approve; Terraform applies (the instance comes up in a few minutes with its public IPv4), the seven images are built and pushed to `ghcr.io/OWNER/northline` (≈ 20 min, in parallel), then the deploy job: k3s is installed over SSH (idempotent; `ufw` on the host: SSH only from `OVH_ADMIN_CIDRS` and the runner, 80/443), the Secrets, cert-manager, Envoy Gateway, CloudNativePG, `northline-data` and `northline` are installed (≈ 15 min the first time), rollouts are waited for and the smoke test runs |
+| 3 | `ovh-vps` | `seed-demo` | `reset` off (on: wipe the demo data first) | approve; a Job from the deployed api image fills the database with the one-click demo data (S-194, [demo.md § One-click demo data](demo.md#one-click-demo-data)): every category with verified businesses, the market live, six accounts, history. The summary has the counts per department; the accounts' passwords and authenticator keys stay in the cluster (`secret/northline-demo-accounts`) — read them on your Mac with `make demo-creds ENV=ovh-vps` |
 
 Each job that reads the state first runs **State keys**: the stored `TF_STATE_*` keys, or — when they are missing or
 refused — the `terraform-state` user's keys from the API (found or created, masked in the log). So the pipeline works
@@ -210,6 +211,7 @@ after creating them, run **`deploy`** again with `build-images` off (≈ 5 min):
 configuration, the Studio's and the consumer's sign-in pages, the consumer home and the console over HTTPS. A failing
 step names what failed; the logs of a pod: run the [local alternative](#the-local-alternative-no-github-actions)'s
 `kubectl` commands from your Mac (`ssh -i .ovh/ovh-vps-deploy-key ubuntu@IPv4` reaches the instance).
+
 
 Later: `deploy` after each change (the images are tagged with the commit's short sha; `image-tag` + `build-images`
 off redeploys an existing tag), `down` / `up` between demos (§ [Between demos](#between-demos)), `plan` / `apply`
