@@ -151,7 +151,7 @@ seed_cluster() {
   if [ -n "${DEMO_SUMMARY_FILE:-}" ]; then
     sed -n '/^### Demo data/,$p' "$tmp/log" >"$DEMO_SUMMARY_FILE"
   fi
-  # The search read model catches up by itself: the api's reconcile sweep re-indexes merchants whose rows changed
+  # The search read model catches up by itself: the worker's reconcile sweep re-indexes merchants whose rows changed
   # (docs/runbooks/search.md § 7), within a minute or two of the commit.
 }
 

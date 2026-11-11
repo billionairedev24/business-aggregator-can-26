@@ -63,7 +63,7 @@ live states) and moves today's jobs and tonight's run to the new day; reviews ar
 deletes every demo row and everything made with them through the product (orders a demo customer placed, bookings
 with a demo provider), except what the database keeps by design: the payments ledger and the audit log are
 append-only (their triggers are never bypassed). The accounts' credentials survive a reset (`ROTATE=1
-scripts/demo/seed-demo.sh …` makes new ones). Search results catch up within a minute or two (the api's reconcile
+scripts/demo/seed-demo.sh …` makes new ones). Search results catch up within a minute or two (the worker's reconcile
 sweep, [search.md § 7](search.md)).
 
 **Safety.** The tool (`ca.northline.tools.demo.DemoSeed`, run from the api image as a one-off Job) refuses to run

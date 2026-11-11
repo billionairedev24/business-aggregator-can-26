@@ -212,7 +212,6 @@ configuration, the Studio's and the consumer's sign-in pages, the consumer home 
 step names what failed; the logs of a pod: run the [local alternative](#the-local-alternative-no-github-actions)'s
 `kubectl` commands from your Mac (`ssh -i .ovh/ovh-vps-deploy-key ubuntu@IPv4` reaches the instance).
 
-
 Later: `deploy` after each change (the images are tagged with the commit's short sha; `image-tag` + `build-images`
 off redeploys an existing tag), `down` / `up` between demos (§ [Between demos](#between-demos)), `plan` / `apply`
 after changing a variable. `ovh-mks` is the same with `target = ovh-mks` (its `apply` takes ≈ 15–25 minutes).
