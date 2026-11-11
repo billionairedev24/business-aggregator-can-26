@@ -129,6 +129,11 @@ class DemoSeedTest {
             assertThat(db.count("select count(*) from region.regions where kind = 'market' and stage = 'live'"))
                     .isEqualTo(1);
             assertThat(db.count("select count(*) from region.zones")).isPositive();
+            // the customers' addresses are complete enough for the checkout (postal code, delivery zone)
+            assertThat(
+                            db.count(
+                                    "select count(*) from identity.addresses where id like '01JDEM%' and postal is not null and zone_id is not null"))
+                    .isEqualTo(2);
             assertThat(db.count("select count(*) from catalogue.media where id like '01JDEM%'"))
                     .isGreaterThan(200);
             assertThat(db.count(

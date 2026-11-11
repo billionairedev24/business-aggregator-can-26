@@ -16,6 +16,7 @@ import tools.jackson.databind.json.JsonMapper;
  */
 record DemoPlan(
         Map<String, Account> accounts,
+        Map<String, String> postalCodes,
         List<String> reviewers,
         List<Application> applications,
         List<Business> businesses) {
@@ -24,6 +25,7 @@ record DemoPlan(
 
     DemoPlan {
         accounts = Map.copyOf(accounts);
+        postalCodes = Map.copyOf(postalCodes);
         reviewers = List.copyOf(reviewers);
         applications = List.copyOf(applications);
         businesses = List.copyOf(businesses);

@@ -143,10 +143,10 @@ final class DemoAccounts {
         var zone = market.deliveryZoneAt(db, p[0], p[1]).orElse(null);
         db.update(
                 """
-                insert into identity.addresses (id, user_id, street, unit, city, province, geom, zone_id, is_default, label, created_at)
-                values (?, ?, ?, ?, ?, ?, ST_GeogFromText(?), ?, true, ?, now())
+                insert into identity.addresses (id, user_id, street, unit, city, province, postal, geom, zone_id, is_default, label, created_at)
+                values (?, ?, ?, ?, ?, ?, ?, ST_GeogFromText(?), ?, true, ?, now())
                 on conflict (id) do update set street = excluded.street, unit = excluded.unit, city = excluded.city,
-                  province = excluded.province, geom = excluded.geom, zone_id = excluded.zone_id, deleted_at = null
+                  province = excluded.province, postal = excluded.postal, geom = excluded.geom, zone_id = excluded.zone_id, deleted_at = null
                 """,
                 addressId(key),
                 userId,
@@ -154,9 +154,24 @@ final class DemoAccounts {
                 address.unit(),
                 market.city(),
                 market.province(),
+                postalCode(market),
                 DemoMarket.point(p[0], p[1]),
                 zone,
                 address.label());
+    }
+
+    /** The checkout needs a postal code: DEMO_POSTAL_CODE, else the plan's code for the market's province. */
+    private String postalCode(DemoMarket market) {
+        var given = env.get("DEMO_POSTAL_CODE");
+        if (given != null && !given.isBlank()) {
+            return given.strip().toUpperCase(Locale.ROOT);
+        }
+        var code = plan.postalCodes().get(market.province());
+        if (code == null) {
+            throw new IllegalStateException(
+                    "plan.json has no postal code for province " + market.province() + "; set DEMO_POSTAL_CODE");
+        }
+        return code;
     }
 
     static String addressId(String accountKey) {

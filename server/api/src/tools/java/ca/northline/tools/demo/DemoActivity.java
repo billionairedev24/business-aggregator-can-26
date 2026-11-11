@@ -233,7 +233,8 @@ final class DemoActivity {
         var pool = b.provider() ? PROVIDER_REVIEWS : b.seller() ? SHOP_REVIEWS : KITCHEN_REVIEWS;
         for (int i = 0; i < n; i++) {
             var h = Math.floorMod((b.key() + i).hashCode(), 100);
-            // 4 or 5 stars, mostly 5: every average stays well above the trust rating floor (4.2 by default, S-93), which
+            // 4 or 5 stars, mostly 5: every average stays well above the trust rating floor (4.2 by default, S-93),
+            // which
             // would otherwise hide the business from search and the category pages
             var rating = i % (b.tier().equals("registered") ? 3 : 4) == 2 ? 4 : 5;
             var author = DemoAccounts.reviewerId(Math.floorMod(b.key().hashCode() + i, reviewers));

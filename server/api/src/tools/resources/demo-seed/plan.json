@@ -69,6 +69,22 @@
    }
   }
  },
+ "postalCodes": {
+  "$comment": "A postal code in each province for the demo customers' addresses (the checkout needs one); the seed takes the market's province's (DEMO_POSTAL_CODE overrides). Format data, not places: only the province's letter is meaningful.",
+  "AB": "T2P 0A1",
+  "BC": "V6B 0A1",
+  "MB": "R3C 0A1",
+  "NB": "E1C 0A1",
+  "NL": "A1C 0A1",
+  "NS": "B3H 0A1",
+  "NT": "X1A 0A1",
+  "NU": "X0A 0A1",
+  "ON": "M5V 0A1",
+  "PE": "C1A 0A1",
+  "QC": "H2Y 0A1",
+  "SK": "S4P 0A1",
+  "YT": "Y1A 0A1"
+ },
  "reviewers": [
   "Priya K.",
   "Marc-André L.",
