@@ -144,6 +144,47 @@ class FakePlaces implements PlacesAutocomplete {
      */
     @Override
     public Optional<PlaceParts> postalCode(String code, @Nullable String country, Locale locale) {
+        return exactOrPrefix(code, country).or(() -> sameCanadianArea(code, country));
+    }
+
+    private static final java.util.regex.Pattern CANADIAN_POSTAL =
+            java.util.regex.Pattern.compile("[ABCEGHJ-NPRSTVXY]\\d[A-Z](\\d[A-Z]\\d)?");
+
+    /**
+     * A Canadian code that isn't in the fixtures (T2M 0L4): the fixture sharing its forward sortation area (T2M), else
+     * its first two characters (T2 = Calgary, T5 = Edmonton), so any real code near a fixture city resolves to that
+     * city's area. The code is kept as typed.
+     */
+    private static Optional<PlaceParts> sameCanadianArea(String code, @Nullable String country) {
+        var typed = compact(code);
+        if ((country != null && !"CA".equalsIgnoreCase(country)) || !CANADIAN_POSTAL.matcher(typed).matches()) {
+            return Optional.empty();
+        }
+        var canadian = FIXTURES.stream().filter(p -> p.postalCode() != null).toList();
+        return canadian.stream()
+                .filter(p -> compact(p.postalCode()).startsWith(typed.substring(0, 3)))
+                .findFirst()
+                .or(() -> canadian.stream()
+                        .filter(p -> compact(p.postalCode()).startsWith(typed.substring(0, 2)))
+                        .findFirst())
+                .map(p -> new PlaceParts(
+                        "postal:CA-" + typed,
+                        "%s, %s %s".formatted(p.city(), p.province(), formatCanadian(typed)),
+                        null,
+                        null,
+                        null,
+                        p.city(),
+                        p.province(),
+                        formatCanadian(typed),
+                        "CA",
+                        p.point()));
+    }
+
+    private static String formatCanadian(String compact) {
+        return compact.length() == 6 ? compact.substring(0, 3) + " " + compact.substring(3) : compact;
+    }
+
+    private static Optional<PlaceParts> exactOrPrefix(String code, @Nullable String country) {
         var typed = compact(code);
         return java.util.stream.Stream.concat(FIXTURES.stream(), POSTAL_ABROAD.stream())
                 .filter(p -> p.postalCode() != null)

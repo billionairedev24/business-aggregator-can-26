@@ -21,6 +21,10 @@
 #                         for DNS in the summary
 #   provision-and-deploy  apply, then deploy
 #   down / up             scripts/ovh/scale.sh (apps to 0 and back; ovh-mks also the node pool)
+#   diagnose              read-only report in the log: pods and restarts, the event outbox, the worker's search
+#                         indexing, Kafka's search-indexer group, Meilisearch counts (scripts/ovh/diagnose.sh)
+#   add-ssh-key           ovh-vps: installs ssh-public-key for ubuntu with the pipeline's own key — the way back in
+#                         when your copy of .ovh/ovh-vps-deploy-key is lost (docs/runbooks/ovh.md § Lost the SSH key)
 #   destroy               releases out of the cluster, buckets emptied, terraform destroy (fake data only), then the
 #                         target's state; the state bucket and its user too when no other target's state is left
 #
@@ -41,7 +45,7 @@ on:
         description: What to do
         type: choice
         default: plan
-        options: [plan, apply, deploy, provision-and-deploy, down, up, destroy]
+        options: [plan, apply, deploy, provision-and-deploy, down, up, diagnose, add-ssh-key, destroy]
       image-tag:
         description: Image tag (empty = the short commit sha of this run)
         type: string
@@ -50,6 +54,10 @@ on:
         description: "deploy: build and push the images first (off = they exist already for image-tag)"
         type: boolean
         default: true
+      ssh-public-key:
+        description: "add-ssh-key only: the line of your .pub file (ssh-ed25519 AAAA… — never the private key)"
+        type: string
+        default: ""
       confirm-destroy:
         description: "destroy only: type the target's name (ovh-vps or ovh-mks)"
         type: string
@@ -83,6 +91,7 @@ jobs:
       images: ${{ steps.p.outputs.images }}
       deploy: ${{ steps.p.outputs.deploy }}
       scale: ${{ steps.p.outputs.scale }}
+      ops: ${{ steps.p.outputs.ops }}
     steps:
       - id: p
         env:
@@ -102,17 +111,18 @@ jobs:
           if [ -n "$REGISTRY_VAR" ]; then registry=$REGISTRY_VAR login=password
           else registry="ghcr.io/$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')/northline" login=ghcr
           fi
-          provision=false images=false deploy=false scale=false
+          provision=false images=false deploy=false scale=false ops=false
           case "$ACTION" in
             (plan | apply | destroy) provision=true ;;
             (deploy) deploy=true ;;
             (provision-and-deploy) provision=true deploy=true ;;
             (down | up) scale=true ;;
+            (diagnose | add-ssh-key) ops=true ;;
           esac
           if [ "$deploy" = true ] && [ "$BUILD" = true ]; then images=true; fi
           {
             echo "tag=$TAG"; echo "registry=$registry"; echo "registry_server=${registry%%/*}"; echo "login=$login"
-            echo "provision=$provision"; echo "images=$images"; echo "deploy=$deploy"; echo "scale=$scale"
+            echo "provision=$provision"; echo "images=$images"; echo "deploy=$deploy"; echo "scale=$scale"; echo "ops=$ops"
           } >> "$GITHUB_OUTPUT"
           echo "**$ACTION** on **$TARGET** · images \`$registry/<app>:$TAG\`" >> "$GITHUB_STEP_SUMMARY"
 
@@ -406,6 +416,71 @@ jobs:
         run: |
           AUTO_APPROVE=1 scripts/ovh/scale.sh "$ACTION" "$TARGET"
           scripts/ovh/scale.sh status "$TARGET"
+      - name: Close the runner's access
+        if: always()
+        run: scripts/ovh/ci.sh close "$TARGET"
+
+  # diagnose / add-ssh-key: read-only report, or a public key appended to ubuntu's authorized_keys (ovh-vps). Approval-
+  # gated like every job here (the target's Environment).
+  ops:
+    name: ${{ inputs.action }}
+    needs: prepare
+    if: needs.prepare.outputs.ops == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: ${{ inputs.target }}
+    permissions:
+      contents: read
+    env:
+      # S-160: where (us-east-va — the default —, us-west-or: OVHcloud US, demo data only; ca-bhs: OVHcloud Canada). It
+      # decides the API endpoint, regions and S3 endpoint (infra/terraform/stacks/ovh/locations.json).
+      OVH_LOCATION: ${{ vars.OVH_LOCATION || 'us-east-va' }}
+      OVH_ENDPOINT: ${{ vars.OVH_ENDPOINT }} # S-155's setting, only checked against the location (scripts/ovh/ci.sh)
+      OVH_APPLICATION_KEY: ${{ secrets.OVH_APPLICATION_KEY }}
+      OVH_APPLICATION_SECRET: ${{ secrets.OVH_APPLICATION_SECRET }}
+      OVH_CONSUMER_KEY: ${{ secrets.OVH_CONSUMER_KEY }}
+      OVH_CLIENT_ID: ${{ secrets.OVH_CLIENT_ID }}
+      OVH_CLIENT_SECRET: ${{ secrets.OVH_CLIENT_SECRET }}
+      OVH_SERVICE_NAME: ${{ vars.OVH_SERVICE_NAME }}
+      OVH_DOMAIN: ${{ vars.OVH_DOMAIN }}
+      OVH_BUCKET_SUFFIX: ${{ vars.OVH_BUCKET_SUFFIX }}
+      OVH_TFVARS: ${{ vars.OVH_TFVARS }}
+      OVH_SERVER: ${{ vars.OVH_SERVER }} # ovh-vps: instance (default; made by Terraform) or vps (ordered in the console)
+      OVH_INSTANCE_FLAVOR: ${{ vars.OVH_INSTANCE_FLAVOR }}
+      OVH_SSH_PUBLIC_KEY: ${{ vars.OVH_SSH_PUBLIC_KEY }}
+      OVH_VPS_SERVICE_NAME: ${{ vars.OVH_VPS_SERVICE_NAME }}
+      OVH_ADMIN_CIDRS: ${{ vars.OVH_ADMIN_CIDRS }}
+      OVH_EDGE_FIREWALL: ${{ vars.OVH_EDGE_FIREWALL }}
+      OVH_API_ALLOWED_CIDRS: ${{ vars.OVH_API_ALLOWED_CIDRS }}
+      OVH_NODE_COUNT: ${{ vars.OVH_NODE_COUNT }}
+      OVH_NODE_FLAVOR: ${{ vars.OVH_NODE_FLAVOR }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      TF_STATE_ACCESS_KEY: ${{ secrets.TF_STATE_ACCESS_KEY }} # → AWS_* by the "State keys" step (S-161)
+      TF_STATE_SECRET_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
+      OVH_VPS_SSH_PRIVATE_KEY: ${{ secrets.OVH_VPS_SSH_PRIVATE_KEY }}
+      OVH_VPS_KNOWN_HOSTS: ${{ secrets.OVH_VPS_KNOWN_HOSTS }}
+      ACTION: ${{ inputs.action }}
+      NEW_SSH_PUBLIC_KEY: ${{ inputs.ssh-public-key }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+      - name: State keys
+        run: scripts/ovh/tf-state.sh keys "$TARGET"
+      - name: Terraform variables and state
+        run: |
+          scripts/ovh/ci.sh tfvars "$TARGET"
+          scripts/ovh/tf-state.sh init "$TARGET"
+      - name: Cluster access
+        run: scripts/ovh/ci.sh open "$TARGET" kubeconfig
+      - name: Install the SSH key
+        if: inputs.action == 'add-ssh-key'
+        run: scripts/ovh/ci.sh add-key "$TARGET"
+      - name: Diagnose (read-only)
+        if: inputs.action == 'diagnose'
+        run: scripts/ovh/diagnose.sh "$TARGET"
       - name: Close the runner's access
         if: always()
         run: scripts/ovh/ci.sh close "$TARGET"
