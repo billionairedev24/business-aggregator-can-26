@@ -2,10 +2,73 @@
 
 A 15-minute demo of the marketplace for prospective clients, on the GCP dry run ([dryrun-gcp.md](dryrun-gcp.md)), on
 OVHcloud ([ovh.md](ovh.md): `ENV=ovh-vps` or `ENV=ovh-mks` wherever this page says `ENV=dryrun`) or rehearsed on a
-laptop. The demo marketplace — businesses, listings, customers, their orders, bookings and reviews — is
-made **through the product** by `make demo-data`, never from the dev seed: the seed's personas have published
-credentials and `DevSeedGuard` refuses it outside a local database (DECISIONS 2026-10-18, GCP dry run). Every person
-and business in it is fake.
+laptop. Every person and business in the demo data is fake. There are two ways to fill a demo environment:
+
+- **One-click demo data** (S-194, next section) — the whole marketplace written straight into the database by one
+  pipeline action, no manual step. Use this to test every flow end to end.
+- **`make demo-data`** (sections 1–10) — a smaller marketplace made **through the product** (sign-ups, onboarding,
+  approvals), which needs a Mailpit inbox, Stripe test keys and a first console admin. Use it to rehearse the
+  onboarding story. Neither uses the dev seed: its personas have published credentials and `DevSeedGuard` refuses it
+  outside a local database (DECISIONS 2026-10-18, GCP dry run).
+
+## One-click demo data
+
+**On OVHcloud** (after a `deploy`): **Actions › ovh › Run workflow** › `target` = `ovh-vps` (or `ovh-mks`), `action` =
+**`seed-demo`** (tick `reset` to wipe the demo data and seed again) › approve the run. About two minutes. Then, on
+your Mac:
+
+```sh
+make demo-creds ENV=ovh-vps     # each account: email, password, a current authenticator code and the key
+```
+
+`demo-creds` reads the Kubernetes Secret `northline-demo-accounts` over SSH (`ssh -i .ovh/ovh-vps-deploy-key
+ubuntu@<IPv4>`; the IPv4 from `OVH_HOST`, else Terraform's output `vps`); for `ovh-mks` through `kubectl`'s current
+context. Add each key to an authenticator app ("enter a setup key", time-based) or type the printed code. **Locally**:
+`make demo-seed ENV=local` (against the stack of `make up`; `RESET=true` to wipe first), then `make demo-creds
+ENV=local` (the file `.demo/local-accounts.env`, mode 600, git-ignored).
+
+**What it makes** (`server/api/src/tools/resources/demo-seed/plan.json`; the run's summary lists the counts):
+
+| | |
+|---|---|
+| businesses | 79, all **verified and live** (every check passed, approved, page published), in the configured default market: 45 providers, 23 shops, 11 kitchens |
+| coverage | **every one of the 162 categories** the consumer site links to (all Services groups, Shop departments and Food formats and services) has at least one business with a priced listing; several in the main ones (3 bakeries, 3 grocers, 2 butchers, 3 mechanics, 3 house cleaners, 3 barbers, 3 tutors, 3 plumbers, 11 kitchens) |
+| listings | 156 services (prices, durations, instant booking), 90 products (stock on today's pooled run), 56 dishes on live menus; a photo from the photo library on each ([photos.md](photos.md)): the demo slot when the library has one, else the category's — none drawn |
+| hours | providers bookable every day (Mon–Sat 8–19, Sun 10–16, the market's time); kitchens open every day, two around the clock, so some are always **open now** |
+| reviews | 3–10 per business (529), ratings mostly 4–5 |
+| customer history | the demo customer: two delivered orders, a food order, two signed-off and reviewed bookings, an upcoming visit |
+| Studio | the owner's businesses (a mechanic, a cleaner and a tutor — providers —, a bakery and an auto-parts shop — sellers —, a kitchen): today's jobs, orders to pack on tonight's run, an open quote request, an open dispute, low stock, an insurance renewal due, 12 weeks of earnings |
+| console | a submitted application in the verification queue, a dispute escalated to an agent, a flagged listing in listing vetting |
+| market | the configured default market (`DEMO_MARKET`, else the first market of `REGION_DEFAULT_PROVINCE` / `SEARCH_DEFAULT_MARKET`) set **live**, with delivery and service zones drawn around its centre when it has none. Nothing names a place: businesses are spread around the market's centre, so pages work without a location and "near {city}" |
+
+**Accounts** (passwords and keys made at seed time, never committed or printed in a log):
+
+| key | email | app | for |
+|---|---|---|---|
+| `admin` | admin@demo.northline.test | console | every console role: approve applications, disputes, vetting |
+| `reviewer` | reviewer@demo.northline.test | console | trust & safety |
+| `owner` | owner@demo.northline.test | Studio | the owner of six businesses of every type (switch business in the account menu) |
+| `applicant` | applicant@demo.northline.test | Studio | no business yet: the live onboarding |
+| `customer` | shopper@demo.northline.test | consumer | orders, bookings, reviews; an address in the market |
+| `customer2` | avery@demo.northline.test | consumer | a second customer with an address |
+
+**Payments and identity without Stripe.** With no `STRIPE_SECRET_KEY` the api uses its fake payment gateway and the
+deploy puts identity and age checks on the local fakes ([ovh.md § 6](ovh.md#6-email-needed-stripe-and-twilio-optional)):
+checkout, booking and the escrow complete without Stripe, and the seeded businesses are already verified, so nothing
+waits on Stripe's hosted pages. What still needs Stripe: payouts to a real (test) bank account and Stripe's own
+dashboards. What needs a person: the live onboarding of a *new* business (the applicant), as in the demo script.
+
+**Re-running.** Idempotent: the ids come from the plan's keys, so a re-run refreshes the same rows (prices, stock,
+live states) and moves today's jobs and tonight's run to the new day; reviews are immutable (V073) and stay. `reset`
+deletes every demo row and everything made with them through the product (orders a demo customer placed, bookings
+with a demo provider), except what the database keeps by design: the payments ledger and the audit log are
+append-only (their triggers are never bypassed). The accounts' credentials survive a reset (`ROTATE=1
+scripts/demo/seed-demo.sh …` makes new ones). Search results catch up within a minute or two (the worker's reconcile
+sweep, [search.md § 7](search.md)).
+
+**Safety.** The tool (`ca.northline.tools.demo.DemoSeed`, run from the api image as a one-off Job) refuses to run
+without `NORTHLINE_DEMO_SEED=true` and under any `staging` or `prod` profile or environment; the chart never sets the
+flag. It writes only through the tables' constraints and V016's triggers.
 
 ## Contents
 
