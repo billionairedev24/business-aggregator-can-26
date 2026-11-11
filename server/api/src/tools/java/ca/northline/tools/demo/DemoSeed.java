@@ -40,7 +40,10 @@ public final class DemoSeed {
         var env = new LinkedHashMap<>(System.getenv());
         System.getProperties().forEach((k, v) -> {
             var key = String.valueOf(k);
-            if (key.startsWith("DEMO_") || key.startsWith("DB_") || key.equals("TOTP_KEY") || key.startsWith("STORAGE_")) {
+            if (key.startsWith("DEMO_")
+                    || key.startsWith("DB_")
+                    || key.equals("TOTP_KEY")
+                    || key.startsWith("STORAGE_")) {
                 env.put(key, String.valueOf(v));
             }
         });
@@ -49,7 +52,10 @@ public final class DemoSeed {
             throw new IllegalStateException(refusal);
         }
         var summary = run("reset".equals(args[0]), env, Instant.now());
-        new java.io.PrintStream(new java.io.FileOutputStream(java.io.FileDescriptor.out), true, java.nio.charset.StandardCharsets.UTF_8)
+        new java.io.PrintStream(
+                        new java.io.FileOutputStream(java.io.FileDescriptor.out),
+                        true,
+                        java.nio.charset.StandardCharsets.UTF_8)
                 .println(summary);
         var file = env.get("DEMO_SUMMARY_FILE");
         if (file != null && !file.isBlank()) {
@@ -82,7 +88,9 @@ public final class DemoSeed {
                 Map<String, Integer> wiped = Map.of();
                 if (reset) {
                     wiped = new DemoReset(db).run();
-                    log.info("Reset: {} demo rows removed", wiped.values().stream().mapToInt(Integer::intValue).sum());
+                    log.info(
+                            "Reset: {} demo rows removed",
+                            wiped.values().stream().mapToInt(Integer::intValue).sum());
                 }
                 var market = DemoMarket.resolve(db, env);
                 var marketChange = market.prepare(db);
@@ -95,7 +103,15 @@ public final class DemoSeed {
                 var activity = new DemoActivity(db, accounts, market, now);
                 activity.seed(made, plan.reviewers().size(), "gifts");
                 connection.commit();
-                return summary(plan, market, marketChange, made, businesses.photosByDepartment(), activity.counts(), wiped, photos.written());
+                return summary(
+                        plan,
+                        market,
+                        marketChange,
+                        made,
+                        businesses.photosByDepartment(),
+                        activity.counts(),
+                        wiped,
+                        photos.written());
             } catch (RuntimeException e) {
                 connection.rollback();
                 throw e;
@@ -115,7 +131,10 @@ public final class DemoSeed {
         var byDepartment = new TreeMap<String, int[]>();
         var categories = new TreeMap<String, Integer>();
         for (var m : made) {
-            var dept = m.business().categories().getFirst().substring(0, m.business().categories().getFirst().indexOf('.'));
+            var dept = m.business()
+                    .categories()
+                    .getFirst()
+                    .substring(0, m.business().categories().getFirst().indexOf('.'));
             var row = byDepartment.computeIfAbsent(dept, k -> new int[2]);
             row[0]++;
             row[1] += m.listingIds().size();
@@ -123,24 +142,54 @@ public final class DemoSeed {
         }
         var out = new StringBuilder();
         out.append("### Demo data\n\n");
-        out.append("Market **").append(market.city()).append(", ").append(market.province()).append("** (`").append(market.id())
-                .append("`, ").append(market.zone()).append(") — ").append(marketChange).append(".\n\n");
+        out.append("Market **")
+                .append(market.city())
+                .append(", ")
+                .append(market.province())
+                .append("** (`")
+                .append(market.id())
+                .append("`, ")
+                .append(market.zone())
+                .append(") — ")
+                .append(marketChange)
+                .append(".\n\n");
         if (!wiped.isEmpty()) {
-            out.append("Reset first: ").append(wiped.values().stream().mapToInt(Integer::intValue).sum())
-                    .append(" demo rows removed from ").append(wiped.size()).append(" tables.\n\n");
+            out.append("Reset first: ")
+                    .append(wiped.values().stream().mapToInt(Integer::intValue).sum())
+                    .append(" demo rows removed from ")
+                    .append(wiped.size())
+                    .append(" tables.\n\n");
         }
         out.append("| department | businesses | listings / dishes | photos |\n|---|---:|---:|---:|\n");
-        byDepartment.forEach((d, r) -> out.append("| ").append(label(d)).append(" | ").append(r[0]).append(" | ").append(r[1])
-                .append(" | ").append(photos.getOrDefault(d, 0)).append(" |\n"));
-        out.append("\nCategories with at least one live, verified business: **").append(categories.size()).append("** (")
-                .append(categories.values().stream().filter(n -> n > 1).count()).append(" with two or more).\n\n");
+        byDepartment.forEach((d, r) -> out.append("| ")
+                .append(label(d))
+                .append(" | ")
+                .append(r[0])
+                .append(" | ")
+                .append(r[1])
+                .append(" | ")
+                .append(photos.getOrDefault(d, 0))
+                .append(" |\n"));
+        out.append("\nCategories with at least one live, verified business: **")
+                .append(categories.size())
+                .append("** (")
+                .append(categories.values().stream().filter(n -> n > 1).count())
+                .append(" with two or more).\n\n");
         out.append("| activity | count |\n|---|---:|\n");
-        activity.forEach((k, v) -> out.append("| ").append(k).append(" | ").append(v).append(" |\n"));
+        activity.forEach(
+                (k, v) -> out.append("| ").append(k).append(" | ").append(v).append(" |\n"));
         out.append("\nAccounts (credentials: `make demo-creds ENV=<target>`, never printed here):\n\n");
         plan.accounts().entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
-                .forEach(e -> out.append("- `").append(e.getKey()).append("` — ").append(e.getValue().email()).append(" · ")
-                        .append(e.getValue().app()).append(" · ").append(e.getValue().role()).append('\n'));
+                .forEach(e -> out.append("- `")
+                        .append(e.getKey())
+                        .append("` — ")
+                        .append(e.getValue().email())
+                        .append(" · ")
+                        .append(e.getValue().app())
+                        .append(" · ")
+                        .append(e.getValue().role())
+                        .append('\n'));
         out.append("\n").append(photosWritten).append(" photos uploaded to the media store this run.\n");
         return out.toString();
     }

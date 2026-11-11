@@ -67,8 +67,10 @@ final class DemoActivity {
             reviews(m, reviewers);
         }
         var evening = window("evening", today, LocalTime.of(18, 0), LocalTime.of(21, 0), LocalTime.of(17, 45));
-        var morning = window("morning", today.plusDays(1), LocalTime.of(8, 0), LocalTime.of(11, 0), LocalTime.of(7, 30));
-        var lastNight = window("evening", today.minusDays(1), LocalTime.of(18, 0), LocalTime.of(21, 0), LocalTime.of(17, 45));
+        var morning =
+                window("morning", today.plusDays(1), LocalTime.of(8, 0), LocalTime.of(11, 0), LocalTime.of(7, 30));
+        var lastNight =
+                window("evening", today.minusDays(1), LocalTime.of(18, 0), LocalTime.of(21, 0), LocalTime.of(17, 45));
         var customer = accounts.id("customer");
         var customer2 = accounts.id("customer2");
         // ── the demo customer's history ──
@@ -78,9 +80,21 @@ final class DemoActivity {
         var cleaning = find(made, "cleaning");
         var pho = find(made, "pho");
         if (bakery != null && grocer != null) {
-            goodsOrder("history-1", customer, "customer", lastNight, "delivered", now.minus(Duration.ofDays(1)),
+            goodsOrder(
+                    "history-1",
+                    customer,
+                    "customer",
+                    lastNight,
+                    "delivered",
+                    now.minus(Duration.ofDays(1)),
                     List.of(line(bakery, 0, 1), line(bakery, 1, 1), line(grocer, 0, 2)));
-            goodsOrder("history-2", customer, "customer", lastNight, "delivered", now.minus(Duration.ofDays(9)),
+            goodsOrder(
+                    "history-2",
+                    customer,
+                    "customer",
+                    lastNight,
+                    "delivered",
+                    now.minus(Duration.ofDays(9)),
                     List.of(line(grocer, 1, 1), line(grocer, 3, 1)));
         }
         if (barber != null) {
@@ -100,19 +114,77 @@ final class DemoActivity {
                 continue;
             }
             if (m.business().provider()) {
-                booking("today-1-" + m.business().key(), customer2, m, 0, today, LocalTime.of(9, 30), "confirmed", false);
-                booking("today-2-" + m.business().key(), reviewer(c++, reviewers), m, 1 % m.listingIds().size(), today, LocalTime.of(13, 0), "confirmed", false);
-                booking("today-3-" + m.business().key(), reviewer(c++, reviewers), m, 2 % m.listingIds().size(), today, LocalTime.of(16, 0), "confirmed", false);
-                booking("tomorrow-" + m.business().key(), reviewer(c++, reviewers), m, 0, today.plusDays(1), LocalTime.of(10, 0), "confirmed", false);
-                booking("yesterday-" + m.business().key(), reviewer(c++, reviewers), m, 1 % m.listingIds().size(), today.minusDays(1), LocalTime.of(11, 0), "completed", false);
+                booking(
+                        "today-1-" + m.business().key(),
+                        customer2,
+                        m,
+                        0,
+                        today,
+                        LocalTime.of(9, 30),
+                        "confirmed",
+                        false);
+                booking(
+                        "today-2-" + m.business().key(),
+                        reviewer(c++, reviewers),
+                        m,
+                        1 % m.listingIds().size(),
+                        today,
+                        LocalTime.of(13, 0),
+                        "confirmed",
+                        false);
+                booking(
+                        "today-3-" + m.business().key(),
+                        reviewer(c++, reviewers),
+                        m,
+                        2 % m.listingIds().size(),
+                        today,
+                        LocalTime.of(16, 0),
+                        "confirmed",
+                        false);
+                booking(
+                        "tomorrow-" + m.business().key(),
+                        reviewer(c++, reviewers),
+                        m,
+                        0,
+                        today.plusDays(1),
+                        LocalTime.of(10, 0),
+                        "confirmed",
+                        false);
+                booking(
+                        "yesterday-" + m.business().key(),
+                        reviewer(c++, reviewers),
+                        m,
+                        1 % m.listingIds().size(),
+                        today.minusDays(1),
+                        LocalTime.of(11, 0),
+                        "completed",
+                        false);
                 quoteRequest(m, reviewer(c++, reviewers));
                 earnings(m, "service");
             } else if (m.business().seller()) {
-                goodsOrder("run-1-" + m.business().key(), customer2, "customer2", evening, "placed", now.minus(Duration.ofHours(2)),
+                goodsOrder(
+                        "run-1-" + m.business().key(),
+                        customer2,
+                        "customer2",
+                        evening,
+                        "placed",
+                        now.minus(Duration.ofHours(2)),
                         List.of(line(m, 0, 2), line(m, 1, 1)));
-                goodsOrder("run-2-" + m.business().key(), reviewer(c++, reviewers), null, evening, "placed", now.minus(Duration.ofMinutes(50)),
+                goodsOrder(
+                        "run-2-" + m.business().key(),
+                        reviewer(c++, reviewers),
+                        null,
+                        evening,
+                        "placed",
+                        now.minus(Duration.ofMinutes(50)),
                         List.of(line(m, 2 % m.listingIds().size(), 1)));
-                goodsOrder("run-3-" + m.business().key(), reviewer(c++, reviewers), null, morning, "placed", now.minus(Duration.ofMinutes(20)),
+                goodsOrder(
+                        "run-3-" + m.business().key(),
+                        reviewer(c++, reviewers),
+                        null,
+                        morning,
+                        "placed",
+                        now.minus(Duration.ofMinutes(20)),
                         List.of(line(m, 0, 1)));
                 earnings(m, "goods");
             } else {
@@ -121,16 +193,29 @@ final class DemoActivity {
         }
         var mechanic = find(made, "mechanic");
         if (mechanic != null) {
-            dispute("studio", mechanic, reviewer(1, reviewers), "open", "Brake inspection",
-                    "The squeal came back two days after the inspection.", now.minus(Duration.ofHours(20)));
+            dispute(
+                    "studio",
+                    mechanic,
+                    reviewer(1, reviewers),
+                    "open",
+                    "Brake inspection",
+                    "The squeal came back two days after the inspection.",
+                    now.minus(Duration.ofHours(20)));
             db.update(
                     "update merchants.verifications set expires_at = ? where id = ?",
-                    now.plus(Duration.ofDays(18)), DemoIds.of("verification:" + mechanic.merchantId() + ":insurance"));
+                    now.plus(Duration.ofDays(18)),
+                    DemoIds.of("verification:" + mechanic.merchantId() + ":insurance"));
         }
         var handyman = find(made, "handyman");
         if (handyman != null) {
-            dispute("console", handyman, reviewer(2, reviewers), "agent", "TV wall mounting",
-                    "The TV was mounted crooked and the provider won't come back to fix it.", now.minus(Duration.ofDays(2)));
+            dispute(
+                    "console",
+                    handyman,
+                    reviewer(2, reviewers),
+                    "agent",
+                    "TV wall mounting",
+                    "The TV was mounted crooked and the provider won't come back to fix it.",
+                    now.minus(Duration.ofDays(2)));
         }
         if (flaggedSellerKey != null) {
             var seller = find(made, flaggedSellerKey);
@@ -160,10 +245,21 @@ final class DemoActivity {
                       from identity.users u where u.id = ?
                     on conflict do nothing
                     """,
-                    DemoIds.of("review:" + b.key() + ":" + i), refType, "DEMO-" + b.key() + "-" + i, author, m.merchantId(), rating,
-                    pool[Math.floorMod(h, pool.length)], i % 3 == 0 ? "Thank you — it was a pleasure!" : null,
-                    b.listings().isEmpty() ? b.name() : b.listings().get(i % b.listings().size()).title(), at,
-                    i % 3 == 0 ? at.plus(Duration.ofHours(5)) : null, i % 3 == 0 ? m.merchantId() : null, author);
+                    DemoIds.of("review:" + b.key() + ":" + i),
+                    refType,
+                    "DEMO-" + b.key() + "-" + i,
+                    author,
+                    m.merchantId(),
+                    rating,
+                    pool[Math.floorMod(h, pool.length)],
+                    i % 3 == 0 ? "Thank you — it was a pleasure!" : null,
+                    b.listings().isEmpty()
+                            ? b.name()
+                            : b.listings().get(i % b.listings().size()).title(),
+                    at,
+                    i % 3 == 0 ? at.plus(Duration.ofHours(5)) : null,
+                    i % 3 == 0 ? m.merchantId() : null,
+                    author);
             count("reviews");
         }
     }
@@ -181,7 +277,8 @@ final class DemoActivity {
         var start = day.atTime(from).atZone(market.zone()).toInstant();
         var existing = db.text(
                 "select id from orders.delivery_windows where (market = ? or market is null) and starts_at = ? order by market nulls last limit 1",
-                market.id(), start);
+                market.id(),
+                start);
         if (existing.isPresent()) {
             return existing.get();
         }
@@ -191,13 +288,24 @@ final class DemoActivity {
                 insert into orders.delivery_windows (id, starts_at, ends_at, cutoff_at, capacity, run_label, market, slot)
                 values (?, ?, ?, ?, 40, ?, ?, ?) on conflict (id) do nothing
                 """,
-                id, start, day.atTime(to).atZone(market.zone()).toInstant(), day.atTime(cutoff).atZone(market.zone()).toInstant(),
-                "R-" + day.getDayOfYear() + ("evening".equals(slot) ? "E" : "M"), market.id(), slot);
+                id,
+                start,
+                day.atTime(to).atZone(market.zone()).toInstant(),
+                day.atTime(cutoff).atZone(market.zone()).toInstant(),
+                "R-" + day.getDayOfYear() + ("evening".equals(slot) ? "E" : "M"),
+                market.id(),
+                slot);
         return id;
     }
 
     private void goodsOrder(
-            String key, String customerId, @Nullable String accountKey, String windowId, String state, Instant placed, List<Line> lines) {
+            String key,
+            String customerId,
+            @Nullable String accountKey,
+            String windowId,
+            String state,
+            Instant placed,
+            List<Line> lines) {
         var id = DemoIds.of("order:" + key);
         long subtotal = 0;
         for (var l : lines) {
@@ -212,8 +320,16 @@ final class DemoActivity {
                 on conflict (id) do update set state = excluded.state, window_id = excluded.window_id, placed_at = excluded.placed_at,
                     delivered_at = excluded.delivered_at
                 """,
-                id, "NL-D" + id.substring(20), customerId, state, accountKey == null ? null : DemoAccounts.addressId(accountKey),
-                windowId, subtotal, Math.round(subtotal * 0.05), placed, delivered ? placed.plus(Duration.ofHours(5)) : null,
+                id,
+                "NL-D" + id.substring(20),
+                customerId,
+                state,
+                accountKey == null ? null : DemoAccounts.addressId(accountKey),
+                windowId,
+                subtotal,
+                Math.round(subtotal * 0.05),
+                placed,
+                delivered ? placed.plus(Duration.ofHours(5)) : null,
                 DemoMarket.QUARTERS.getFirst());
         int i = 0;
         for (var l : lines) {
@@ -226,10 +342,28 @@ final class DemoActivity {
                     values (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     on conflict (id) do update set state = excluded.state, packed_at = excluded.packed_at
                     """,
-                    lineId, id, l.merchant().merchantId(), offer, l.qty(), unit(l), delivered ? "packed" : "pending", title,
+                    lineId,
+                    id,
+                    l.merchant().merchantId(),
+                    offer,
+                    l.qty(),
+                    unit(l),
+                    delivered ? "packed" : "pending",
+                    title,
                     delivered ? placed.plus(Duration.ofHours(2)) : null);
-            escrow("order-line:" + key + ":" + i, "order_line", lineId, l.merchant(), unit(l) * l.qty(), "goods", title,
-                    "NL-D" + id.substring(20), customerId, offer, placed, delivered ? "released" : "held",
+            escrow(
+                    "order-line:" + key + ":" + i,
+                    "order_line",
+                    lineId,
+                    l.merchant(),
+                    unit(l) * l.qty(),
+                    "goods",
+                    title,
+                    "NL-D" + id.substring(20),
+                    customerId,
+                    offer,
+                    placed,
+                    delivered ? "released" : "held",
                     delivered ? placed.plus(Duration.ofDays(7)) : null);
             i++;
         }
@@ -245,7 +379,9 @@ final class DemoActivity {
         var id = DemoIds.of("order:" + key);
         var items = kitchen.listingIds();
         var dish = kitchen.business().menuSections().getFirst().items().getFirst();
-        var main = kitchen.business().menuSections().size() > 1 ? kitchen.business().menuSections().get(1).items().getFirst() : dish;
+        var main = kitchen.business().menuSections().size() > 1
+                ? kitchen.business().menuSections().get(1).items().getFirst()
+                : dish;
         var subtotal = dish.priceCents() + main.priceCents() * 2;
         db.update(
                 """
@@ -254,25 +390,60 @@ final class DemoActivity {
                 values (?, ?, ?, 'food', 'delivered', ?, ?, 499, 99, ?, 300, ?, ?, ?, 'delivery', 'direct')
                 on conflict (id) do update set placed_at = excluded.placed_at, delivered_at = excluded.delivered_at
                 """,
-                id, "NL-F" + id.substring(20), customerId, DemoAccounts.addressId("customer"), subtotal, Math.round(subtotal * 0.05),
-                placed, placed.plus(Duration.ofMinutes(42)), DemoMarket.QUARTERS.getFirst());
+                id,
+                "NL-F" + id.substring(20),
+                customerId,
+                DemoAccounts.addressId("customer"),
+                subtotal,
+                Math.round(subtotal * 0.05),
+                placed,
+                placed.plus(Duration.ofMinutes(42)),
+                DemoMarket.QUARTERS.getFirst());
         db.update(
                 """
                 insert into orders.order_lines (id, order_id, merchant_id, menu_item_id, qty, unit_cents, state, title)
                 values (?, ?, ?, ?, 1, ?, 'packed', ?), (?, ?, ?, ?, 2, ?, 'packed', ?) on conflict (id) do nothing
                 """,
-                DemoIds.of("order-line:" + key + ":0"), id, kitchen.merchantId(), items.getFirst(), dish.priceCents(), dish.name(),
-                DemoIds.of("order-line:" + key + ":1"), id, kitchen.merchantId(), items.get(Math.min(2, items.size() - 1)),
-                main.priceCents(), main.name());
-        escrow("food:" + key, "food_order", id, kitchen, subtotal, "food", kitchen.business().name(), "NL-F" + id.substring(20),
-                customerId, null, placed, "released", placed.plus(Duration.ofMinutes(42)));
+                DemoIds.of("order-line:" + key + ":0"),
+                id,
+                kitchen.merchantId(),
+                items.getFirst(),
+                dish.priceCents(),
+                dish.name(),
+                DemoIds.of("order-line:" + key + ":1"),
+                id,
+                kitchen.merchantId(),
+                items.get(Math.min(2, items.size() - 1)),
+                main.priceCents(),
+                main.name());
+        escrow(
+                "food:" + key,
+                "food_order",
+                id,
+                kitchen,
+                subtotal,
+                "food",
+                kitchen.business().name(),
+                "NL-F" + id.substring(20),
+                customerId,
+                null,
+                placed,
+                "released",
+                placed.plus(Duration.ofMinutes(42)));
         count("past orders");
     }
 
     // ── bookings and quotes ─────────────────────────────────────────────────────────────────────────────────────
 
     private void booking(
-            String key, String customerId, Made provider, int listing, LocalDate day, LocalTime at, String state, boolean reviewed) {
+            String key,
+            String customerId,
+            Made provider,
+            int listing,
+            LocalDate day,
+            LocalTime at,
+            String state,
+            boolean reviewed) {
         var b = provider.business();
         var l = b.listings().get(listing);
         var id = DemoIds.of("booking:" + key);
@@ -281,10 +452,23 @@ final class DemoActivity {
         var price = l.priceCents() == null ? 10000 : l.priceCents();
         var tax = Math.round(price * 0.05);
         var ref = "BK-D" + id.substring(22);
-        var escrowId = escrow("booking:" + key, "booking", id, provider, price, "service", l.title(), null, customerId,
-                provider.listingIds().get(listing), starts, "signed_off".equals(state) ? "released" : "held",
+        var escrowId = escrow(
+                "booking:" + key,
+                "booking",
+                id,
+                provider,
+                price,
+                "service",
+                l.title(),
+                null,
+                customerId,
+                provider.listingIds().get(listing),
+                starts,
+                "signed_off".equals(state) ? "released" : "held",
                 "signed_off".equals(state) ? ends.plus(Duration.ofDays(2)) : null);
-        var addressAccount = customerId.equals(accounts.id("customer")) ? "customer" : customerId.equals(accounts.id("customer2")) ? "customer2" : null;
+        var addressAccount = customerId.equals(accounts.id("customer"))
+                ? "customer"
+                : customerId.equals(accounts.id("customer2")) ? "customer2" : null;
         db.update(
                 """
                 insert into booking.bookings (id, ref, customer_id, merchant_id, member_user_id, service_id, type, state, starts_at, ends_at,
@@ -295,19 +479,39 @@ final class DemoActivity {
                 on conflict (id) do update set state = excluded.state, starts_at = excluded.starts_at, ends_at = excluded.ends_at,
                     free_cancel_until = excluded.free_cancel_until, updated_at = excluded.updated_at
                 """,
-                id, ref, customerId, provider.merchantId(), provider.listingIds().get(listing), state, starts, ends, l.title(),
-                addressAccount == null ? null : DemoAccounts.addressId(addressAccount), addressAccount == null ? "Demo address" : null,
-                DemoMarket.QUARTERS.get(Math.floorMod(key.hashCode(), DemoMarket.QUARTERS.size())), escrowId, price, tax,
-                starts.minus(Duration.ofDays(3)), now, starts.minus(Duration.ofHours(24)), provider.merchantId());
+                id,
+                ref,
+                customerId,
+                provider.merchantId(),
+                provider.listingIds().get(listing),
+                state,
+                starts,
+                ends,
+                l.title(),
+                addressAccount == null ? null : DemoAccounts.addressId(addressAccount),
+                addressAccount == null ? "Demo address" : null,
+                DemoMarket.QUARTERS.get(Math.floorMod(key.hashCode(), DemoMarket.QUARTERS.size())),
+                escrowId,
+                price,
+                tax,
+                starts.minus(Duration.ofDays(3)),
+                now,
+                starts.minus(Duration.ofHours(24)),
+                provider.merchantId());
         if ("signed_off".equals(state) || "completed".equals(state)) {
             int e = 0;
-            for (var type : "signed_off".equals(state) ? List.of("en_route", "on_site", "completed", "signed_off") : List.of("en_route", "on_site", "completed")) {
+            for (var type : "signed_off".equals(state)
+                    ? List.of("en_route", "on_site", "completed", "signed_off")
+                    : List.of("en_route", "on_site", "completed")) {
                 db.update(
                         """
                         insert into booking.booking_events (id, booking_id, type, at, actor_id)
                         values (?, ?, ?, ?, ?) on conflict (id) do update set at = excluded.at
                         """,
-                        DemoIds.of("booking-event:" + key + ":" + e), id, type, starts.plus(Duration.ofMinutes(e * 20L - 20)),
+                        DemoIds.of("booking-event:" + key + ":" + e),
+                        id,
+                        type,
+                        starts.plus(Duration.ofMinutes(e * 20L - 20)),
                         "signed_off".equals(type) ? customerId : provider.merchantId());
                 e++;
             }
@@ -321,15 +525,24 @@ final class DemoActivity {
                       from identity.users u where u.id = ?
                     on conflict do nothing
                     """,
-                    DemoIds.of("review:" + key), ref, customerId, provider.merchantId(),
-                    "Great " + l.title().toLowerCase(java.util.Locale.ROOT) + ", right on time. Booking again.", l.title(),
-                    ends.plus(Duration.ofHours(30)), customerId);
+                    DemoIds.of("review:" + key),
+                    ref,
+                    customerId,
+                    provider.merchantId(),
+                    "Great " + l.title().toLowerCase(java.util.Locale.ROOT) + ", right on time. Booking again.",
+                    l.title(),
+                    ends.plus(Duration.ofHours(30)),
+                    customerId);
             count("reviews");
         }
-        count(switch (state) {
-            case "signed_off", "completed" -> "past bookings";
-            default -> starts.isBefore(now.plus(Duration.ofDays(1))) && day.equals(today) ? "jobs today" : "upcoming bookings";
-        });
+        count(
+                switch (state) {
+                    case "signed_off", "completed" -> "past bookings";
+                    default ->
+                        starts.isBefore(now.plus(Duration.ofDays(1))) && day.equals(today)
+                                ? "jobs today"
+                                : "upcoming bookings";
+                });
     }
 
     private void quoteRequest(Made provider, String customerId) {
@@ -340,12 +553,19 @@ final class DemoActivity {
                 values (?, ?, ?, ?::jsonb, '{}', ?, ?, ?, ?)
                 on conflict (id) do update set expires_at = excluded.expires_at, respond_by = excluded.respond_by, created_at = excluded.created_at
                 """,
-                DemoIds.of("quote-request:" + b.key()), customerId, b.categories().getFirst(),
+                DemoIds.of("quote-request:" + b.key()),
+                customerId,
+                b.categories().getFirst(),
                 DemoBusinesses.json(Map.of(
-                        "title", "Quote for " + b.listings().getFirst().title().toLowerCase(java.util.Locale.ROOT),
-                        "area", DemoMarket.QUARTERS.get(1),
-                        "description", "Can you come this week? Weekday mornings work best for me.")),
-                Db.array(provider.merchantId()), now.plus(Duration.ofDays(3)), now.plus(Duration.ofMinutes(75)),
+                        "title",
+                        "Quote for " + b.listings().getFirst().title().toLowerCase(java.util.Locale.ROOT),
+                        "area",
+                        DemoMarket.QUARTERS.get(1),
+                        "description",
+                        "Can you come this week? Weekday mornings work best for me.")),
+                Db.array(provider.merchantId()),
+                now.plus(Duration.ofDays(3)),
+                now.plus(Duration.ofMinutes(75)),
                 now.minus(Duration.ofMinutes(40)));
         count("open quote requests");
     }
@@ -375,9 +595,19 @@ final class DemoActivity {
                     ref_type, ref_id, merchant_id, authorized_at, created_at)
                 values (?, ?, ?, ?, 'CAD', 'manual', ?, false, ?, ?, ?, ?, ?) on conflict (id) do update set state = excluded.state
                 """,
-                intent, "pi_demo_" + intent.substring(6), customerId, amount + tax, "released".equals(state) ? "captured" : "authorized",
-                refType, refId, merchant.merchantId(), occurred, occurred);
-        var rate = "master".equals(merchant.business().tier()) ? 900 : "trusted".equals(merchant.business().tier()) ? 1200 : 1500;
+                intent,
+                "pi_demo_" + intent.substring(6),
+                customerId,
+                amount + tax,
+                "released".equals(state) ? "captured" : "authorized",
+                refType,
+                refId,
+                merchant.merchantId(),
+                occurred,
+                occurred);
+        var rate = "master".equals(merchant.business().tier())
+                ? 900
+                : "trusted".equals(merchant.business().tier()) ? 1200 : 1500;
         db.update(
                 """
                 insert into payments.escrows (id, payment_intent_id, ref_type, ref_id, merchant_id, amount_cents, release_at, released_at, state,
@@ -388,9 +618,28 @@ final class DemoActivity {
                 on conflict (id) do update set state = excluded.state, release_at = excluded.release_at, released_at = excluded.released_at,
                     occurred_at = excluded.occurred_at
                 """,
-                id, intent, refType, refId, merchant.merchantId(), amount,
-                released == null ? occurred.plus(Duration.ofDays(2)) : released, released, state, kind, label, orderNumber, customerId,
-                listingId, label, rate, amount * rate / 10_000, tax, occurred, released, occurred, customerId);
+                id,
+                intent,
+                refType,
+                refId,
+                merchant.merchantId(),
+                amount,
+                released == null ? occurred.plus(Duration.ofDays(2)) : released,
+                released,
+                state,
+                kind,
+                label,
+                orderNumber,
+                customerId,
+                listingId,
+                label,
+                rate,
+                amount * rate / 10_000,
+                tax,
+                occurred,
+                released,
+                occurred,
+                customerId);
         return id;
     }
 
@@ -405,7 +654,9 @@ final class DemoActivity {
                 String label;
                 String listing = null;
                 if (listings.isEmpty()) {
-                    var dishes = m.business().menuSections().stream().flatMap(s -> s.items().stream()).toList();
+                    var dishes = m.business().menuSections().stream()
+                            .flatMap(s -> s.items().stream())
+                            .toList();
                     var d = dishes.get(Math.floorMod(week + i, dishes.size()));
                     amount = d.priceCents() * 2 + 499;
                     label = d.name();
@@ -417,9 +668,19 @@ final class DemoActivity {
                     listing = m.listingIds().get(idx);
                 }
                 var key = "history:" + m.business().key() + ":" + week + ":" + i;
-                escrow(key, "goods".equals(kind) ? "order_line" : "food".equals(kind) ? "food_order" : "booking",
-                        DemoIds.of("ref:" + key), m, amount, kind, label, null,
-                        DemoAccounts.reviewerId(Math.floorMod(key.hashCode(), 12)), listing, at, "released",
+                escrow(
+                        key,
+                        "goods".equals(kind) ? "order_line" : "food".equals(kind) ? "food_order" : "booking",
+                        DemoIds.of("ref:" + key),
+                        m,
+                        amount,
+                        kind,
+                        label,
+                        null,
+                        DemoAccounts.reviewerId(Math.floorMod(key.hashCode(), 12)),
+                        listing,
+                        at,
+                        "released",
                         at.plus(Duration.ofDays("service".equals(kind) ? 2 : "goods".equals(kind) ? 7 : 0)));
             }
         }
@@ -428,11 +689,30 @@ final class DemoActivity {
 
     // ── the console's work ──────────────────────────────────────────────────────────────────────────────────────
 
-    private void dispute(String key, Made provider, String customerId, String state, String subject, String statement, Instant opened) {
+    private void dispute(
+            String key,
+            Made provider,
+            String customerId,
+            String state,
+            String subject,
+            String statement,
+            Instant opened) {
         var l = provider.business().listings().getFirst();
         var price = l.priceCents() == null ? 10000 : l.priceCents();
-        var escrow = escrow("dispute:" + key, "booking", DemoIds.of("booking:dispute:" + key), provider, price, "service", subject, null,
-                customerId, provider.listingIds().getFirst(), opened.minus(Duration.ofDays(3)), "disputed", null);
+        var escrow = escrow(
+                "dispute:" + key,
+                "booking",
+                DemoIds.of("booking:dispute:" + key),
+                provider,
+                price,
+                "service",
+                subject,
+                null,
+                customerId,
+                provider.listingIds().getFirst(),
+                opened.minus(Duration.ofDays(3)),
+                "disputed",
+                null);
         db.update(
                 """
                 insert into payments.disputes (id, ref_type, ref_id, opened_by, evidence, state, merchant_id, case_number, subject, amount_cents,
@@ -441,27 +721,38 @@ final class DemoActivity {
                   from identity.users u where u.id = ?
                 on conflict (id) do update set state = excluded.state, respond_by = excluded.respond_by, opened_at = excluded.opened_at
                 """,
-                DemoIds.of("dispute:" + key), escrow, customerId, state, provider.merchantId(), "DS-D" + escrow.substring(22), subject,
-                price, statement, opened.plus(Duration.ofDays(3)), opened, customerId);
+                DemoIds.of("dispute:" + key),
+                escrow,
+                customerId,
+                state,
+                provider.merchantId(),
+                "DS-D" + escrow.substring(22),
+                subject,
+                price,
+                statement,
+                opened.plus(Duration.ofDays(3)),
+                opened,
+                customerId);
         count("open disputes");
     }
 
     /** A pending listing the automated vetting flagged (a price far from its category's): the console's vetting queue. */
     private void flag(Made seller) {
         var id = seller.listingIds().getLast();
-        db.update(
-                """
+        db.update("""
                 update catalogue.offers set vetting = 'pending', status = 'hidden', vetting_flags = '{price_outlier}',
                     submitted_at = ?, price_cents = price_cents * 6 where id = ? and vetting <> 'pending'
-                """,
-                now.minus(Duration.ofHours(3)), id);
+                """, now.minus(Duration.ofHours(3)), id);
         count("flagged listings");
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────────────────────────────────────────
 
     private static @Nullable Made find(List<Made> made, String key) {
-        return made.stream().filter(m -> m.business().key().equals(key)).findFirst().orElse(null);
+        return made.stream()
+                .filter(m -> m.business().key().equals(key))
+                .findFirst()
+                .orElse(null);
     }
 
     private static String reviewer(int i, int reviewers) {

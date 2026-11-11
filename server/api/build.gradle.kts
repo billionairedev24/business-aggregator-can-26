@@ -66,6 +66,7 @@ dependencies {
     "toolsCompileOnly"(libs.jspecify)
 
     testImplementation(tools.output)
+    testImplementation(libs.bouncycastle.prov) // S-194: DemoSeedTest runs the seed, which hashes with Argon2id
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation(testFixtures(project(":openapi"))) // S-125: OpenApiSnapshot (spec drift check)
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")

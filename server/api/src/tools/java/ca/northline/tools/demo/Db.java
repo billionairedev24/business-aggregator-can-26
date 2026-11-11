@@ -4,10 +4,10 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -82,9 +82,11 @@ final class Db {
             var p = params[i];
             switch (p) {
                 case null -> ps.setNull(i + 1, Types.NULL);
-                case Instant at -> ps.setTimestamp(i + 1, Timestamp.from(at));
+                case Instant at -> ps.setObject(i + 1, at.atOffset(ZoneOffset.UTC));
                 case LocalDate day -> ps.setObject(i + 1, day);
-                case TextArray a -> ps.setArray(i + 1, connection.createArrayOf("text", a.values().toArray()));
+                case TextArray a ->
+                    ps.setArray(
+                            i + 1, connection.createArrayOf("text", a.values().toArray()));
                 default -> ps.setObject(i + 1, p);
             }
         }

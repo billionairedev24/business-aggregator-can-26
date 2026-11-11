@@ -54,34 +54,29 @@ final class DemoAccounts {
 
     void seed(DemoMarket market, Instant now) {
         var keyRing = AesKeyRing.of(
-                "TOTP_KEY",
-                env.getOrDefault("TOTP_KEY_ID", "v1"),
-                required("TOTP_KEY"),
-                env.get("TOTP_PREVIOUS_KEYS"));
+                "TOTP_KEY", env.getOrDefault("TOTP_KEY_ID", "v1"), required("TOTP_KEY"), env.get("TOTP_PREVIOUS_KEYS"));
         for (var e : plan.accounts().entrySet()) {
             var key = e.getKey();
             var a = e.getValue();
             var id = userId(key);
             upsertUser(id, a.email(), a.first(), a.last(), now, true);
-            db.update(
-                    """
+            db.update("""
                     insert into auth.passwords (user_id, hash, changed_at) values (?, ?, ?)
                     on conflict (user_id) do update set hash = excluded.hash, changed_at = excluded.changed_at
-                    """,
-                    id, "{argon2}" + argon2.encode(required(variable(key, "PASSWORD"))), now);
+                    """, id, "{argon2}" + argon2.encode(required(variable(key, "PASSWORD"))), now);
             var secret = required(variable(key, "TOTP")).replace(" ", "").toUpperCase(Locale.ROOT);
-            db.update(
-                    """
+            db.update("""
                     insert into auth.totp_secrets (user_id, secret_enc, key_id, confirmed_at, last_used_step) values (?, ?, ?, ?, null)
                     on conflict (user_id) do update set secret_enc = excluded.secret_enc, key_id = excluded.key_id,
                       confirmed_at = excluded.confirmed_at, last_used_step = null
-                    """,
-                    id, keyRing.encrypt(secret), keyRing.currentId(), now);
+                    """, id, keyRing.encrypt(secret), keyRing.currentId(), now);
             db.update("delete from identity.platform_roles where user_id = ?", id);
             for (var role : a.platformRoles()) {
                 db.update(
                         "insert into identity.platform_roles (user_id, role, granted_at) values (?, ?, ?) on conflict do nothing",
-                        id, role, now);
+                        id,
+                        role,
+                        now);
             }
             if (a.address() != null) {
                 address(id, key, a.address(), market);
@@ -91,7 +86,13 @@ final class DemoAccounts {
         for (int i = 0; i < plan.reviewers().size(); i++) {
             var name = plan.reviewers().get(i);
             var parts = name.split(" ", 2);
-            upsertUser(reviewerId(i), "reviewer" + (i + 1) + "@people." + DOMAIN, parts[0], parts.length > 1 ? parts[1] : "", now, false);
+            upsertUser(
+                    reviewerId(i),
+                    "reviewer" + (i + 1) + "@people." + DOMAIN,
+                    parts[0],
+                    parts.length > 1 ? parts[1] : "",
+                    now,
+                    false);
         }
     }
 
@@ -124,8 +125,17 @@ final class DemoAccounts {
                   status = 'active', email_verified_at = coalesce(identity.users.email_verified_at, excluded.email_verified_at),
                   terms_version = excluded.terms_version, updated_at = excluded.updated_at
                 """,
-                id, email, (first + " " + last).strip(), first, last, signsIn ? "totp" : null, now, TERMS_VERSION, now,
-                now.minusSeconds(86_400L * 120), now);
+                id,
+                email,
+                (first + " " + last).strip(),
+                first,
+                last,
+                signsIn ? "totp" : null,
+                now,
+                TERMS_VERSION,
+                now,
+                now.minusSeconds(86_400L * 120),
+                now);
     }
 
     private void address(String userId, String key, DemoPlan.Address address, DemoMarket market) {
@@ -138,8 +148,15 @@ final class DemoAccounts {
                 on conflict (id) do update set street = excluded.street, unit = excluded.unit, city = excluded.city,
                   province = excluded.province, geom = excluded.geom, zone_id = excluded.zone_id, deleted_at = null
                 """,
-                addressId(key), userId, address.street(), address.unit(), market.city(), market.province(),
-                DemoMarket.point(p[0], p[1]), zone, address.label());
+                addressId(key),
+                userId,
+                address.street(),
+                address.unit(),
+                market.city(),
+                market.province(),
+                DemoMarket.point(p[0], p[1]),
+                zone,
+                address.label());
     }
 
     static String addressId(String accountKey) {

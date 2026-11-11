@@ -24,15 +24,21 @@ record DemoMarket(String id, String province, String city, double lat, double ln
         String id;
         if (!wanted.isEmpty()) {
             id = db.text("select id from region.regions where kind = 'market' and id = ?", wanted)
-                    .orElseThrow(() -> new IllegalStateException("DEMO_MARKET " + wanted + " is not a market in region.regions"));
+                    .orElseThrow(() ->
+                            new IllegalStateException("DEMO_MARKET " + wanted + " is not a market in region.regions"));
         } else {
             if (province.isEmpty()) {
-                province = db.text("select province from region.regions where kind = 'province' and stage = 'live' order by sort, id limit 1")
-                        .orElseThrow(() -> new IllegalStateException("no live province in region.regions; set REGION_DEFAULT_PROVINCE or DEMO_MARKET"));
+                province = db.text(
+                                "select province from region.regions where kind = 'province' and stage = 'live' order by sort, id limit 1")
+                        .orElseThrow(() -> new IllegalStateException(
+                                "no live province in region.regions; set REGION_DEFAULT_PROVINCE or DEMO_MARKET"));
             }
             var p = province.toUpperCase(Locale.ROOT);
-            id = db.text("select id from region.regions where kind = 'market' and province = ? order by sort, id limit 1", p)
-                    .orElseThrow(() -> new IllegalStateException("province " + p + " has no market in region.regions; set DEMO_MARKET"));
+            id = db.text(
+                            "select id from region.regions where kind = 'market' and province = ? order by sort, id limit 1",
+                            p)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "province " + p + " has no market in region.regions; set DEMO_MARKET"));
         }
         var rows = db.list(
                 """
@@ -57,7 +63,9 @@ record DemoMarket(String id, String province, String city, double lat, double ln
     String prepare(Db db) {
         var was = db.text("select stage from region.regions where id = ?", id).orElse("?");
         db.update("update region.regions set stage = 'live' where id = ?", id);
-        db.update("update region.regions set stage = 'live' where kind = 'province' and province = ? and stage <> 'live'", province);
+        db.update(
+                "update region.regions set stage = 'live' where kind = 'province' and province = ? and stage <> 'live'",
+                province);
         var delivery = db.count("select count(*) from region.zones where region_id = ?", id);
         if (delivery == 0) {
             for (int i = 0; i < QUARTERS.size(); i++) {
@@ -66,7 +74,11 @@ record DemoMarket(String id, String province, String city, double lat, double ln
                         insert into region.zones (id, region_id, name, polygon, runs_per_day, fee_std_cents, fee_plus_cents, min_basket_cents, sort)
                         values (?, ?, ?, ST_GeogFromText(?), 2, 499, 0, 0, ?) on conflict (id) do nothing
                         """,
-                        DemoIds.of("zone:" + id + ":" + i), id, QUARTERS.get(i), "SRID=4326;" + quarterPolygon(i), i + 1);
+                        DemoIds.of("zone:" + id + ":" + i),
+                        id,
+                        QUARTERS.get(i),
+                        "SRID=4326;" + quarterPolygon(i),
+                        i + 1);
             }
         }
         var service = db.count("select count(*) from availability.service_zones where market_id = ?", id);
@@ -78,8 +90,13 @@ record DemoMarket(String id, String province, String city, double lat, double ln
                         insert into availability.service_zones (name, city, centre, area, radius_m, market_id, sort, default_on)
                         values (?, ?, ST_GeogFromText(?), ST_GeogFromText(?), ?, ?, ?, true) on conflict do nothing
                         """,
-                        serviceZoneName(i), city, point(c[0], c[1]), "SRID=4326;" + quarterPolygon(i),
-                        (int) Math.round(radiusKm * 1000 / 2), id, i + 1);
+                        serviceZoneName(i),
+                        city,
+                        point(c[0], c[1]),
+                        "SRID=4326;" + quarterPolygon(i),
+                        (int) Math.round(radiusKm * 1000 / 2),
+                        id,
+                        i + 1);
             }
         }
         return "was " + was.strip() + ", now live" + (delivery == 0 ? "; delivery zones added" : "")
@@ -98,7 +115,9 @@ record DemoMarket(String id, String province, String city, double lat, double ln
     Optional<String> deliveryZoneAt(Db db, double lat, double lng) {
         return db.text(
                 "select id from region.zones where region_id = ? and ST_Covers(polygon, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography) order by sort limit 1",
-                id, lng, lat);
+                id,
+                lng,
+                lat);
     }
 
     private String serviceZoneName(int i) {
@@ -135,20 +154,28 @@ record DemoMarket(String id, String province, String city, double lat, double ln
     private String quarterPolygon(int i) {
         var r = Math.max(radiusKm, 5);
         var h = r / 4;
-        double[][] box =
-                switch (i) {
-                    case 0 -> new double[][] {{-h, -h}, {h, h}};
-                    case 1 -> new double[][] {{h, -r}, {r, r}};
-                    case 2 -> new double[][] {{-h, h}, {h, r}};
-                    case 3 -> new double[][] {{-r, -r}, {-h, r}};
-                    default -> new double[][] {{-h, -r}, {h, -h}};
-                };
+        double[][] box = switch (i) {
+            case 0 -> new double[][] {{-h, -h}, {h, h}};
+            case 1 -> new double[][] {{h, -r}, {r, r}};
+            case 2 -> new double[][] {{-h, h}, {h, r}};
+            case 3 -> new double[][] {{-r, -r}, {-h, r}};
+            default -> new double[][] {{-h, -r}, {h, -h}};
+        };
         var sw = offset(box[0][0], box[0][1]);
         var ne = offset(box[1][0], box[1][1]);
         return String.format(
                 Locale.ROOT,
                 "POLYGON((%.6f %.6f,%.6f %.6f,%.6f %.6f,%.6f %.6f,%.6f %.6f))",
-                sw[1], sw[0], ne[1], sw[0], ne[1], ne[0], sw[1], ne[0], sw[1], sw[0]);
+                sw[1],
+                sw[0],
+                ne[1],
+                sw[0],
+                ne[1],
+                ne[0],
+                sw[1],
+                ne[0],
+                sw[1],
+                sw[0]);
     }
 
     static String point(double lat, double lng) {

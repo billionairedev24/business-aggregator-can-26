@@ -65,7 +65,8 @@ final class DemoPhotos implements AutoCloseable {
             case "s3" -> new DemoPhotos(library, s3(env));
             case "local", "" -> new DemoPhotos(library, local(env));
             default ->
-                throw new IllegalStateException("STORAGE_PROVIDER=" + provider + ": the demo seed writes photos to s3 or a local folder only");
+                throw new IllegalStateException(
+                        "STORAGE_PROVIDER=" + provider + ": the demo seed writes photos to s3 or a local folder only");
         };
     }
 
@@ -84,7 +85,10 @@ final class DemoPhotos implements AutoCloseable {
                 written++;
             }
             return Optional.of(new Photo(
-                    key, image == null ? 1200 : image.getWidth(), image == null ? 1200 : image.getHeight(), bytes.length));
+                    key,
+                    image == null ? 1200 : image.getWidth(),
+                    image == null ? 1200 : image.getHeight(),
+                    bytes.length));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -105,7 +109,9 @@ final class DemoPhotos implements AutoCloseable {
 
     private static Sink local(Map<String, String> env) {
         var root = Path.of(env.getOrDefault(
-                        "NORTHLINE_MEDIA_LOCALDIR", Path.of(System.getProperty("java.io.tmpdir"), "northline-media").toString()))
+                        "NORTHLINE_MEDIA_LOCALDIR",
+                        Path.of(System.getProperty("java.io.tmpdir"), "northline-media")
+                                .toString()))
                 .toAbsolutePath()
                 .normalize();
         log.info("Photos into the local media folder {}", root);
@@ -155,7 +161,10 @@ final class DemoPhotos implements AutoCloseable {
             @Override
             public boolean exists(String key) {
                 try {
-                    s3.headObject(HeadObjectRequest.builder().bucket(bucket).key(prefix + key).build());
+                    s3.headObject(HeadObjectRequest.builder()
+                            .bucket(bucket)
+                            .key(prefix + key)
+                            .build());
                     return true;
                 } catch (NoSuchKeyException e) {
                     return false;

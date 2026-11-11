@@ -30,7 +30,8 @@ final class DemoGuard {
         }
         var refused = names(properties, env).stream().filter(REFUSED::contains).toList();
         if (!refused.isEmpty()) {
-            return "the demo seed never runs under " + refused + ": it writes fake businesses, people and demo accounts";
+            return "the demo seed never runs under " + refused
+                    + ": it writes fake businesses, people and demo accounts";
         }
         return null;
     }
@@ -50,7 +51,8 @@ final class DemoGuard {
         return all;
     }
 
-    private static String setting(Map<Object, Object> properties, Map<String, String> env, String property, String variable) {
+    private static String setting(
+            Map<Object, Object> properties, Map<String, String> env, String property, String variable) {
         var fromProperty = properties.get(property);
         if (fromProperty != null && !String.valueOf(fromProperty).isBlank()) {
             return String.valueOf(fromProperty);

@@ -21,10 +21,16 @@ final class DemoReset {
 
     /** Never touched: the event outbox, the OAuth tables and the append-only ledgers (their triggers refuse a delete). */
     static final Set<String> KEEP = Set.of(
-            "payments.ledger_entries", "developer.audit_log", "events.event_publication", "events.event_publication_archive",
-            "events.processed_events", "auth.event_publication", "auth.event_publication_archive");
+            "payments.ledger_entries",
+            "developer.audit_log",
+            "events.event_publication",
+            "events.event_publication_archive",
+            "events.processed_events",
+            "auth.event_publication",
+            "auth.event_publication_archive");
 
-    private static final Set<String> SCHEMAS_SKIPPED = Set.of("pg_catalog", "information_schema", "public", "topology", "tiger", "tiger_data");
+    private static final Set<String> SCHEMAS_SKIPPED =
+            Set.of("pg_catalog", "information_schema", "public", "topology", "tiger", "tiger_data");
 
     private final Db db;
 
@@ -42,7 +48,11 @@ final class DemoReset {
             boolean progress = false;
             for (var entry : pending) {
                 var table = entry.getKey();
-                var where = String.join(" or ", entry.getValue().stream().map(c -> c + " like '" + DemoIds.LIKE + "'").toList());
+                var where = String.join(
+                        " or ",
+                        entry.getValue().stream()
+                                .map(c -> c + " like '" + DemoIds.LIKE + "'")
+                                .toList());
                 try {
                     var sp = db.connection().setSavepoint();
                     try (var st = db.connection().createStatement()) {
@@ -57,7 +67,13 @@ final class DemoReset {
                         if ("23503".equals(e.getSQLState())) {
                             next.add(entry); // still referenced: try again after the others
                         } else {
-                            log.warn("Kept the demo rows of {} ({})", table, String.valueOf(e.getMessage()).lines().findFirst().orElse(""));
+                            log.warn(
+                                    "Kept the demo rows of {} ({})",
+                                    table,
+                                    String.valueOf(e.getMessage())
+                                            .lines()
+                                            .findFirst()
+                                            .orElse(""));
                         }
                     }
                 } catch (SQLException e) {
@@ -70,7 +86,9 @@ final class DemoReset {
             }
         }
         if (!pending.isEmpty()) {
-            log.warn("Demo rows still referenced from outside the demo, kept in: {}", pending.stream().map(Map.Entry::getKey).toList());
+            log.warn(
+                    "Demo rows still referenced from outside the demo, kept in: {}",
+                    pending.stream().map(Map.Entry::getKey).toList());
         }
         return deleted;
     }
@@ -78,22 +96,19 @@ final class DemoReset {
     /** Every application table with its text columns that can hold an id ({@code id}, {@code *_id}). */
     private Map<String, List<String>> tables() {
         var out = new LinkedHashMap<String, List<String>>();
-        db.list(
-                        """
+        db.list("""
                         select c.table_schema || '.' || c.table_name as t, c.column_name
                           from information_schema.columns c
                           join information_schema.tables tb on tb.table_schema = c.table_schema and tb.table_name = c.table_name
                          where tb.table_type = 'BASE TABLE' and c.data_type = 'text'
                            and (c.column_name = 'id' or c.column_name like '%\\_id' or c.column_name in ('created_by', 'uploaded_by', 'submitted_by'))
                          order by 1, 2
-                        """,
-                        rs -> new String[] {rs.getString(1), rs.getString(2)})
-                .forEach(r -> {
-                    var schema = r[0].substring(0, r[0].indexOf('.'));
-                    if (!SCHEMAS_SKIPPED.contains(schema) && !KEEP.contains(r[0])) {
-                        out.computeIfAbsent(r[0], k -> new ArrayList<>()).add(r[1]);
-                    }
-                });
+                        """, rs -> new String[] {rs.getString(1), rs.getString(2)}).forEach(r -> {
+            var schema = r[0].substring(0, r[0].indexOf('.'));
+            if (!SCHEMAS_SKIPPED.contains(schema) && !KEEP.contains(r[0])) {
+                out.computeIfAbsent(r[0], k -> new ArrayList<>()).add(r[1]);
+            }
+        });
         return out;
     }
 }

@@ -58,7 +58,8 @@ final class DemoBusinesses {
     List<Made> seed() {
         var zones = market.serviceZones(db);
         for (var b : plan.businesses()) {
-            var owner = "owner".equals(b.owner()) ? accounts.id("owner") : accounts.backgroundOwner(b.key(), b.name(), now);
+            var owner =
+                    "owner".equals(b.owner()) ? accounts.id("owner") : accounts.backgroundOwner(b.key(), b.name(), now);
             var id = merchant(b, owner, "active");
             page(b, id);
             location(b, id);
@@ -87,12 +88,27 @@ final class DemoBusinesses {
     String application(DemoPlan.Application a) {
         var owner = accounts.backgroundOwner(a.key(), a.name(), now);
         var b = new Business(
-                a.key(), a.type(), a.name(), a.categories(), a.colour(), "registered", a.about(), a.about(), List.of(),
-                null, null, null, null, null, null, null);
+                a.key(),
+                a.type(),
+                a.name(),
+                a.categories(),
+                a.colour(),
+                "registered",
+                a.about(),
+                a.about(),
+                List.of(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null);
         var id = merchant(b, owner, "pending");
         db.update(
                 "update merchants.merchants set onboarding_step = 'review', approved_at = null, submitted_at = ? where id = ?",
-                now.minusSeconds(26 * 3600), id);
+                now.minusSeconds(26 * 3600),
+                id);
         return id;
     }
 
@@ -123,11 +139,16 @@ final class DemoBusinesses {
             profile.put("serviceArea", market.city());
         }
         var legalDetails = Map.of(
-                "structure", "corp_prov",
-                "legal_corporate_name", legal,
-                "business_number", bn,
-                "operating_name", b.name(),
-                "registered_office", market.city() + ", " + market.province());
+                "structure",
+                "corp_prov",
+                "legal_corporate_name",
+                legal,
+                "business_number",
+                bn,
+                "operating_name",
+                b.name(),
+                "registered_office",
+                market.city() + ", " + market.province());
         db.update(
                 """
                 insert into merchants.merchants (id, type, display_name, legal_name, structure, legal_details, business_number,
@@ -143,48 +164,85 @@ final class DemoBusinesses {
                     onboarding_step = excluded.onboarding_step, approved_at = excluded.approved_at,
                     search_hidden_at = null, search_hidden_cause = null, updated_at = excluded.updated_at
                 """,
-                id, b.type(), b.name(), legal, json(legalDetails), bn, bn + " RT0001", "DEMO-" + bn, market.province(),
-                b.tier(), takeRate(b.tier()), status, market.id(), market.city(), market.province(),
-                "hello@" + slug(b.name()) + "." + DemoAccounts.DOMAIN, json(profile), since, since.plusSeconds(3600),
-                "active".equals(status) ? since.plusSeconds(86_400) : null, owner, since, now);
-        db.update(
-                """
+                id,
+                b.type(),
+                b.name(),
+                legal,
+                json(legalDetails),
+                bn,
+                bn + " RT0001",
+                "DEMO-" + bn,
+                market.province(),
+                b.tier(),
+                takeRate(b.tier()),
+                status,
+                market.id(),
+                market.city(),
+                market.province(),
+                "hello@" + slug(b.name()) + "." + DemoAccounts.DOMAIN,
+                json(profile),
+                since,
+                since.plusSeconds(3600),
+                "active".equals(status) ? since.plusSeconds(86_400) : null,
+                owner,
+                since,
+                now);
+        db.update("""
                 insert into merchants.merchant_members (merchant_id, user_id, role, bookable, mfa_ok, joined_at)
                 values (?, ?, 'owner', ?, true, ?)
                 on conflict (merchant_id, user_id) do update set role = 'owner', bookable = excluded.bookable, mfa_ok = true
-                """,
-                id, owner, b.provider(), since);
+                """, id, owner, b.provider(), since);
         var kyc = verification(id, "kyc", "kyc", null, "passed", 0, "stripe", null);
-        db.update(
-                """
+        db.update("""
                 insert into merchants.merchant_principals (id, merchant_id, legal_name, role, ownership_pct, kyc_verification_id, user_id)
                 values (?, ?, ?, 'director', 100, ?, ?)
                 on conflict (id) do update set legal_name = excluded.legal_name, kyc_verification_id = excluded.kyc_verification_id
-                """,
-                DemoIds.of("principal:" + b.key()), id, ownerName(owner), kyc, owner);
+                """, DemoIds.of("principal:" + b.key()), id, ownerName(owner), kyc, owner);
         int pos = 1;
         verification(id, "registry", "registry", null, "DEMO-" + bn, pos++, "registry", null);
         verification(id, "gst", "registry", "CRA", bn + " RT0001", pos++, "registry", null);
         for (var c : b.categories()) {
-            var registry = db.text("select regulated_registry from catalogue.categories where id = ?", c).orElse(null);
+            var registry = db.text("select regulated_registry from catalogue.categories where id = ?", c)
+                    .orElse(null);
             String registryCheck = null;
             if (registry != null && !registry.isBlank()) {
-                registryCheck = verification(id, "licence:" + registry, "licence", registry, "DEMO-" + Math.floorMod(c.hashCode(), 100000),
-                        pos++, "registry", now.plusSeconds(86_400L * 300));
+                registryCheck = verification(
+                        id,
+                        "licence:" + registry,
+                        "licence",
+                        registry,
+                        "DEMO-" + Math.floorMod(c.hashCode(), 100000),
+                        pos++,
+                        "registry",
+                        now.plusSeconds(86_400L * 300));
             }
-            db.update(
-                    """
+            db.update("""
                     insert into merchants.merchant_categories (merchant_id, category_id, status, registry_verification_id)
                     values (?, ?, 'approved', ?)
                     on conflict (merchant_id, category_id) do update set status = 'approved', registry_verification_id = excluded.registry_verification_id
-                    """,
-                    id, c, registryCheck);
+                    """, id, c, registryCheck);
         }
         if (b.provider()) {
-            verification(id, "insurance", "insurance", null, "Liability $2M", pos++, "agent", now.plusSeconds(86_400L * 200));
+            verification(
+                    id,
+                    "insurance",
+                    "insurance",
+                    null,
+                    "Liability $2M",
+                    pos++,
+                    "agent",
+                    now.plusSeconds(86_400L * 200));
         }
         if (b.kitchen()) {
-            verification(id, "ahs_permit", "ahs_permit", null, "FS-" + bn.substring(0, 6), pos++, "registry", now.plusSeconds(86_400L * 250));
+            verification(
+                    id,
+                    "ahs_permit",
+                    "ahs_permit",
+                    null,
+                    "FS-" + bn.substring(0, 6),
+                    pos++,
+                    "registry",
+                    now.plusSeconds(86_400L * 250));
             verification(id, "food_cert", "food_cert", null, "2 staff", pos++, "agent", null);
             verification(id, "allergen_attestation", "attestation", null, "signed", pos++, "owner", null);
         }
@@ -194,12 +252,10 @@ final class DemoBusinesses {
         }
         verification(id, "bank", "bank", null, "Demo bank ··" + bn.substring(5, 9), pos++, "stripe", null);
         verification(id, "mfa", "mfa", null, "second_factor", pos, "system", null);
-        db.update(
-                """
+        db.update("""
                 insert into merchants.obligation_acceptances (merchant_id, version, accepted_by, accepted_at)
                 values (?, '2.3', ?, ?) on conflict do nothing
-                """,
-                id, owner, since);
+                """, id, owner, since);
         if (b.licence() != null) {
             licence(id, b.licence(), owner, since);
         }
@@ -216,27 +272,23 @@ final class DemoBusinesses {
             String by,
             @Nullable Instant expires) {
         var id = DemoIds.of("verification:" + merchantId + ":" + checkKey);
-        db.update(
-                """
+        db.update("""
                 insert into merchants.verifications (id, merchant_id, check_key, check_type, registry, status, reference, position,
                     verified_by, expires_at, verified_at, created_at, updated_at)
                 values (?, ?, ?, ?, ?, 'verified', ?, ?, ?, ?, ?, ?, ?)
                 on conflict (id) do update set status = 'verified', reference = excluded.reference, position = excluded.position,
                     expires_at = excluded.expires_at, updated_at = excluded.updated_at
-                """,
-                id, merchantId, checkKey, checkType, registry, reference, position, by, expires, now, now, now);
+                """, id, merchantId, checkKey, checkType, registry, reference, position, by, expires, now, now, now);
         return id;
     }
 
     /** An approved licence for an age-restricted class (alcohol, tobacco), with the document it was approved on. */
     private void licence(String merchantId, String ageClass, String owner, Instant since) {
         var doc = DemoIds.of("document:licence:" + merchantId);
-        db.update(
-                """
+        db.update("""
                 insert into merchants.documents (id, merchant_id, purpose, file_name, content_type, size_bytes, storage_key, uploaded_by, created_at)
                 values (?, ?, 'verification', 'licence.pdf', 'application/pdf', 48211, ?, ?, ?) on conflict (id) do nothing
-                """,
-                doc, merchantId, "demo/" + merchantId + "/licence.pdf", owner, since);
+                """, doc, merchantId, "demo/" + merchantId + "/licence.pdf", owner, since);
         db.update(
                 """
                 insert into merchants.restricted_licences (id, merchant_id, age_class, province, licence_number, document_id, expires_on,
@@ -244,9 +296,17 @@ final class DemoBusinesses {
                 values (?, ?, ?, ?, ?, ?, ?, 'approved', ?, ?, ?, ?)
                 on conflict (id) do update set status = 'approved', province = excluded.province, expires_on = excluded.expires_on
                 """,
-                DemoIds.of("licence:" + merchantId + ":" + ageClass), merchantId, ageClass, market.province(),
-                "DEMO-" + ageClass.toUpperCase(Locale.ROOT) + "-" + merchantId.substring(20), doc,
-                LocalDate.ofInstant(now, market.zone()).plusYears(1), owner, since, accounts.id("admin"), since.plusSeconds(86_400));
+                DemoIds.of("licence:" + merchantId + ":" + ageClass),
+                merchantId,
+                ageClass,
+                market.province(),
+                "DEMO-" + ageClass.toUpperCase(Locale.ROOT) + "-" + merchantId.substring(20),
+                doc,
+                LocalDate.ofInstant(now, market.zone()).plusYears(1),
+                owner,
+                since,
+                accounts.id("admin"),
+                since.plusSeconds(86_400));
     }
 
     // ── public page and place ───────────────────────────────────────────────────────────────────────────────────
@@ -264,48 +324,63 @@ final class DemoBusinesses {
                     tagline_i18n = excluded.tagline_i18n, cta_label = excluded.cta_label,
                     published_at = coalesce(merchants.storefronts.published_at, excluded.published_at), updated_at = excluded.updated_at
                 """,
-                id, merchantId, slug, kind, b.colour(), json(Map.of("en", b.tagline())), cta, now.minusSeconds(86_400L * 30),
-                now.minusSeconds(86_400L * 31), now);
-        var sections =
-                switch (kind) {
-                    case "business_page" -> List.of("hero", "about", "services", "reviews", "area", "faq", "cta");
-                    case "store" -> List.of("hero", "about", "featured", "catalogue", "delivery", "reviews", "policies", "cta");
-                    default -> List.of("hero", "about", "menu", "hours", "fulfil", "reviews", "permit", "cta");
-                };
+                id,
+                merchantId,
+                slug,
+                kind,
+                b.colour(),
+                json(Map.of("en", b.tagline())),
+                cta,
+                now.minusSeconds(86_400L * 30),
+                now.minusSeconds(86_400L * 31),
+                now);
+        var sections = switch (kind) {
+            case "business_page" -> List.of("hero", "about", "services", "reviews", "area", "faq", "cta");
+            case "store" -> List.of("hero", "about", "featured", "catalogue", "delivery", "reviews", "policies", "cta");
+            default -> List.of("hero", "about", "menu", "hours", "fulfil", "reviews", "permit", "cta");
+        };
         for (int i = 0; i < sections.size(); i++) {
             var k = sections.get(i);
             var settings = "faq".equals(k)
-                    ? json(Map.of("pairs", List.of(Map.of("q", "How do I book?", "a", "Pick a time on this page; you pay into escrow and we're paid after the job."))))
+                    ? json(Map.of(
+                            "pairs",
+                            List.of(Map.of(
+                                    "q",
+                                    "How do I book?",
+                                    "a",
+                                    "Pick a time on this page; you pay into escrow and we're paid after the job."))))
                     : "policies".equals(k)
-                            ? json(Map.of("returns_text", "Returns within 14 days for unopened items. Perishables are final sale."))
+                            ? json(Map.of(
+                                    "returns_text",
+                                    "Returns within 14 days for unopened items. Perishables are final sale."))
                             : "{}";
-            db.update(
-                    """
+            db.update("""
                     insert into merchants.storefront_sections (id, storefront_id, kind, position, enabled, settings)
                     values (?, ?, ?, ?, true, ?::jsonb) on conflict (id) do update set position = excluded.position, enabled = true
-                    """,
-                    DemoIds.of("section:" + b.key() + ":" + k), id, k, i, settings);
+                    """, DemoIds.of("section:" + b.key() + ":" + k), id, k, i, settings);
         }
     }
 
     private String freeSlug(String wanted, String storefrontId) {
         var slug = wanted.length() > 40 ? wanted.substring(0, 40).replaceAll("-+$", "") : wanted;
-        for (int n = 2; db.count("select count(*) from merchants.storefronts where slug = ? and id <> ?", slug, storefrontId) > 0; n++) {
+        for (int n = 2;
+                db.count("select count(*) from merchants.storefronts where slug = ? and id <> ?", slug, storefrontId)
+                        > 0;
+                n++) {
             var suffix = "-" + n;
-            slug = (wanted.length() + suffix.length() > 40 ? wanted.substring(0, 40 - suffix.length()) : wanted) + suffix;
+            slug = (wanted.length() + suffix.length() > 40 ? wanted.substring(0, 40 - suffix.length()) : wanted)
+                    + suffix;
         }
         return slug;
     }
 
     private void location(Business b, String merchantId) {
         var p = market.pointFor("merchant:" + b.key());
-        db.update(
-                """
+        db.update("""
                 insert into merchants.locations (merchant_id, geom, service_radius_km, source, updated_at)
                 values (?, ST_GeogFromText(?), ?, 'seed', ?)
                 on conflict (merchant_id) do update set geom = excluded.geom, service_radius_km = excluded.service_radius_km, updated_at = excluded.updated_at
-                """,
-                merchantId, DemoMarket.point(p[0], p[1]), b.kitchen() ? null : 30, now);
+                """, merchantId, DemoMarket.point(p[0], p[1]), b.kitchen() ? null : 30, now);
     }
 
     // ── providers: hours, booking rules, areas, services ────────────────────────────────────────────────────────
@@ -321,20 +396,25 @@ final class DemoBusinesses {
                     values (?, ?, ?, ?, ?::jsonb, ?, ?)
                     on conflict (id) do update set ranges = excluded.ranges, member_user_id = excluded.member_user_id, updated_at = excluded.updated_at
                     """,
-                    DemoIds.of("availability:" + key + ":" + d), merchantId, member, d, ranges, today.minusDays(60), now);
+                    DemoIds.of("availability:" + key + ":" + d),
+                    merchantId,
+                    member,
+                    d,
+                    ranges,
+                    today.minusDays(60),
+                    now);
         }
-        db.update(
-                """
+        db.update("""
                 insert into availability.booking_rules (merchant_id, interval_min, buffer_min, min_notice_min, horizon_days, max_jobs_per_day,
                     accept_mode, reschedule_free_min, late_cancel_fee_cents, updated_at)
                 values (?, 30, 15, 60, 30, 8, 'instant', 180, 0, ?)
                 on conflict (merchant_id) do update set accept_mode = 'instant', horizon_days = 30, updated_at = excluded.updated_at
-                """,
-                merchantId, now);
+                """, merchantId, now);
         for (var z : zones.subList(0, Math.min(zones.size(), 6))) {
             db.update(
                     "insert into availability.service_areas (merchant_id, zone) values (?, ?) on conflict do nothing",
-                    merchantId, z);
+                    merchantId,
+                    z);
         }
     }
 
@@ -353,10 +433,23 @@ final class DemoBusinesses {
                     price_cents = excluded.price_cents, duration_min = excluded.duration_min, instant_book = excluded.instant_book,
                     vetting = 'approved', status = 'live', own_images = excluded.own_images, updated_at = excluded.updated_at
                 """,
-                id, merchantId, category, l.title(), json(Map.of("en", l.title())), json(Map.of("en", l.text())),
-                "DEMO-" + l.key().toUpperCase(Locale.ROOT), l.text(), l.pricingMode(), quote ? null : l.priceCents(),
-                l.durationMin() == null ? 60 : l.durationMin(), !quote, image == null ? Db.array() : Db.array(image),
-                5 + Math.floorMod(id.hashCode(), 40), now.minusSeconds(86_400L * 20), now.minusSeconds(86_400L * 21), now);
+                id,
+                merchantId,
+                category,
+                l.title(),
+                json(Map.of("en", l.title())),
+                json(Map.of("en", l.text())),
+                "DEMO-" + l.key().toUpperCase(Locale.ROOT),
+                l.text(),
+                l.pricingMode(),
+                quote ? null : l.priceCents(),
+                l.durationMin() == null ? 60 : l.durationMin(),
+                !quote,
+                image == null ? Db.array() : Db.array(image),
+                5 + Math.floorMod(id.hashCode(), 40),
+                now.minusSeconds(86_400L * 20),
+                now.minusSeconds(86_400L * 21),
+                now);
         return id;
     }
 
@@ -375,9 +468,17 @@ final class DemoBusinesses {
                 on conflict (id) do update set title = excluded.title, title_i18n = excluded.title_i18n, category_id = excluded.category_id,
                     attributes = excluded.attributes, description = excluded.description, updated_at = excluded.updated_at
                 """,
-                product, "NL-D-" + product.substring(18), l.title(), json(Map.of("en", l.title())), category,
-                json(Map.of("volume", l.unit() == null ? "each" : l.unit())), l.text(), merchantId, merchantId,
-                now.minusSeconds(86_400L * 21), now);
+                product,
+                "NL-D-" + product.substring(18),
+                l.title(),
+                json(Map.of("en", l.title())),
+                category,
+                json(Map.of("volume", l.unit() == null ? "each" : l.unit())),
+                l.text(),
+                merchantId,
+                merchantId,
+                now.minusSeconds(86_400L * 21),
+                now);
         var image = photo(merchantId, id, l, category);
         db.update(
                 """
@@ -391,10 +492,21 @@ final class DemoBusinesses {
                     own_images = excluded.own_images, returns_policy = excluded.returns_policy, licence_hold = false,
                     updated_at = excluded.updated_at
                 """,
-                id, product, merchantId, l.title(), "DEMO-" + b.key().toUpperCase(Locale.ROOT) + "-" + l.key().toUpperCase(Locale.ROOT),
-                l.priceCents(), l.compareAtCents(), l.stock() == null ? 20 : l.stock(), image == null ? Db.array() : Db.array(image),
-                restricted ? "final_sale" : "standard_14", l.title().toLowerCase(Locale.ROOT), 5 + Math.floorMod(id.hashCode(), 60),
-                now.minusSeconds(86_400L * 20), now.minusSeconds(86_400L * 21), now);
+                id,
+                product,
+                merchantId,
+                l.title(),
+                "DEMO-" + b.key().toUpperCase(Locale.ROOT) + "-" + l.key().toUpperCase(Locale.ROOT),
+                l.priceCents(),
+                l.compareAtCents(),
+                l.stock() == null ? 20 : l.stock(),
+                image == null ? Db.array() : Db.array(image),
+                restricted ? "final_sale" : "standard_14",
+                l.title().toLowerCase(Locale.ROOT),
+                5 + Math.floorMod(id.hashCode(), 60),
+                now.minusSeconds(86_400L * 20),
+                now.minusSeconds(86_400L * 21),
+                now);
         return id;
     }
 
@@ -407,13 +519,11 @@ final class DemoBusinesses {
             return null;
         }
         var p = stored.get();
-        db.update(
-                """
+        db.update("""
                 insert into catalogue.media (id, url, kind, merchant_id, content_type, width, height, byte_size, on_white, exif_ok, created_at)
                 values (?, ?, 'main', ?, 'image/jpeg', ?, ?, ?, false, true, ?)
                 on conflict (id) do update set url = excluded.url, width = excluded.width, height = excluded.height, byte_size = excluded.byte_size
-                """,
-                mediaId, p.storageKey(), merchantId, p.width(), p.height(), p.bytes(), now);
+                """, mediaId, p.storageKey(), merchantId, p.width(), p.height(), p.bytes(), now);
         photosByDepartment.merge(category.substring(0, category.indexOf('.')), 1, Integer::sum);
         return mediaId;
     }
@@ -421,13 +531,11 @@ final class DemoBusinesses {
     // ── kitchens: settings, hours, a live menu ──────────────────────────────────────────────────────────────────
 
     private List<String> kitchen(Business b, String merchantId) {
-        db.update(
-                """
+        db.update("""
                 insert into food.kitchen_settings (merchant_id, default_prep_min, max_orders_per_15, fulfilment, radius_km, group_orders, updated_at)
                 values (?, 25, 8, '{courier,pickup}', 12, true, ?)
                 on conflict (merchant_id) do update set paused_until = null, auto_paused_at = null, radius_km = 12, updated_at = excluded.updated_at
-                """,
-                merchantId, now);
+                """, merchantId, now);
         var hours = b.hours() == null ? "11:00-22:00" : b.hours();
         var from = hours.substring(0, 5);
         var to = hours.substring(6);
@@ -435,31 +543,25 @@ final class DemoBusinesses {
             to = "23:59";
         }
         for (int d = 1; d <= 7; d++) {
-            db.update(
-                    """
+            db.update("""
                     insert into food.opening_hours (merchant_id, weekday, ranges, updated_at) values (?, ?, ?::jsonb, ?)
                     on conflict (merchant_id, weekday) do update set ranges = excluded.ranges, updated_at = excluded.updated_at
-                    """,
-                    merchantId, d, "[[\"" + from + "\",\"" + to + "\"]]", now);
+                    """, merchantId, d, "[[\"" + from + "\",\"" + to + "\"]]", now);
         }
         var menu = DemoIds.of("menu:" + b.key());
-        db.update(
-                """
+        db.update("""
                 insert into food.menus (id, merchant_id, name, name_i18n, schedule, status, sort, published_at, created_at, updated_at)
                 values (?, ?, 'Menu', '{"en":"Menu","fr":"Menu"}', '{"mode":"open_hours","days":[]}', 'live', 0, ?, ?, ?)
                 on conflict (id) do update set status = 'live', published_at = coalesce(food.menus.published_at, excluded.published_at), updated_at = excluded.updated_at
-                """,
-                menu, merchantId, now.minusSeconds(86_400L * 30), now.minusSeconds(86_400L * 31), now);
+                """, menu, merchantId, now.minusSeconds(86_400L * 30), now.minusSeconds(86_400L * 31), now);
         var items = new ArrayList<String>();
         int s = 0;
         for (var section : b.menuSections()) {
             var sectionId = DemoIds.of("menu-section:" + b.key() + ":" + s);
-            db.update(
-                    """
+            db.update("""
                     insert into food.menu_sections (id, menu_id, name, name_i18n, sort) values (?, ?, ?, ?::jsonb, ?)
                     on conflict (id) do update set name = excluded.name, name_i18n = excluded.name_i18n, sort = excluded.sort
-                    """,
-                    sectionId, menu, section.name(), json(Map.of("en", section.name())), s);
+                    """, sectionId, menu, section.name(), json(Map.of("en", section.name())), s);
             int i = 0;
             for (var dish : section.items()) {
                 var id = DemoIds.of("dish:" + b.key() + ":" + s + ":" + i);
@@ -474,10 +576,23 @@ final class DemoBusinesses {
                             allergens = excluded.allergens, dietary = excluded.dietary, available = true, sold_out_on = null,
                             vetting = 'approved', status = 'published', updated_at = excluded.updated_at
                         """,
-                        id, sectionId, merchantId, dish.name(), json(Map.of("en", dish.name())), dish.text(),
-                        json(Map.of("en", dish.text())), dish.priceCents(), Db.array(dish.allergens()),
-                        Db.array(dish.dietary().stream().filter(x -> !"alcohol".equals(x)).toList()), i,
-                        now.minusSeconds(86_400L * 30), ageClass, now.minusSeconds(86_400L * 31), now);
+                        id,
+                        sectionId,
+                        merchantId,
+                        dish.name(),
+                        json(Map.of("en", dish.name())),
+                        dish.text(),
+                        json(Map.of("en", dish.text())),
+                        dish.priceCents(),
+                        Db.array(dish.allergens()),
+                        Db.array(dish.dietary().stream()
+                                .filter(x -> !"alcohol".equals(x))
+                                .toList()),
+                        i,
+                        now.minusSeconds(86_400L * 30),
+                        ageClass,
+                        now.minusSeconds(86_400L * 31),
+                        now);
                 items.add(id);
                 i++;
             }
@@ -489,12 +604,16 @@ final class DemoBusinesses {
     // ── helpers ─────────────────────────────────────────────────────────────────────────────────────────────────
 
     private String ownerName(String userId) {
-        return db.text("select display_name from identity.users where id = ?", userId).orElse("Demo Owner");
+        return db.text("select display_name from identity.users where id = ?", userId)
+                .orElse("Demo Owner");
     }
 
     static String slug(String name) {
         var plain = Normalizer.normalize(name, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
-        return plain.toLowerCase(Locale.ROOT).replace("&", "and").replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
+        return plain.toLowerCase(Locale.ROOT)
+                .replace("&", "and")
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("(^-|-$)", "");
     }
 
     /** A fake 9-digit business number, stable for the key (never a real one's checksum pattern: starts with 9). */
