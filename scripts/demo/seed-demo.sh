@@ -86,7 +86,9 @@ seed_cluster() {
   kubectl -n "$ns" get deployment northline-api >/dev/null 2>&1 \
     || die "no deployment northline-api in namespace $ns (deploy first: the pipeline's action deploy) — context $(kubectl config current-context 2>/dev/null)"
   tmp=$(mktemp -d)
-  trap 'rm -rf "$tmp"' EXIT
+  # Expanded now: $tmp is local to this function, so it is unset (and `set -u` fails) when the EXIT trap runs.
+  # shellcheck disable=SC2064
+  trap "rm -rf '$tmp'" EXIT
   if ! kubectl -n "$ns" get secret "$SECRET" >/dev/null 2>&1 || [ "${ROTATE:-0}" = 1 ]; then
     (umask 077; new_credentials >"$tmp/accounts.env")
     kubectl -n "$ns" create secret generic "$SECRET" --from-env-file="$tmp/accounts.env" --dry-run=client -o json \
